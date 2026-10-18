@@ -1,0 +1,64 @@
+# Working in this repository
+
+This repository is the node service: the machines reachable from here and what is known of them. It
+keeps the node list and the jake hubs, checks whether each node answers, reads every machine's hardware
+live and keeps it for a month, reads this machine's room for another launch and tells a pressure that
+stands, and carries the tunnel door nodes dial in by. It decides nothing about jobs, agents or rooms:
+which job a process serves, whether a launch goes ahead and what the chat agent is told are the callers'.
+
+## Rules
+
+- **`docs/` is canonical.** `docs/api.md` is the boundary contract, every route, event and command the
+  service answers and its configuration; `docs/inventory.md` is what came from the old repository. Read
+  the document covering a change first. A change that would make it wrong repairs the document first,
+  stating what is true now, and the code is then written to match. A change to the boundary API changes
+  `docs/api.md` in the same commit and follows the version rule below.
+- **No other service's code.** Among other repositories only the base libraries `bmo-chat`,
+  `bmo-chat-client` and `bmo-ui` may be depended on or imported; `tests/dependencies.rs` fails on any
+  other. Another unit reaches the service through its API, and the service tells a consumer something by
+  publishing an event, never by calling it.
+- **A variation belongs to its member.** A value that differs per connection type, road or machine is
+  answered by that member, never by a central table in the layer below.
+- **No hand-written parser for a general format.** TOML, JSON, XML and command lines are read by a
+  maintained library; where none fits, the reason is written beside the code. The probe's sections are
+  this repository's own syntax.
+- **Tests live in `tests/`.** The root package holds them: a group of tests is a directory under `tests/`
+  with its own `main.rs`, and the checks that span the repository are files at the top of `tests/`. No test
+  module sits in a source file.
+- **English only** in code, comments, strings, tests and documents, and in commit messages; `tests/literals.rs`
+  fails on Hangul. Messages the service shows are English sentences; what a machine reads is a status code
+  or a kebab-case code, and the web console words them.
+- **No names of agents, owners or hosts, and no personal paths** in code, documents or commits. Write the
+  role instead: the owner, a node, this machine. A path is written from `$HOME` or from a setting.
+  `tests/literals.rs` fails on the account name, the host name and the committer's address of the machine it
+  runs on.
+- **No credential in a row, an answer, an event or a log line,** only where one is kept.
+- **No directory named after its parent.** `tests/layout.rs` fails on one.
+- **Only Cargo manifests at the root,** beside `testbed.toml`, the testbed's declaration. The root
+  `Cargo.toml` is the workspace and the root package, which is never published and exists to hold
+  `tests/`. `tests/layout.rs` fails on another build tool's manifest at the root.
+- **Documents state what is true now:** no change history, no quoted source and no file-and-line pins.
+
+## Layout
+
+- `crates/`: the Rust crates.
+  - `policy`: the policy files, `node-states.toml`, `ssh.toml` and `windows-sensors.toml`, and their readers.
+  - `store`: node's own database and the live record's path (`docs/store.md`).
+  - `node-check`: whether each node answers, and a node's shell (`docs/nodes.md`).
+  - `hardware`: the probe, its parser, the recorder, the history and the machine reading
+    (`docs/hardware.md`, `docs/machine.md`).
+  - `llm-bridge`: the tunnel door (`docs/llm-bridge.md`).
+  - `server`: the `bmo-node` binary: the routes, the loops and the command (`docs/api.md`).
+- `docs/`: the canonical documents.
+- `deploy/`: the service units, `bmo-node.service` and `bmo-llm-bridge.service`.
+- `testbed.toml`: how the testbed tests, checks, builds and deploys the repository.
+- `tests/`: every test, with the probe's fixtures under `tests/hardware/fixtures`.
+
+## Checks
+
+- Static: `cargo check --workspace --all-targets`.
+- Review: `cargo fmt --all --check` (108 columns, 2-space indentation, as `rustfmt.toml` sets) and
+  `cargo clippy --workspace --all-targets -- -D warnings`.
+- Tests: `cargo test --workspace`.
+- The version is the workspace's, in semver. The major moves on a change to the boundary API or to a
+  table's contract, the minor on an addition to either, the patch on anything else.
