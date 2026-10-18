@@ -1,0 +1,6 @@
+[package]
+name = "llm-bridge"
+description = "The tunnel door a node's tunnel dials in by."
+version.workspace = true
+edition.workspace = true
+publish = false

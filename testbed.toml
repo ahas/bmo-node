@@ -1,0 +1,42 @@
+# How the testbed tests, checks, builds and deploys this repository, in the testbed's declaration format.
+
+testbed = 0
+name = "node"
+
+[test]
+# The Cargo workspace's crates, the root package's test groups among them.
+languages = ["cargo"]
+
+[check]
+quick = ["layout", "dependencies"]
+base_libraries = ["bmo-chat", "bmo-chat-client", "bmo-ui"]
+
+[[check.step]]
+id = "check"
+command = "cargo check --workspace --all-targets"
+lane = "wide"
+
+[[check.step]]
+id = "clippy"
+command = "cargo clippy --workspace --all-targets -- -D warnings"
+lane = "wide"
+
+[[check.step]]
+id = "fmt"
+command = "cargo fmt --all --check"
+
+[build]
+# The service and its command, the node check's own binary, and the tunnel door.
+binaries = ["bmo-node", "node-check", "llm-bridge"]
+
+# The node service's own deploy tree, and the shared data root its configuration and its own folder stand
+# under (docs/api.md, 「Configuration」; docs/store.md).
+[deploy]
+root = "~/.local/share/bmo-node"
+link = "deploy"
+data_root = "~/.local/share/bmo/data"
+env_links = [{ link = "node.toml", target = "env/node.toml" }]
+# The service's unit, marked bot, whose health the deployment waits on, and the tunnel door's, marked binary.
+units = ["deploy/*.service"]
+# Answers 0 once the service the deployed configuration names answers ready (docs/api.md, 「Health」).
+health = "~/.local/share/bmo-node/deploy/bin/bmo-node --config ~/.local/share/bmo-node/deploy/node.toml health"

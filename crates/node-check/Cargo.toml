@@ -1,0 +1,6 @@
+[package]
+name = "node-check"
+description = "Whether each node answers, and a node's shell."
+version.workspace = true
+edition.workspace = true
+publish = false

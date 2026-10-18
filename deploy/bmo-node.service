@@ -1,0 +1,24 @@
+[Unit]
+Description=bmo-node: the node list, the node checks, the hardware monitor and this machine's room
+After=network-online.target
+# Without its configuration the service has no listen address or token, so the unit does not start where the
+# deployment wrote none (docs/api.md, 「Configuration」).
+ConditionPathExists=%h/.local/share/bmo/data/env/node.toml
+
+[Service]
+# The service settles its store under the data root's node/ folder, then answers its routes and runs the node
+# check pass, the hardware recorder and the machine watch (docs/api.md). It runs out of the deploy tree, whose
+# bin/ holds it and whose node.toml links to the data root's env/node.toml.
+Type=simple
+WorkingDirectory=%h/.local/share/bmo-node/deploy
+ExecStart=%h/.local/share/bmo-node/deploy/bin/bmo-node --config %h/.local/share/bmo-node/deploy/node.toml serve
+Environment=BMO_DATA_DIR=%h/.local/share/bmo/data
+Environment=PATH=%h/.local/bin:%h/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Restart=always
+RestartSec=2
+TimeoutStopSec=30
+
+[Install]
+WantedBy=default.target
+# The repository's one service: stopped, restarted and watched by every deployment, which waits on its health.
+X-BMO-Deploy=bot
