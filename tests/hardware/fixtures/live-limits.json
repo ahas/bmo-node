@@ -1,0 +1,488 @@
+[
+  null,
+  {
+    "view": {
+      "host": "example-host",
+      "kernel": "7.0.0-31-generic",
+      "os": "Ubuntu 24.04",
+      "hostOs": null,
+      "wsl": false,
+      "sensorLibrary": null,
+      "uptimeSeconds": 102,
+      "load": [
+        0.5,
+        0.4,
+        0.3
+      ],
+      "cpu": {
+        "model": "AMD Ryzen 9 3900X 12-Core Processor",
+        "threadCount": 1,
+        "usage": 0.25,
+        "celsius": null,
+        "limitCelsius": null,
+        "mhz": 3600,
+        "peakMhz": 3600,
+        "watts": 30,
+        "chip": {
+          "label": "AMD Ryzen 9 3900X 12-Core Processor",
+          "celsius": null,
+          "rows": [
+            [
+              {
+                "label": "CCD0",
+                "role": "compute",
+                "celsius": null,
+                "direction": "column",
+                "items": [
+                  {
+                    "kind": "cluster",
+                    "label": "CCX0",
+                    "cache": "L3",
+                    "left": [
+                      {
+                        "label": "C0",
+                        "usage": 0.25,
+                        "mhz": 3600,
+                        "celsius": null,
+                        "threads": [
+                          {
+                            "cpu": 0,
+                            "usage": 0.25
+                          }
+                        ]
+                      }
+                    ],
+                    "right": []
+                  },
+                  {
+                    "kind": "part",
+                    "label": "Infinity Fabric",
+                    "off": false
+                  },
+                  {
+                    "kind": "cluster",
+                    "label": "CCX1",
+                    "cache": "L3",
+                    "left": [],
+                    "right": []
+                  }
+                ]
+              },
+              null
+            ],
+            [
+              {
+                "label": "IOD",
+                "role": "io",
+                "celsius": null,
+                "direction": "column",
+                "items": [
+                  {
+                    "kind": "part",
+                    "label": "Memory · PCIe",
+                    "off": false
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        "sensors": []
+      },
+      "memory": {
+        "usedKb": 600,
+        "totalKb": 1000,
+        "share": 0.6,
+        "swapUsedKb": null,
+        "swapTotalKb": null,
+        "swapShare": null
+      },
+      "gpus": [
+        {
+          "index": 0,
+          "name": "NVIDIA GeForce RTX 3060 Ti",
+          "usage": 0.03,
+          "celsius": 40,
+          "limitCelsius": 91,
+          "throttling": true,
+          "mhz": 210,
+          "maxMhz": 2100,
+          "memoryMhz": 405,
+          "watts": 18.75,
+          "wattLimit": 200,
+          "wattShare": 0.09375,
+          "memoryUsedMb": 33,
+          "memoryTotalMb": 8192,
+          "memoryShare": 0.0040283203125,
+          "fanPercent": 30
+        }
+      ],
+      "storage": [
+        {
+          "key": "/dev/nvme0n1p2",
+          "name": "/dev/nvme0n1p2",
+          "kind": null,
+          "sizeBytes": 1024000,
+          "celsius": null,
+          "limitCelsius": null,
+          "volumes": [
+            {
+              "mount": "/",
+              "fsType": "ext4",
+              "totalKb": 1000,
+              "usedKb": 400,
+              "availableKb": 600,
+              "share": 0.4
+            }
+          ],
+          "usedKb": 400,
+          "totalKb": 1000,
+          "share": 0.4
+        }
+      ],
+      "board": {
+        "sensors": [],
+        "fans": []
+      },
+      "services": {
+        "running": 3,
+        "failed": []
+      }
+    },
+    "sample": {
+      "cpu|use": 25,
+      "cpu|watts": 30,
+      "cpu|mhz": 3600,
+      "memory|gb": 0,
+      "gpu0|use": 3,
+      "gpu0|temp": 40,
+      "gpu0|watts": 18.8,
+      "gpu0|mhz": 210,
+      "gpu0:vram|gb": 0.03,
+      "storage:/dev/nvme0n1p2|gb": 0
+    }
+  },
+  null,
+  {
+    "view": {
+      "host": "example-host",
+      "kernel": "7.0.0-31-generic",
+      "os": "Ubuntu 24.04",
+      "hostOs": null,
+      "wsl": false,
+      "sensorLibrary": null,
+      "uptimeSeconds": 103.5,
+      "load": [
+        0.5,
+        0.4,
+        0.3
+      ],
+      "cpu": {
+        "model": "AMD Ryzen 9 3900X 12-Core Processor",
+        "threadCount": 1,
+        "usage": 0.12,
+        "celsius": null,
+        "limitCelsius": null,
+        "mhz": 2895,
+        "peakMhz": 2895,
+        "watts": "denied",
+        "chip": {
+          "label": "AMD Ryzen 9 3900X 12-Core Processor",
+          "celsius": null,
+          "rows": [
+            [
+              {
+                "label": "CCD0",
+                "role": "compute",
+                "celsius": null,
+                "direction": "column",
+                "items": [
+                  {
+                    "kind": "cluster",
+                    "label": "CCX0",
+                    "cache": "L3",
+                    "left": [
+                      {
+                        "label": "C0",
+                        "usage": 0.12,
+                        "mhz": 2895,
+                        "celsius": null,
+                        "threads": [
+                          {
+                            "cpu": 0,
+                            "usage": 0.12
+                          }
+                        ]
+                      }
+                    ],
+                    "right": []
+                  },
+                  {
+                    "kind": "part",
+                    "label": "Infinity Fabric",
+                    "off": false
+                  },
+                  {
+                    "kind": "cluster",
+                    "label": "CCX1",
+                    "cache": "L3",
+                    "left": [],
+                    "right": []
+                  }
+                ]
+              },
+              null
+            ],
+            [
+              {
+                "label": "IOD",
+                "role": "io",
+                "celsius": null,
+                "direction": "column",
+                "items": [
+                  {
+                    "kind": "part",
+                    "label": "Memory · PCIe",
+                    "off": false
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        "sensors": []
+      },
+      "memory": {
+        "usedKb": 600,
+        "totalKb": 1000,
+        "share": 0.6,
+        "swapUsedKb": null,
+        "swapTotalKb": null,
+        "swapShare": null
+      },
+      "gpus": [
+        {
+          "index": 0,
+          "name": "NVIDIA GeForce RTX 3060 Ti",
+          "usage": 0.03,
+          "celsius": 40,
+          "limitCelsius": 91,
+          "throttling": true,
+          "mhz": 210,
+          "maxMhz": 2100,
+          "memoryMhz": 405,
+          "watts": 18.75,
+          "wattLimit": 200,
+          "wattShare": 0.09375,
+          "memoryUsedMb": 33,
+          "memoryTotalMb": 8192,
+          "memoryShare": 0.0040283203125,
+          "fanPercent": 30
+        }
+      ],
+      "storage": [
+        {
+          "key": "/dev/nvme0n1p2",
+          "name": "/dev/nvme0n1p2",
+          "kind": null,
+          "sizeBytes": 1024000,
+          "celsius": null,
+          "limitCelsius": null,
+          "volumes": [
+            {
+              "mount": "/",
+              "fsType": "ext4",
+              "totalKb": 1000,
+              "usedKb": 400,
+              "availableKb": 600,
+              "share": 0.4
+            }
+          ],
+          "usedKb": 400,
+          "totalKb": 1000,
+          "share": 0.4
+        }
+      ],
+      "board": {
+        "sensors": [],
+        "fans": []
+      },
+      "services": {
+        "running": 3,
+        "failed": []
+      }
+    },
+    "sample": {
+      "cpu|use": 12,
+      "cpu|mhz": 2895,
+      "memory|gb": 0,
+      "gpu0|use": 3,
+      "gpu0|temp": 40,
+      "gpu0|watts": 18.8,
+      "gpu0|mhz": 210,
+      "gpu0:vram|gb": 0.03,
+      "storage:/dev/nvme0n1p2|gb": 0
+    }
+  },
+  {
+    "view": {
+      "host": "example-host",
+      "kernel": "7.0.0-31-generic",
+      "os": "Ubuntu 24.04",
+      "hostOs": null,
+      "wsl": false,
+      "sensorLibrary": null,
+      "uptimeSeconds": 104,
+      "load": [
+        0.5,
+        0.4,
+        0.3
+      ],
+      "cpu": {
+        "model": "AMD Ryzen 9 3900X 12-Core Processor",
+        "threadCount": 1,
+        "usage": 0.2,
+        "celsius": null,
+        "limitCelsius": null,
+        "mhz": 2895,
+        "peakMhz": 2895,
+        "watts": "denied",
+        "chip": {
+          "label": "AMD Ryzen 9 3900X 12-Core Processor",
+          "celsius": null,
+          "rows": [
+            [
+              {
+                "label": "CCD0",
+                "role": "compute",
+                "celsius": null,
+                "direction": "column",
+                "items": [
+                  {
+                    "kind": "cluster",
+                    "label": "CCX0",
+                    "cache": "L3",
+                    "left": [
+                      {
+                        "label": "C0",
+                        "usage": 0.2,
+                        "mhz": 2895,
+                        "celsius": null,
+                        "threads": [
+                          {
+                            "cpu": 0,
+                            "usage": 0.2
+                          }
+                        ]
+                      }
+                    ],
+                    "right": []
+                  },
+                  {
+                    "kind": "part",
+                    "label": "Infinity Fabric",
+                    "off": false
+                  },
+                  {
+                    "kind": "cluster",
+                    "label": "CCX1",
+                    "cache": "L3",
+                    "left": [],
+                    "right": []
+                  }
+                ]
+              },
+              null
+            ],
+            [
+              {
+                "label": "IOD",
+                "role": "io",
+                "celsius": null,
+                "direction": "column",
+                "items": [
+                  {
+                    "kind": "part",
+                    "label": "Memory · PCIe",
+                    "off": false
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        "sensors": []
+      },
+      "memory": {
+        "usedKb": 600,
+        "totalKb": 1000,
+        "share": 0.6,
+        "swapUsedKb": null,
+        "swapTotalKb": null,
+        "swapShare": null
+      },
+      "gpus": [
+        {
+          "index": 0,
+          "name": "NVIDIA GeForce RTX 3060 Ti",
+          "usage": 0.03,
+          "celsius": 40,
+          "limitCelsius": 91,
+          "throttling": true,
+          "mhz": 210,
+          "maxMhz": 2100,
+          "memoryMhz": 405,
+          "watts": 18.75,
+          "wattLimit": 200,
+          "wattShare": 0.09375,
+          "memoryUsedMb": 33,
+          "memoryTotalMb": 8192,
+          "memoryShare": 0.0040283203125,
+          "fanPercent": 30
+        }
+      ],
+      "storage": [
+        {
+          "key": "/dev/nvme0n1p2",
+          "name": "/dev/nvme0n1p2",
+          "kind": null,
+          "sizeBytes": 1024000,
+          "celsius": null,
+          "limitCelsius": null,
+          "volumes": [
+            {
+              "mount": "/",
+              "fsType": "ext4",
+              "totalKb": 1000,
+              "usedKb": 400,
+              "availableKb": 600,
+              "share": 0.4
+            }
+          ],
+          "usedKb": 400,
+          "totalKb": 1000,
+          "share": 0.4
+        }
+      ],
+      "board": {
+        "sensors": [],
+        "fans": []
+      },
+      "services": {
+        "running": 3,
+        "failed": []
+      }
+    },
+    "sample": {
+      "cpu|use": 20,
+      "cpu|mhz": 2895,
+      "memory|gb": 0,
+      "gpu0|use": 3,
+      "gpu0|temp": 40,
+      "gpu0|watts": 18.8,
+      "gpu0|mhz": 210,
+      "gpu0:vram|gb": 0.03,
+      "storage:/dev/nvme0n1p2|gb": 0
+    }
+  }
+]

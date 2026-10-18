@@ -1,0 +1,341 @@
+[
+  {
+    "view": {
+      "host": "example-host",
+      "kernel": "7.0.0-31-generic",
+      "os": "Ubuntu 24.04.4 LTS",
+      "hostOs": null,
+      "wsl": false,
+      "sensorLibrary": null,
+      "uptimeSeconds": 117358.75,
+      "load": [
+        1.68,
+        1.66,
+        1.38
+      ],
+      "cpu": {
+        "model": "AMD Ryzen 7 3700X 8-Core Processor",
+        "threadCount": 4,
+        "usage": 0.5,
+        "celsius": 62.4,
+        "limitCelsius": null,
+        "mhz": 3220,
+        "peakMhz": 4249,
+        "watts": 60,
+        "chip": {
+          "label": "AMD Ryzen 7 3700X 8-Core Processor",
+          "celsius": 62.4,
+          "rows": [
+            [
+              {
+                "label": "CCD0",
+                "role": "compute",
+                "celsius": 57.8,
+                "direction": "column",
+                "items": [
+                  {
+                    "kind": "cluster",
+                    "label": "CCX0",
+                    "cache": "L3 16 MB",
+                    "left": [
+                      {
+                        "label": "C0",
+                        "usage": 0.75,
+                        "mhz": 4229,
+                        "celsius": null,
+                        "threads": [
+                          {
+                            "cpu": 0,
+                            "usage": 1
+                          },
+                          {
+                            "cpu": 2,
+                            "usage": 0.5
+                          }
+                        ]
+                      }
+                    ],
+                    "right": []
+                  },
+                  {
+                    "kind": "part",
+                    "label": "Infinity Fabric",
+                    "off": false
+                  },
+                  {
+                    "kind": "cluster",
+                    "label": "CCX1",
+                    "cache": "L3",
+                    "left": [
+                      {
+                        "label": "C1",
+                        "usage": 0.25,
+                        "mhz": 4249,
+                        "celsius": null,
+                        "threads": [
+                          {
+                            "cpu": 1,
+                            "usage": 0
+                          },
+                          {
+                            "cpu": 3,
+                            "usage": 0.5
+                          }
+                        ]
+                      }
+                    ],
+                    "right": []
+                  }
+                ]
+              },
+              null
+            ],
+            [
+              {
+                "label": "IOD",
+                "role": "io",
+                "celsius": null,
+                "direction": "column",
+                "items": [
+                  {
+                    "kind": "part",
+                    "label": "Memory · PCIe",
+                    "off": false
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        "sensors": [
+          {
+            "chip": "k10temp",
+            "device": "0000:00:18.3",
+            "label": "Tctl",
+            "celsius": 62.4,
+            "limitCelsius": null
+          },
+          {
+            "chip": "k10temp",
+            "device": "0000:00:18.3",
+            "label": "Tccd1",
+            "celsius": 57.8,
+            "limitCelsius": null
+          }
+        ]
+      },
+      "memory": {
+        "usedKb": 13177856,
+        "totalKb": 49276868,
+        "share": 0.2674247884423174,
+        "swapUsedKb": 1667256,
+        "swapTotalKb": 16777212,
+        "swapShare": 0.09937622532277711
+      },
+      "gpus": [
+        {
+          "index": 0,
+          "name": "NVIDIA GeForce RTX 3060 Ti",
+          "usage": 0.03,
+          "celsius": 40,
+          "limitCelsius": null,
+          "throttling": null,
+          "mhz": 210,
+          "maxMhz": 2100,
+          "memoryMhz": 405,
+          "watts": 18.75,
+          "wattLimit": 200,
+          "wattShare": 0.09375,
+          "memoryUsedMb": 33,
+          "memoryTotalMb": 8192,
+          "memoryShare": 0.0040283203125,
+          "fanPercent": null
+        }
+      ],
+      "storage": [
+        {
+          "key": "nvme0n1",
+          "name": "Samsung SSD 9100 PRO 1TB",
+          "kind": "nvme",
+          "sizeBytes": 1000204886016,
+          "celsius": 44.9,
+          "limitCelsius": null,
+          "volumes": [
+            {
+              "mount": "/",
+              "fsType": "ext4",
+              "totalKb": 957199192,
+              "usedKb": 462756020,
+              "availableKb": 447513720,
+              "share": 0.5083724083808389
+            },
+            {
+              "mount": "/boot/efi",
+              "fsType": "vfat",
+              "totalKb": 1046508,
+              "usedKb": 8572,
+              "availableKb": 1037936,
+              "share": 0.008191050617864364
+            }
+          ],
+          "usedKb": 462764592,
+          "totalKb": 911316248,
+          "share": 0.5077980262237133
+        },
+        {
+          "key": "sda",
+          "name": "ST3000DM007-1WY1",
+          "kind": "hdd",
+          "sizeBytes": 3000592982016,
+          "celsius": 34,
+          "limitCelsius": null,
+          "volumes": [
+            {
+              "mount": "/mnt/data 1",
+              "fsType": "xfs",
+              "totalKb": 2928835792,
+              "usedKb": 1825852096,
+              "availableKb": 1102983696,
+              "share": 0.6234054162364593
+            }
+          ],
+          "usedKb": 1825852096,
+          "totalKb": 2928835792,
+          "share": 0.6234054162364593
+        },
+        {
+          "key": "sdb",
+          "name": "Expansion Desk",
+          "kind": "usb",
+          "sizeBytes": 8001563221504,
+          "celsius": null,
+          "limitCelsius": null,
+          "volumes": [],
+          "usedKb": null,
+          "totalKb": null,
+          "share": null
+        },
+        {
+          "key": "vda",
+          "name": "QEMU Virtual Disk",
+          "kind": "virtual",
+          "sizeBytes": null,
+          "celsius": null,
+          "limitCelsius": null,
+          "volumes": [],
+          "usedKb": null,
+          "totalKb": null,
+          "share": null
+        },
+        {
+          "key": "/dev/sdz1",
+          "name": "/dev/sdz1",
+          "kind": null,
+          "sizeBytes": 1024000,
+          "celsius": null,
+          "limitCelsius": null,
+          "volumes": [
+            {
+              "mount": "/mnt/gone",
+              "fsType": "ext4",
+              "totalKb": 1000,
+              "usedKb": 10,
+              "availableKb": 990,
+              "share": 0.01
+            }
+          ],
+          "usedKb": 10,
+          "totalKb": 1000,
+          "share": 0.01
+        },
+        {
+          "key": "net:fileserver:/home/user/repos",
+          "name": "fileserver:/home/user/repos",
+          "kind": "network",
+          "sizeBytes": 983348281344,
+          "celsius": null,
+          "limitCelsius": null,
+          "volumes": [
+            {
+              "mount": "/home/user/repos",
+              "fsType": "nfs4",
+              "totalKb": 960301056,
+              "usedKb": 780949504,
+              "availableKb": 130497536,
+              "share": 0.8568237864923013
+            }
+          ],
+          "usedKb": 780949504,
+          "totalKb": 911447040,
+          "share": 0.8568237864923013
+        },
+        {
+          "key": "net:onedrive:",
+          "name": "onedrive:",
+          "kind": "network",
+          "sizeBytes": 1104880336896,
+          "celsius": null,
+          "limitCelsius": null,
+          "volumes": [
+            {
+              "mount": "/home/user/OneDrive",
+              "fsType": "fuse.rclone",
+              "totalKb": 1078984704,
+              "usedKb": 38063312,
+              "availableKb": 1040921392,
+              "share": 0.035276970895780184
+            }
+          ],
+          "usedKb": 38063312,
+          "totalKb": 1078984704,
+          "share": 0.035276970895780184
+        }
+      ],
+      "board": {
+        "sensors": [
+          {
+            "chip": "nct6795",
+            "device": "nct6775.656",
+            "label": "temp4",
+            "celsius": 38.5,
+            "limitCelsius": null
+          }
+        ],
+        "fans": [
+          {
+            "chip": "nct6795",
+            "label": "fan2",
+            "rpm": 812
+          }
+        ]
+      },
+      "services": {
+        "running": 66,
+        "failed": [
+          "ssh.socket",
+          "podman.service (user)"
+        ]
+      }
+    },
+    "sample": {
+      "cpu|use": 50,
+      "cpu|temp": 62.4,
+      "cpu|watts": 60,
+      "cpu|mhz": 3220,
+      "memory|gb": 12.57,
+      "gpu0|use": 3,
+      "gpu0|temp": 40,
+      "gpu0|watts": 18.8,
+      "gpu0|mhz": 210,
+      "gpu0:vram|gb": 0.03,
+      "storage:nvme0n1|gb": 441.33,
+      "storage:nvme0n1|temp": 44.9,
+      "storage:sda|gb": 1741.27,
+      "storage:sda|temp": 34,
+      "storage:/dev/sdz1|gb": 0,
+      "storage:net:fileserver:/home/user/repos|gb": 744.77,
+      "storage:net:onedrive:|gb": 36.3,
+      "fan:nct6795:fan2|rpm": 812
+    }
+  }
+]

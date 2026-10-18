@@ -1,0 +1,209 @@
+[
+  {
+    "view": {
+      "host": "example-host",
+      "kernel": "6.6.87.2-microsoft-standard-WSL2",
+      "os": "Ubuntu 24.04.4 LTS",
+      "hostOs": null,
+      "wsl": true,
+      "sensorLibrary": "missing",
+      "uptimeSeconds": 117358.75,
+      "load": [
+        1.68,
+        1.66,
+        1.38
+      ],
+      "cpu": {
+        "model": "AMD Ryzen 7 3700X 8-Core Processor",
+        "threadCount": 4,
+        "usage": 0.5,
+        "celsius": null,
+        "limitCelsius": null,
+        "mhz": null,
+        "peakMhz": null,
+        "watts": 60,
+        "chip": {
+          "label": "AMD Ryzen 7 3700X 8-Core Processor",
+          "celsius": null,
+          "rows": [
+            [
+              {
+                "label": "CCD0",
+                "role": "compute",
+                "celsius": null,
+                "direction": "column",
+                "items": [
+                  {
+                    "kind": "cluster",
+                    "label": "CCX0",
+                    "cache": "L3 16 MB",
+                    "left": [
+                      {
+                        "label": "C0",
+                        "usage": 0.75,
+                        "mhz": null,
+                        "celsius": null,
+                        "threads": [
+                          {
+                            "cpu": 0,
+                            "usage": 1
+                          },
+                          {
+                            "cpu": 2,
+                            "usage": 0.5
+                          }
+                        ]
+                      }
+                    ],
+                    "right": []
+                  },
+                  {
+                    "kind": "part",
+                    "label": "Infinity Fabric",
+                    "off": false
+                  },
+                  {
+                    "kind": "cluster",
+                    "label": "CCX1",
+                    "cache": "L3",
+                    "left": [
+                      {
+                        "label": "C1",
+                        "usage": 0.25,
+                        "mhz": null,
+                        "celsius": null,
+                        "threads": [
+                          {
+                            "cpu": 1,
+                            "usage": 0
+                          },
+                          {
+                            "cpu": 3,
+                            "usage": 0.5
+                          }
+                        ]
+                      }
+                    ],
+                    "right": []
+                  }
+                ]
+              },
+              null
+            ],
+            [
+              {
+                "label": "IOD",
+                "role": "io",
+                "celsius": null,
+                "direction": "column",
+                "items": [
+                  {
+                    "kind": "part",
+                    "label": "Memory · PCIe",
+                    "off": false
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        "sensors": []
+      },
+      "memory": {
+        "usedKb": 13177856,
+        "totalKb": 49276868,
+        "share": 0.2674247884423174,
+        "swapUsedKb": 1667256,
+        "swapTotalKb": 16777212,
+        "swapShare": 0.09937622532277711
+      },
+      "gpus": [
+        {
+          "index": 0,
+          "name": "NVIDIA GeForce RTX 3060 Ti",
+          "usage": 0.03,
+          "celsius": 40,
+          "limitCelsius": null,
+          "throttling": null,
+          "mhz": 210,
+          "maxMhz": 2100,
+          "memoryMhz": 405,
+          "watts": 18.75,
+          "wattLimit": 200,
+          "wattShare": 0.09375,
+          "memoryUsedMb": 33,
+          "memoryTotalMb": 8192,
+          "memoryShare": 0.0040283203125,
+          "fanPercent": null
+        }
+      ],
+      "storage": [
+        {
+          "key": "/dev/sdc",
+          "name": "/dev/sdc",
+          "kind": null,
+          "sizeBytes": 1081101176832,
+          "celsius": null,
+          "limitCelsius": null,
+          "volumes": [
+            {
+              "mount": "/",
+              "fsType": "ext4",
+              "totalKb": 1055762868,
+              "usedKb": 120000000,
+              "availableKb": 881905396,
+              "share": 0.11977178731553613
+            }
+          ],
+          "usedKb": 120000000,
+          "totalKb": 1001905396,
+          "share": 0.11977178731553613
+        },
+        {
+          "key": "nvme0n1",
+          "name": "Samsung SSD 9100 PRO 1TB",
+          "kind": "virtual",
+          "sizeBytes": 1000204886016,
+          "celsius": null,
+          "limitCelsius": null,
+          "volumes": [
+            {
+              "mount": "/",
+              "fsType": "ext4",
+              "totalKb": 957199192,
+              "usedKb": 465539056,
+              "availableKb": 444730684,
+              "share": 0.5114297834397966
+            }
+          ],
+          "usedKb": 465539056,
+          "totalKb": 910269740,
+          "share": 0.5114297834397966
+        }
+      ],
+      "board": {
+        "sensors": [],
+        "fans": []
+      },
+      "services": {
+        "running": 66,
+        "failed": [
+          "ssh.socket",
+          "podman.service (user)"
+        ]
+      }
+    },
+    "sample": {
+      "cpu|use": 50,
+      "cpu|watts": 60,
+      "memory|gb": 12.57,
+      "gpu0|use": 3,
+      "gpu0|temp": 40,
+      "gpu0|watts": 18.8,
+      "gpu0|mhz": 210,
+      "gpu0:vram|gb": 0.03,
+      "storage:/dev/sdc|gb": 114.44,
+      "storage:nvme0n1|gb": 443.97
+    }
+  }
+]

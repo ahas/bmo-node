@@ -1,0 +1,380 @@
+@@host
+example-host
+@@kernel
+7.0.0-31-generic
+@@version
+Linux version 7.0.0-31-generic (buildd@lcy02) #31
+@@os
+NAME="Ubuntu"
+VERSION_ID="24.04"
+PRETTY_NAME="Ubuntu 24.04.4 LTS"
+@@uptime
+117358.75 1800000.00
+@@loadavg
+1.68 1.66 1.38 2/900 12345
+@@meminfo
+MemTotal:       49276868 kB
+MemFree:         3000000 kB
+MemAvailable:   36099012 kB
+SwapTotal:      16777212 kB
+SwapFree:       15109956 kB
+@@cpuinfo
+processor	: 0
+model name	: AMD Ryzen 9 5950X 16-Core Processor
+cpu MHz		: 3000.500
+processor	: 1
+model name	: AMD Ryzen 9 5950X 16-Core Processor
+cpu MHz		: 3017.500
+processor	: 2
+model name	: AMD Ryzen 9 5950X 16-Core Processor
+cpu MHz		: 3034.500
+processor	: 3
+model name	: AMD Ryzen 9 5950X 16-Core Processor
+cpu MHz		: 3051.500
+processor	: 4
+model name	: AMD Ryzen 9 5950X 16-Core Processor
+cpu MHz		: 3068.500
+processor	: 5
+model name	: AMD Ryzen 9 5950X 16-Core Processor
+cpu MHz		: 3085.500
+processor	: 6
+model name	: AMD Ryzen 9 5950X 16-Core Processor
+cpu MHz		: 3102.500
+processor	: 7
+model name	: AMD Ryzen 9 5950X 16-Core Processor
+cpu MHz		: 3119.500
+processor	: 8
+model name	: AMD Ryzen 9 5950X 16-Core Processor
+cpu MHz		: 3136.500
+processor	: 9
+model name	: AMD Ryzen 9 5950X 16-Core Processor
+cpu MHz		: 3153.500
+processor	: 10
+model name	: AMD Ryzen 9 5950X 16-Core Processor
+cpu MHz		: 3170.500
+processor	: 11
+model name	: AMD Ryzen 9 5950X 16-Core Processor
+cpu MHz		: 3187.500
+processor	: 12
+model name	: AMD Ryzen 9 5950X 16-Core Processor
+cpu MHz		: 3204.500
+processor	: 13
+model name	: AMD Ryzen 9 5950X 16-Core Processor
+cpu MHz		: 3221.500
+processor	: 14
+model name	: AMD Ryzen 9 5950X 16-Core Processor
+cpu MHz		: 3238.500
+processor	: 15
+model name	: AMD Ryzen 9 5950X 16-Core Processor
+cpu MHz		: 3255.500
+processor	: 16
+model name	: AMD Ryzen 9 5950X 16-Core Processor
+cpu MHz		: 3272.500
+processor	: 17
+model name	: AMD Ryzen 9 5950X 16-Core Processor
+cpu MHz		: 3289.500
+processor	: 18
+model name	: AMD Ryzen 9 5950X 16-Core Processor
+cpu MHz		: 3306.500
+processor	: 19
+model name	: AMD Ryzen 9 5950X 16-Core Processor
+cpu MHz		: 3323.500
+processor	: 20
+model name	: AMD Ryzen 9 5950X 16-Core Processor
+cpu MHz		: 3340.500
+processor	: 21
+model name	: AMD Ryzen 9 5950X 16-Core Processor
+cpu MHz		: 3357.500
+processor	: 22
+model name	: AMD Ryzen 9 5950X 16-Core Processor
+cpu MHz		: 3374.500
+processor	: 23
+model name	: AMD Ryzen 9 5950X 16-Core Processor
+cpu MHz		: 3391.500
+processor	: 24
+model name	: AMD Ryzen 9 5950X 16-Core Processor
+cpu MHz		: 3408.500
+processor	: 25
+model name	: AMD Ryzen 9 5950X 16-Core Processor
+cpu MHz		: 3425.500
+processor	: 26
+model name	: AMD Ryzen 9 5950X 16-Core Processor
+cpu MHz		: 3442.500
+processor	: 27
+model name	: AMD Ryzen 9 5950X 16-Core Processor
+cpu MHz		: 3459.500
+processor	: 28
+model name	: AMD Ryzen 9 5950X 16-Core Processor
+cpu MHz		: 3476.500
+processor	: 29
+model name	: AMD Ryzen 9 5950X 16-Core Processor
+cpu MHz		: 3493.500
+processor	: 30
+model name	: AMD Ryzen 9 5950X 16-Core Processor
+cpu MHz		: 3510.500
+processor	: 31
+model name	: AMD Ryzen 9 5950X 16-Core Processor
+cpu MHz		: 3527.500
+@@topology
+/sys/devices/system/cpu/cpu0/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu0/topology/core_id:0
+/sys/devices/system/cpu/cpu0/cache/index3/shared_cpu_list:0-7,16-23
+/sys/devices/system/cpu/cpu0/cache/index3/size:32768K
+/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq:3600000
+/sys/devices/system/cpu/cpu1/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu1/topology/core_id:1
+/sys/devices/system/cpu/cpu1/cache/index3/shared_cpu_list:0-7,16-23
+/sys/devices/system/cpu/cpu1/cache/index3/size:32768K
+/sys/devices/system/cpu/cpu1/cpufreq/scaling_cur_freq:3612345
+/sys/devices/system/cpu/cpu2/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu2/topology/core_id:2
+/sys/devices/system/cpu/cpu2/cache/index3/shared_cpu_list:0-7,16-23
+/sys/devices/system/cpu/cpu2/cache/index3/size:32768K
+/sys/devices/system/cpu/cpu2/cpufreq/scaling_cur_freq:3624690
+/sys/devices/system/cpu/cpu3/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu3/topology/core_id:3
+/sys/devices/system/cpu/cpu3/cache/index3/shared_cpu_list:0-7,16-23
+/sys/devices/system/cpu/cpu3/cache/index3/size:32768K
+/sys/devices/system/cpu/cpu3/cpufreq/scaling_cur_freq:3637035
+/sys/devices/system/cpu/cpu4/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu4/topology/core_id:4
+/sys/devices/system/cpu/cpu4/cache/index3/shared_cpu_list:0-7,16-23
+/sys/devices/system/cpu/cpu4/cache/index3/size:32768K
+/sys/devices/system/cpu/cpu4/cpufreq/scaling_cur_freq:3649380
+/sys/devices/system/cpu/cpu5/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu5/topology/core_id:5
+/sys/devices/system/cpu/cpu5/cache/index3/shared_cpu_list:0-7,16-23
+/sys/devices/system/cpu/cpu5/cache/index3/size:32768K
+/sys/devices/system/cpu/cpu5/cpufreq/scaling_cur_freq:3661725
+/sys/devices/system/cpu/cpu6/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu6/topology/core_id:6
+/sys/devices/system/cpu/cpu6/cache/index3/shared_cpu_list:0-7,16-23
+/sys/devices/system/cpu/cpu6/cache/index3/size:32768K
+/sys/devices/system/cpu/cpu6/cpufreq/scaling_cur_freq:3674070
+/sys/devices/system/cpu/cpu7/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu7/topology/core_id:7
+/sys/devices/system/cpu/cpu7/cache/index3/shared_cpu_list:0-7,16-23
+/sys/devices/system/cpu/cpu7/cache/index3/size:32768K
+/sys/devices/system/cpu/cpu7/cpufreq/scaling_cur_freq:3686415
+/sys/devices/system/cpu/cpu8/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu8/topology/core_id:8
+/sys/devices/system/cpu/cpu8/cache/index3/shared_cpu_list:8-15,24-31
+/sys/devices/system/cpu/cpu8/cache/index3/size:32768K
+/sys/devices/system/cpu/cpu8/cpufreq/scaling_cur_freq:3698760
+/sys/devices/system/cpu/cpu9/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu9/topology/core_id:9
+/sys/devices/system/cpu/cpu9/cache/index3/shared_cpu_list:8-15,24-31
+/sys/devices/system/cpu/cpu9/cache/index3/size:32768K
+/sys/devices/system/cpu/cpu9/cpufreq/scaling_cur_freq:3711105
+/sys/devices/system/cpu/cpu10/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu10/topology/core_id:10
+/sys/devices/system/cpu/cpu10/cache/index3/shared_cpu_list:8-15,24-31
+/sys/devices/system/cpu/cpu10/cache/index3/size:32768K
+/sys/devices/system/cpu/cpu10/cpufreq/scaling_cur_freq:3723450
+/sys/devices/system/cpu/cpu11/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu11/topology/core_id:11
+/sys/devices/system/cpu/cpu11/cache/index3/shared_cpu_list:8-15,24-31
+/sys/devices/system/cpu/cpu11/cache/index3/size:32768K
+/sys/devices/system/cpu/cpu11/cpufreq/scaling_cur_freq:3735795
+/sys/devices/system/cpu/cpu12/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu12/topology/core_id:12
+/sys/devices/system/cpu/cpu12/cache/index3/shared_cpu_list:8-15,24-31
+/sys/devices/system/cpu/cpu12/cache/index3/size:32768K
+/sys/devices/system/cpu/cpu12/cpufreq/scaling_cur_freq:3748140
+/sys/devices/system/cpu/cpu13/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu13/topology/core_id:13
+/sys/devices/system/cpu/cpu13/cache/index3/shared_cpu_list:8-15,24-31
+/sys/devices/system/cpu/cpu13/cache/index3/size:32768K
+/sys/devices/system/cpu/cpu13/cpufreq/scaling_cur_freq:3760485
+/sys/devices/system/cpu/cpu14/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu14/topology/core_id:14
+/sys/devices/system/cpu/cpu14/cache/index3/shared_cpu_list:8-15,24-31
+/sys/devices/system/cpu/cpu14/cache/index3/size:32768K
+/sys/devices/system/cpu/cpu14/cpufreq/scaling_cur_freq:3772830
+/sys/devices/system/cpu/cpu15/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu15/topology/core_id:15
+/sys/devices/system/cpu/cpu15/cache/index3/shared_cpu_list:8-15,24-31
+/sys/devices/system/cpu/cpu15/cache/index3/size:32768K
+/sys/devices/system/cpu/cpu15/cpufreq/scaling_cur_freq:3785175
+/sys/devices/system/cpu/cpu16/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu16/topology/core_id:0
+/sys/devices/system/cpu/cpu16/cache/index3/shared_cpu_list:0-7,16-23
+/sys/devices/system/cpu/cpu16/cache/index3/size:32768K
+/sys/devices/system/cpu/cpu16/cpufreq/scaling_cur_freq:3797520
+/sys/devices/system/cpu/cpu17/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu17/topology/core_id:1
+/sys/devices/system/cpu/cpu17/cache/index3/shared_cpu_list:0-7,16-23
+/sys/devices/system/cpu/cpu17/cache/index3/size:32768K
+/sys/devices/system/cpu/cpu17/cpufreq/scaling_cur_freq:3809865
+/sys/devices/system/cpu/cpu18/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu18/topology/core_id:2
+/sys/devices/system/cpu/cpu18/cache/index3/shared_cpu_list:0-7,16-23
+/sys/devices/system/cpu/cpu18/cache/index3/size:32768K
+/sys/devices/system/cpu/cpu18/cpufreq/scaling_cur_freq:3822210
+/sys/devices/system/cpu/cpu19/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu19/topology/core_id:3
+/sys/devices/system/cpu/cpu19/cache/index3/shared_cpu_list:0-7,16-23
+/sys/devices/system/cpu/cpu19/cache/index3/size:32768K
+/sys/devices/system/cpu/cpu19/cpufreq/scaling_cur_freq:3834555
+/sys/devices/system/cpu/cpu20/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu20/topology/core_id:4
+/sys/devices/system/cpu/cpu20/cache/index3/shared_cpu_list:0-7,16-23
+/sys/devices/system/cpu/cpu20/cache/index3/size:32768K
+/sys/devices/system/cpu/cpu20/cpufreq/scaling_cur_freq:3846900
+/sys/devices/system/cpu/cpu21/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu21/topology/core_id:5
+/sys/devices/system/cpu/cpu21/cache/index3/shared_cpu_list:0-7,16-23
+/sys/devices/system/cpu/cpu21/cache/index3/size:32768K
+/sys/devices/system/cpu/cpu21/cpufreq/scaling_cur_freq:3859245
+/sys/devices/system/cpu/cpu22/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu22/topology/core_id:6
+/sys/devices/system/cpu/cpu22/cache/index3/shared_cpu_list:0-7,16-23
+/sys/devices/system/cpu/cpu22/cache/index3/size:32768K
+/sys/devices/system/cpu/cpu22/cpufreq/scaling_cur_freq:3871590
+/sys/devices/system/cpu/cpu23/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu23/topology/core_id:7
+/sys/devices/system/cpu/cpu23/cache/index3/shared_cpu_list:0-7,16-23
+/sys/devices/system/cpu/cpu23/cache/index3/size:32768K
+/sys/devices/system/cpu/cpu23/cpufreq/scaling_cur_freq:3883935
+/sys/devices/system/cpu/cpu24/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu24/topology/core_id:8
+/sys/devices/system/cpu/cpu24/cache/index3/shared_cpu_list:8-15,24-31
+/sys/devices/system/cpu/cpu24/cache/index3/size:32768K
+/sys/devices/system/cpu/cpu24/cpufreq/scaling_cur_freq:3896280
+/sys/devices/system/cpu/cpu25/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu25/topology/core_id:9
+/sys/devices/system/cpu/cpu25/cache/index3/shared_cpu_list:8-15,24-31
+/sys/devices/system/cpu/cpu25/cache/index3/size:32768K
+/sys/devices/system/cpu/cpu25/cpufreq/scaling_cur_freq:3908625
+/sys/devices/system/cpu/cpu26/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu26/topology/core_id:10
+/sys/devices/system/cpu/cpu26/cache/index3/shared_cpu_list:8-15,24-31
+/sys/devices/system/cpu/cpu26/cache/index3/size:32768K
+/sys/devices/system/cpu/cpu26/cpufreq/scaling_cur_freq:3920970
+/sys/devices/system/cpu/cpu27/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu27/topology/core_id:11
+/sys/devices/system/cpu/cpu27/cache/index3/shared_cpu_list:8-15,24-31
+/sys/devices/system/cpu/cpu27/cache/index3/size:32768K
+/sys/devices/system/cpu/cpu27/cpufreq/scaling_cur_freq:3933315
+/sys/devices/system/cpu/cpu28/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu28/topology/core_id:12
+/sys/devices/system/cpu/cpu28/cache/index3/shared_cpu_list:8-15,24-31
+/sys/devices/system/cpu/cpu28/cache/index3/size:32768K
+/sys/devices/system/cpu/cpu28/cpufreq/scaling_cur_freq:3945660
+/sys/devices/system/cpu/cpu29/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu29/topology/core_id:13
+/sys/devices/system/cpu/cpu29/cache/index3/shared_cpu_list:8-15,24-31
+/sys/devices/system/cpu/cpu29/cache/index3/size:32768K
+/sys/devices/system/cpu/cpu29/cpufreq/scaling_cur_freq:3958005
+/sys/devices/system/cpu/cpu30/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu30/topology/core_id:14
+/sys/devices/system/cpu/cpu30/cache/index3/shared_cpu_list:8-15,24-31
+/sys/devices/system/cpu/cpu30/cache/index3/size:32768K
+/sys/devices/system/cpu/cpu30/cpufreq/scaling_cur_freq:3970350
+/sys/devices/system/cpu/cpu31/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu31/topology/core_id:15
+/sys/devices/system/cpu/cpu31/cache/index3/shared_cpu_list:8-15,24-31
+/sys/devices/system/cpu/cpu31/cache/index3/size:32768K
+/sys/devices/system/cpu/cpu31/cpufreq/scaling_cur_freq:3982695
+@@stat1
+cpu  1000 0 1000 8000 0 0 0 0 0 0
+cpu0 0 0 100 2000 10 0 3 0 0 0
+cpu1 100 0 100 2000 10 0 3 0 0 0
+cpu2 200 0 100 2000 10 0 3 0 0 0
+cpu3 300 0 100 2000 10 0 3 0 0 0
+cpu4 400 0 100 2000 10 0 3 0 0 0
+cpu5 500 0 100 2000 10 0 3 0 0 0
+cpu6 600 0 100 2000 10 0 3 0 0 0
+cpu7 700 0 100 2000 10 0 3 0 0 0
+cpu8 800 0 100 2000 10 0 3 0 0 0
+cpu9 900 0 100 2000 10 0 3 0 0 0
+cpu10 1000 0 100 2000 10 0 3 0 0 0
+cpu11 1100 0 100 2000 10 0 3 0 0 0
+cpu12 1200 0 100 2000 10 0 3 0 0 0
+cpu13 1300 0 100 2000 10 0 3 0 0 0
+cpu14 1400 0 100 2000 10 0 3 0 0 0
+cpu15 1500 0 100 2000 10 0 3 0 0 0
+cpu16 1600 0 100 2000 10 0 3 0 0 0
+cpu17 1700 0 100 2000 10 0 3 0 0 0
+cpu18 1800 0 100 2000 10 0 3 0 0 0
+cpu19 1900 0 100 2000 10 0 3 0 0 0
+cpu20 2000 0 100 2000 10 0 3 0 0 0
+cpu21 2100 0 100 2000 10 0 3 0 0 0
+cpu22 2200 0 100 2000 10 0 3 0 0 0
+cpu23 2300 0 100 2000 10 0 3 0 0 0
+cpu24 2400 0 100 2000 10 0 3 0 0 0
+cpu25 2500 0 100 2000 10 0 3 0 0 0
+cpu26 2600 0 100 2000 10 0 3 0 0 0
+cpu27 2700 0 100 2000 10 0 3 0 0 0
+cpu28 2800 0 100 2000 10 0 3 0 0 0
+cpu29 2900 0 100 2000 10 0 3 0 0 0
+cpu30 3000 0 100 2000 10 0 3 0 0 0
+cpu31 3100 0 100 2000 10 0 3 0 0 0
+@@rapl1
+1000000000
+@@stat2
+cpu  1600 0 1100 8200 0 0 0 0 0 0
+cpu0 0 0 120 2100 10 0 3 0 0 0
+cpu1 107 0 120 2100 10 0 3 0 0 0
+cpu2 214 0 120 2100 10 0 3 0 0 0
+cpu3 321 0 120 2100 10 0 3 0 0 0
+cpu4 428 0 120 2100 10 0 3 0 0 0
+cpu5 535 0 120 2100 10 0 3 0 0 0
+cpu6 642 0 120 2100 10 0 3 0 0 0
+cpu7 749 0 120 2100 10 0 3 0 0 0
+cpu8 856 0 120 2100 10 0 3 0 0 0
+cpu9 963 0 120 2100 10 0 3 0 0 0
+cpu10 1070 0 120 2100 10 0 3 0 0 0
+cpu11 1177 0 120 2100 10 0 3 0 0 0
+cpu12 1284 0 120 2100 10 0 3 0 0 0
+cpu13 1391 0 120 2100 10 0 3 0 0 0
+cpu14 1498 0 120 2100 10 0 3 0 0 0
+cpu15 1605 0 120 2100 10 0 3 0 0 0
+cpu16 1712 0 120 2100 10 0 3 0 0 0
+cpu17 1819 0 120 2100 10 0 3 0 0 0
+cpu18 1926 0 120 2100 10 0 3 0 0 0
+cpu19 2033 0 120 2100 10 0 3 0 0 0
+cpu20 2140 0 120 2100 10 0 3 0 0 0
+cpu21 2247 0 120 2100 10 0 3 0 0 0
+cpu22 2354 0 120 2100 10 0 3 0 0 0
+cpu23 2461 0 120 2100 10 0 3 0 0 0
+cpu24 2568 0 120 2100 10 0 3 0 0 0
+cpu25 2675 0 120 2100 10 0 3 0 0 0
+cpu26 2782 0 120 2100 10 0 3 0 0 0
+cpu27 2889 0 120 2100 10 0 3 0 0 0
+cpu28 2996 0 120 2100 10 0 3 0 0 0
+cpu29 3103 0 120 2100 10 0 3 0 0 0
+cpu30 3210 0 120 2100 10 0 3 0 0 0
+cpu31 3317 0 120 2100 10 0 3 0 0 0
+@@rapl2
+1030000000
+@@hwmon
+chip /sys/class/hwmon/hwmon2 k10temp 0000:00:18.3
+/sys/class/hwmon/hwmon2/temp1_input:71375
+/sys/class/hwmon/hwmon2/temp1_label:Tctl
+/sys/class/hwmon/hwmon2/temp3_input:65250
+/sys/class/hwmon/hwmon2/temp3_label:Tccd1
+/sys/class/hwmon/hwmon2/temp4_input:69125
+/sys/class/hwmon/hwmon2/temp4_label:Tccd2
+chip /sys/class/hwmon/hwmon4 nct6795 nct6775.656
+/sys/class/hwmon/hwmon4/fan2_input:812
+/sys/class/hwmon/hwmon4/temp1_input:0
+/sys/class/hwmon/hwmon4/temp2_input:-128000
+/sys/class/hwmon/hwmon4/temp4_input:38500
+@@gpu
+0, NVIDIA GeForce RTX 3060 Ti, 3, 40, 210, 2100, 405, 18.75, 200.00, 33, 8192, [N/A]
+@@blk
+NAME="nvme0n1" PKNAME="" TYPE="disk" SIZE="1000204886016" MODEL="Samsung SSD 9100 PRO 1TB" ROTA="0" TRAN="nvme"
+NAME="nvme0n1p2" PKNAME="nvme0n1" TYPE="part" SIZE="999000000000" MODEL="" ROTA="0" TRAN="nvme"
+@@blkdev
+nvme0n1 nvme0
+@@df
+/dev/nvme0n1p2 ext4 957199192 465539056 444730684 52% /
+tmpfs tmpfs 100 1 99 1% /run
+@@win
+@@services
+system running 59
+system failed ssh.socket
+user running 7
+user failed ● podman.service
+@@end

@@ -1,0 +1,454 @@
+[
+  {
+    "view": {
+      "host": "example-host",
+      "kernel": "7.0.0-31-generic",
+      "os": "Ubuntu 24.04.4 LTS",
+      "hostOs": null,
+      "wsl": false,
+      "sensorLibrary": null,
+      "uptimeSeconds": 117358.75,
+      "load": [
+        1.68,
+        1.66,
+        1.38
+      ],
+      "cpu": {
+        "model": "AMD Ryzen 9 5950X 16-Core Processor",
+        "threadCount": 32,
+        "usage": 0.7777777777777778,
+        "celsius": 71.4,
+        "limitCelsius": null,
+        "mhz": 3791,
+        "peakMhz": 3983,
+        "watts": 60,
+        "chip": {
+          "label": "AMD Ryzen 9 5950X 16-Core Processor",
+          "celsius": 71.4,
+          "rows": [
+            [
+              {
+                "label": "CCD0",
+                "role": "compute",
+                "celsius": 65.3,
+                "direction": "column",
+                "items": [
+                  {
+                    "kind": "cluster",
+                    "label": "CCX0",
+                    "cache": "L3 32 MB",
+                    "left": [
+                      {
+                        "label": "C0",
+                        "usage": 0.367816091954023,
+                        "mhz": 3798,
+                        "celsius": null,
+                        "threads": [
+                          {
+                            "cpu": 0,
+                            "usage": 0.16666666666666666
+                          },
+                          {
+                            "cpu": 16,
+                            "usage": 0.5689655172413793
+                          }
+                        ]
+                      },
+                      {
+                        "label": "C1",
+                        "usage": 0.39709419167792315,
+                        "mhz": 3810,
+                        "celsius": null,
+                        "threads": [
+                          {
+                            "cpu": 1,
+                            "usage": 0.2125984251968504
+                          },
+                          {
+                            "cpu": 17,
+                            "usage": 0.5815899581589958
+                          }
+                        ]
+                      },
+                      {
+                        "label": "C2",
+                        "usage": 0.4236136391214659,
+                        "mhz": 3822,
+                        "celsius": null,
+                        "threads": [
+                          {
+                            "cpu": 2,
+                            "usage": 0.2537313432835821
+                          },
+                          {
+                            "cpu": 18,
+                            "usage": 0.5934959349593496
+                          }
+                        ]
+                      },
+                      {
+                        "label": "C3",
+                        "usage": 0.44776161242396206,
+                        "mhz": 3835,
+                        "celsius": null,
+                        "threads": [
+                          {
+                            "cpu": 3,
+                            "usage": 0.2907801418439716
+                          },
+                          {
+                            "cpu": 19,
+                            "usage": 0.6047430830039525
+                          }
+                        ]
+                      }
+                    ],
+                    "right": [
+                      {
+                        "label": "C4",
+                        "usage": 0.4698544698544699,
+                        "mhz": 3847,
+                        "celsius": null,
+                        "threads": [
+                          {
+                            "cpu": 4,
+                            "usage": 0.32432432432432434
+                          },
+                          {
+                            "cpu": 20,
+                            "usage": 0.6153846153846154
+                          }
+                        ]
+                      },
+                      {
+                        "label": "C5",
+                        "usage": 0.4901534372357134,
+                        "mhz": 3859,
+                        "celsius": null,
+                        "threads": [
+                          {
+                            "cpu": 5,
+                            "usage": 0.3548387096774194
+                          },
+                          {
+                            "cpu": 21,
+                            "usage": 0.6254681647940075
+                          }
+                        ]
+                      },
+                      {
+                        "label": "C6",
+                        "usage": 0.5088762728665405,
+                        "mhz": 3872,
+                        "celsius": null,
+                        "threads": [
+                          {
+                            "cpu": 6,
+                            "usage": 0.38271604938271603
+                          },
+                          {
+                            "cpu": 22,
+                            "usage": 0.635036496350365
+                          }
+                        ]
+                      },
+                      {
+                        "label": "C7",
+                        "usage": 0.5262060687738213,
+                        "mhz": 3884,
+                        "celsius": null,
+                        "threads": [
+                          {
+                            "cpu": 7,
+                            "usage": 0.40828402366863903
+                          },
+                          {
+                            "cpu": 23,
+                            "usage": 0.6441281138790036
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "CCD1",
+                "role": "compute",
+                "celsius": 69.1,
+                "direction": "column",
+                "items": [
+                  {
+                    "kind": "cluster",
+                    "label": "CCX1",
+                    "cache": "L3 32 MB",
+                    "left": [
+                      {
+                        "label": "C8",
+                        "usage": 0.5422979797979798,
+                        "mhz": 3896,
+                        "celsius": null,
+                        "threads": [
+                          {
+                            "cpu": 8,
+                            "usage": 0.4318181818181818
+                          },
+                          {
+                            "cpu": 24,
+                            "usage": 0.6527777777777778
+                          }
+                        ]
+                      },
+                      {
+                        "label": "C9",
+                        "usage": 0.5572844308604242,
+                        "mhz": 3909,
+                        "celsius": null,
+                        "threads": [
+                          {
+                            "cpu": 9,
+                            "usage": 0.453551912568306
+                          },
+                          {
+                            "cpu": 25,
+                            "usage": 0.6610169491525424
+                          }
+                        ]
+                      },
+                      {
+                        "label": "C10",
+                        "usage": 0.5712791913558731,
+                        "mhz": 3921,
+                        "celsius": null,
+                        "threads": [
+                          {
+                            "cpu": 10,
+                            "usage": 0.47368421052631576
+                          },
+                          {
+                            "cpu": 26,
+                            "usage": 0.6688741721854304
+                          }
+                        ]
+                      },
+                      {
+                        "label": "C11",
+                        "usage": 0.5843805956663873,
+                        "mhz": 3933,
+                        "celsius": null,
+                        "threads": [
+                          {
+                            "cpu": 11,
+                            "usage": 0.49238578680203043
+                          },
+                          {
+                            "cpu": 27,
+                            "usage": 0.6763754045307443
+                          }
+                        ]
+                      }
+                    ],
+                    "right": [
+                      {
+                        "label": "C12",
+                        "usage": 0.5966741126830479,
+                        "mhz": 3946,
+                        "celsius": null,
+                        "threads": [
+                          {
+                            "cpu": 12,
+                            "usage": 0.5098039215686274
+                          },
+                          {
+                            "cpu": 28,
+                            "usage": 0.6835443037974683
+                          }
+                        ]
+                      },
+                      {
+                        "label": "C13",
+                        "usage": 0.6082344137455431,
+                        "mhz": 3958,
+                        "celsius": null,
+                        "threads": [
+                          {
+                            "cpu": 13,
+                            "usage": 0.5260663507109005
+                          },
+                          {
+                            "cpu": 29,
+                            "usage": 0.6904024767801857
+                          }
+                        ]
+                      },
+                      {
+                        "label": "C14",
+                        "usage": 0.6191270503197108,
+                        "mhz": 3970,
+                        "celsius": null,
+                        "threads": [
+                          {
+                            "cpu": 14,
+                            "usage": 0.5412844036697247
+                          },
+                          {
+                            "cpu": 30,
+                            "usage": 0.696969696969697
+                          }
+                        ]
+                      },
+                      {
+                        "label": "C15",
+                        "usage": 0.6294098252555226,
+                        "mhz": 3983,
+                        "celsius": null,
+                        "threads": [
+                          {
+                            "cpu": 15,
+                            "usage": 0.5555555555555556
+                          },
+                          {
+                            "cpu": 31,
+                            "usage": 0.7032640949554896
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "label": "IOD",
+                "role": "io",
+                "celsius": null,
+                "direction": "column",
+                "items": [
+                  {
+                    "kind": "part",
+                    "label": "Memory · PCIe",
+                    "off": false
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        "sensors": [
+          {
+            "chip": "k10temp",
+            "device": "0000:00:18.3",
+            "label": "Tctl",
+            "celsius": 71.4,
+            "limitCelsius": null
+          },
+          {
+            "chip": "k10temp",
+            "device": "0000:00:18.3",
+            "label": "Tccd1",
+            "celsius": 65.3,
+            "limitCelsius": null
+          },
+          {
+            "chip": "k10temp",
+            "device": "0000:00:18.3",
+            "label": "Tccd2",
+            "celsius": 69.1,
+            "limitCelsius": null
+          }
+        ]
+      },
+      "memory": {
+        "usedKb": 13177856,
+        "totalKb": 49276868,
+        "share": 0.2674247884423174,
+        "swapUsedKb": 1667256,
+        "swapTotalKb": 16777212,
+        "swapShare": 0.09937622532277711
+      },
+      "gpus": [
+        {
+          "index": 0,
+          "name": "NVIDIA GeForce RTX 3060 Ti",
+          "usage": 0.03,
+          "celsius": 40,
+          "limitCelsius": null,
+          "throttling": null,
+          "mhz": 210,
+          "maxMhz": 2100,
+          "memoryMhz": 405,
+          "watts": 18.75,
+          "wattLimit": 200,
+          "wattShare": 0.09375,
+          "memoryUsedMb": 33,
+          "memoryTotalMb": 8192,
+          "memoryShare": 0.0040283203125,
+          "fanPercent": null
+        }
+      ],
+      "storage": [
+        {
+          "key": "nvme0n1",
+          "name": "Samsung SSD 9100 PRO 1TB",
+          "kind": "nvme",
+          "sizeBytes": 1000204886016,
+          "celsius": null,
+          "limitCelsius": null,
+          "volumes": [
+            {
+              "mount": "/",
+              "fsType": "ext4",
+              "totalKb": 957199192,
+              "usedKb": 465539056,
+              "availableKb": 444730684,
+              "share": 0.5114297834397966
+            }
+          ],
+          "usedKb": 465539056,
+          "totalKb": 910269740,
+          "share": 0.5114297834397966
+        }
+      ],
+      "board": {
+        "sensors": [
+          {
+            "chip": "nct6795",
+            "device": "nct6775.656",
+            "label": "temp4",
+            "celsius": 38.5,
+            "limitCelsius": null
+          }
+        ],
+        "fans": [
+          {
+            "chip": "nct6795",
+            "label": "fan2",
+            "rpm": 812
+          }
+        ]
+      },
+      "services": {
+        "running": 66,
+        "failed": [
+          "ssh.socket",
+          "podman.service (user)"
+        ]
+      }
+    },
+    "sample": {
+      "cpu|use": 77.8,
+      "cpu|temp": 71.4,
+      "cpu|watts": 60,
+      "cpu|mhz": 3791,
+      "memory|gb": 12.57,
+      "gpu0|use": 3,
+      "gpu0|temp": 40,
+      "gpu0|watts": 18.8,
+      "gpu0|mhz": 210,
+      "gpu0:vram|gb": 0.03,
+      "storage:nvme0n1|gb": 443.97,
+      "fan:nct6795:fan2|rpm": 812
+    }
+  }
+]

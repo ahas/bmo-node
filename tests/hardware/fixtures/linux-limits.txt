@@ -1,0 +1,113 @@
+@@host
+example-host
+@@kernel
+7.0.0-31-generic
+@@version
+Linux version 7.0.0-31-generic (buildd@lcy02) #31
+@@os
+NAME="Ubuntu"
+VERSION_ID="24.04"
+PRETTY_NAME="Ubuntu 24.04.4 LTS"
+@@uptime
+117358.75 1800000.00
+@@loadavg
+1.68 1.66 1.38 2/900 12345
+@@meminfo
+MemTotal:       49276868 kB
+MemFree:         3000000 kB
+MemAvailable:   36099012 kB
+SwapTotal:      16777212 kB
+SwapFree:       15109956 kB
+@@cpuinfo
+processor	: 0
+model name	: AMD Ryzen 7 3700X 8-Core Processor
+cpu MHz		: 4229.000
+processor	: 1
+model name	: AMD Ryzen 7 3700X 8-Core Processor
+cpu MHz		: 4249.000
+processor	: 2
+model name	: AMD Ryzen 7 3700X 8-Core Processor
+cpu MHz		: 2200.000
+processor	: 3
+model name	: AMD Ryzen 7 3700X 8-Core Processor
+cpu MHz		: 2200.000
+@@topology
+/sys/devices/system/cpu/cpu0/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu1/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu2/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu3/topology/physical_package_id:0
+/sys/devices/system/cpu/cpu0/topology/core_id:0
+/sys/devices/system/cpu/cpu1/topology/core_id:1
+/sys/devices/system/cpu/cpu2/topology/core_id:0
+/sys/devices/system/cpu/cpu3/topology/core_id:1
+/sys/devices/system/cpu/cpu0/cache/index3/shared_cpu_list:0-3
+/sys/devices/system/cpu/cpu0/cache/index3/size:16384K
+/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq:4229000
+/sys/devices/system/cpu/cpu1/cpufreq/scaling_cur_freq:4249000
+/sys/devices/system/cpu/cpu2/cpufreq/scaling_cur_freq:2200000
+/sys/devices/system/cpu/cpu3/cpufreq/scaling_cur_freq:2200000
+@@stat1
+cpu  1000 0 1000 8000 0 0 0 0 0 0
+cpu0 250 0 250 2000 0 0 0 0 0 0
+cpu1 250 0 250 2000 0 0 0 0 0 0
+cpu2 250 0 250 2000 0 0 0 0 0 0
+cpu3 250 0 250 2000 0 0 0 0 0 0
+@@rapl1
+1000000000
+@@stat2
+cpu  1100 0 1100 8200 0 0 0 0 0 0
+cpu0 300 0 300 2000 0 0 0 0 0 0
+cpu1 250 0 250 2100 0 0 0 0 0 0
+cpu2 275 0 275 2050 0 0 0 0 0 0
+cpu3 275 0 275 2050 0 0 0 0 0 0
+@@rapl2
+1030000000
+@@hwmon
+chip /sys/class/hwmon/hwmon0 nvme nvme0
+/sys/class/hwmon/hwmon0/temp1_input:44850
+/sys/class/hwmon/hwmon0/temp1_label:Composite
+/sys/class/hwmon/hwmon0/temp1_crit:84850
+/sys/class/hwmon/hwmon0/temp1_max:81850
+chip /sys/class/hwmon/hwmon2 k10temp 0000:00:18.3
+/sys/class/hwmon/hwmon2/temp1_input:62375
+/sys/class/hwmon/hwmon2/temp3_input:57750
+/sys/class/hwmon/hwmon2/temp1_label:Tctl
+/sys/class/hwmon/hwmon2/temp3_label:Tccd1
+chip /sys/class/hwmon/hwmon4 nct6795 nct6775.656
+/sys/class/hwmon/hwmon4/fan2_input:812
+/sys/class/hwmon/hwmon4/temp1_input:0
+/sys/class/hwmon/hwmon4/temp2_input:-128000
+/sys/class/hwmon/hwmon4/temp4_input:38500
+@@gpu
+0, NVIDIA GeForce RTX 3060 Ti, 3, 40, 210, 2100, 405, 18.75, 200.00, 33, 8192, [N/A], Active, Not Active
+@@gpureport
+<?xml version="1.0" ?>
+<!DOCTYPE nvidia_smi_log SYSTEM "nvsmi_device_v12.dtd">
+<nvidia_smi_log>
+	<driver_version>580.178.04</driver_version>
+	<gpu id="00000000:03:00.0">
+		<product_name>NVIDIA GeForce RTX 3060 Ti</product_name>
+		<temperature>
+			<gpu_temp>40 C</gpu_temp>
+			<gpu_temp_tlimit>N/A</gpu_temp_tlimit>
+			<gpu_temp_max_threshold>98 C</gpu_temp_max_threshold>
+			<gpu_temp_slow_threshold>95 C</gpu_temp_slow_threshold>
+			<gpu_temp_max_gpu_threshold>93 C</gpu_temp_max_gpu_threshold>
+		</temperature>
+	</gpu>
+</nvidia_smi_log>
+@@blk
+NAME="nvme0n1" PKNAME="" TYPE="disk" SIZE="1000204886016" MODEL="Samsung SSD 9100 PRO 1TB" ROTA="0" TRAN="nvme"
+NAME="nvme0n1p2" PKNAME="nvme0n1" TYPE="part" SIZE="999000000000" MODEL="" ROTA="0" TRAN="nvme"
+@@blkdev
+nvme0n1 nvme0
+@@df
+/dev/nvme0n1p2 ext4 957199192 465539056 444730684 52% /
+tmpfs tmpfs 100 1 99 1% /run
+@@win
+@@services
+system running 59
+system failed ssh.socket
+user running 7
+user failed ● podman.service
+@@end

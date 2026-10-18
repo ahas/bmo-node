@@ -1,0 +1,216 @@
+[
+  {
+    "view": {
+      "host": "example-host",
+      "kernel": "7.0.0-31-generic",
+      "os": "Ubuntu 24.04.4 LTS",
+      "hostOs": null,
+      "wsl": false,
+      "sensorLibrary": null,
+      "uptimeSeconds": 117358.75,
+      "load": [
+        1.68,
+        1.66,
+        1.38
+      ],
+      "cpu": {
+        "model": "12th Gen Intel(R) Core(TM) i7-12700K",
+        "threadCount": 8,
+        "usage": 0.7777777777777778,
+        "celsius": null,
+        "limitCelsius": null,
+        "mhz": 3643,
+        "peakMhz": 3686,
+        "watts": 60,
+        "chip": {
+          "label": "12th Gen Intel(R) Core(TM) i7-12700K",
+          "celsius": null,
+          "rows": [
+            [
+              {
+                "label": "Die",
+                "role": "compute",
+                "celsius": null,
+                "direction": "column",
+                "items": [
+                  {
+                    "kind": "cluster",
+                    "label": "L3 0",
+                    "cache": "L3 32 MB",
+                    "left": [
+                      {
+                        "label": "C0",
+                        "usage": 0.24549549549549549,
+                        "mhz": 3649,
+                        "celsius": null,
+                        "threads": [
+                          {
+                            "cpu": 0,
+                            "usage": 0.16666666666666666
+                          },
+                          {
+                            "cpu": 4,
+                            "usage": 0.32432432432432434
+                          }
+                        ]
+                      }
+                    ],
+                    "right": [
+                      {
+                        "label": "C1",
+                        "usage": 0.28371856743713486,
+                        "mhz": 3662,
+                        "celsius": null,
+                        "threads": [
+                          {
+                            "cpu": 1,
+                            "usage": 0.2125984251968504
+                          },
+                          {
+                            "cpu": 5,
+                            "usage": 0.3548387096774194
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "kind": "cluster",
+                    "label": "L3 1",
+                    "cache": "L3 32 MB",
+                    "left": [
+                      {
+                        "label": "C2",
+                        "usage": 0.31822369633314906,
+                        "mhz": 3674,
+                        "celsius": null,
+                        "threads": [
+                          {
+                            "cpu": 2,
+                            "usage": 0.2537313432835821
+                          },
+                          {
+                            "cpu": 6,
+                            "usage": 0.38271604938271603
+                          }
+                        ]
+                      }
+                    ],
+                    "right": [
+                      {
+                        "label": "C3",
+                        "usage": 0.3495320827563053,
+                        "mhz": 3686,
+                        "celsius": null,
+                        "threads": [
+                          {
+                            "cpu": 3,
+                            "usage": 0.2907801418439716
+                          },
+                          {
+                            "cpu": 7,
+                            "usage": 0.40828402366863903
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        "sensors": []
+      },
+      "memory": {
+        "usedKb": 13177856,
+        "totalKb": 49276868,
+        "share": 0.2674247884423174,
+        "swapUsedKb": 1667256,
+        "swapTotalKb": 16777212,
+        "swapShare": 0.09937622532277711
+      },
+      "gpus": [
+        {
+          "index": 0,
+          "name": "NVIDIA GeForce RTX 3060 Ti",
+          "usage": 0.03,
+          "celsius": 40,
+          "limitCelsius": null,
+          "throttling": null,
+          "mhz": 210,
+          "maxMhz": 2100,
+          "memoryMhz": 405,
+          "watts": 18.75,
+          "wattLimit": 200,
+          "wattShare": 0.09375,
+          "memoryUsedMb": 33,
+          "memoryTotalMb": 8192,
+          "memoryShare": 0.0040283203125,
+          "fanPercent": null
+        }
+      ],
+      "storage": [
+        {
+          "key": "nvme0n1",
+          "name": "Samsung SSD 9100 PRO 1TB",
+          "kind": "nvme",
+          "sizeBytes": 1000204886016,
+          "celsius": null,
+          "limitCelsius": null,
+          "volumes": [
+            {
+              "mount": "/",
+              "fsType": "ext4",
+              "totalKb": 957199192,
+              "usedKb": 465539056,
+              "availableKb": 444730684,
+              "share": 0.5114297834397966
+            }
+          ],
+          "usedKb": 465539056,
+          "totalKb": 910269740,
+          "share": 0.5114297834397966
+        }
+      ],
+      "board": {
+        "sensors": [
+          {
+            "chip": "nct6795",
+            "device": "nct6775.656",
+            "label": "temp4",
+            "celsius": 38.5,
+            "limitCelsius": null
+          }
+        ],
+        "fans": [
+          {
+            "chip": "nct6795",
+            "label": "fan2",
+            "rpm": 812
+          }
+        ]
+      },
+      "services": {
+        "running": 66,
+        "failed": [
+          "ssh.socket",
+          "podman.service (user)"
+        ]
+      }
+    },
+    "sample": {
+      "cpu|use": 77.8,
+      "cpu|watts": 60,
+      "cpu|mhz": 3643,
+      "memory|gb": 12.57,
+      "gpu0|use": 3,
+      "gpu0|temp": 40,
+      "gpu0|watts": 18.8,
+      "gpu0|mhz": 210,
+      "gpu0:vram|gb": 0.03,
+      "storage:nvme0n1|gb": 443.97,
+      "fan:nct6795:fan2|rpm": 812
+    }
+  }
+]

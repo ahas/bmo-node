@@ -52,6 +52,36 @@ impl Store {
     self.rows("hardware_samples", "sample", machine, from, until)
   }
 
+  /// A machine's minute rows from `from` up to `until` whose stretch of `width` seconds has no rolled-up
+  /// row yet, the oldest first.
+  pub fn samples_not_rolled_up(
+    &self,
+    machine: &str,
+    from: i64,
+    until: i64,
+    width: i64,
+  ) -> Result<Vec<Row>> {
+    let connection = self.connection();
+    let mut query = connection.prepare(&format!(
+      "SELECT s.machine, s.at, s.sample FROM hardware_samples s
+       WHERE s.machine = ?1 AND s.at >= ?2 AND s.at < ?3
+       AND NOT EXISTS (SELECT 1 FROM hardware_rollups r WHERE r.machine = s.machine AND r.at = {grain})
+       ORDER BY s.at",
+      grain = grain_of("s.at", width)
+    ))?;
+    let rows = query
+      .query_map(params![machine, from, until], |row| {
+        Ok(Row {
+          machine: row.get(0)?,
+          at: row.get(1)?,
+          figures: row.get(2)?,
+        })
+      })?
+      .collect::<rusqlite::Result<Vec<_>>>()?;
+
+    Ok(rows)
+  }
+
   /// A machine's half-hour rows from `from` up to `until`, the oldest first.
   pub fn rollups(&self, machine: &str, from: i64, until: i64) -> Result<Vec<Row>> {
     self.rows("hardware_rollups", "tally", machine, from, until)

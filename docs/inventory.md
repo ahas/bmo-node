@@ -67,7 +67,7 @@ scripts.
 | `node-shell` | 1 | bmo-voice's and bmo-kakaotalk's, who run their services on a node over its login; kakaotalk carries its own |
 | `hardware-read`, `node-view`, `this-machine` | 3 | realised in Rust by `crates/server`'s hardware reads and node views |
 | `process-memory` | 1 | agency's: its `machine memory` verb |
-| `hardware-chips.test`, `hardware-history.test`, `hardware-live-record.test`, `hardware-parity.test`, `hardware-probe.test`, `hardware-storage.test`, `hardware-view.test`, `hardware-windows.test` | 8 | each assertion held by a Rust test in `tests/hardware` |
+| `hardware-chips.test`, `hardware-history.test`, `hardware-live-record.test`, `hardware-parity.test`, `hardware-probe.test`, `hardware-storage.test`, `hardware-view.test`, `hardware-windows.test` | 8 | each assertion held by a Rust test in `tests/hardware`; the probe test's bare Linux output stands as `tests/hardware/samples/linux-bare.txt` |
 | `ssh-login.test` | 1 | each assertion held by a Rust test in `tests/node-check` |
 | `jake-hub.test` | 1 | the token's assertions held in `tests/node-check`, the exec stream's in `tests/hardware`; the file transfer's go with bmo-voice |
 | `node-shell.test` | 1 | goes with bmo-voice and bmo-kakaotalk |
@@ -76,7 +76,7 @@ scripts.
 | `nodes.test` | 1 | each assertion held by a Rust test in `tests/cli` |
 | `process-memory.test` | 1 | agency's |
 | `package.json`, `tsconfig.json`, `bunfig.toml` | 3 | dropped: no TypeScript package stands here |
-| `fixtures/probe`: `linux-cpuinfo-clocks`, `linux-generic`, `linux-intel-ring`, `linux-limits`, `linux-no-services`, `linux-storage`, `linux-zen2-two-ccds`, `linux-zen3`, `linux`, `live-limits`, `live-local`, `live-synthetic`, `live-windows`, `windows`, `wsl-no-windows`, `wsl`, each a `.txt` output and the `.json` readings made of it | 32 | carried to `tests/hardware/fixtures`, personal paths made neutral |
+| `fixtures/probe`: `linux-cpuinfo-clocks`, `linux-generic`, `linux-intel-ring`, `linux-limits`, `linux-no-services`, `linux-storage`, `linux-zen2-two-ccds`, `linux-zen3`, `linux`, `live-limits`, `live-local`, `live-synthetic`, `live-windows`, `windows`, `wsl-no-windows`, `wsl`, each a `.txt` output and the `.json` readings made of it | 32 | carried to `tests/hardware/fixtures`, host names and personal paths made neutral and the chip's part names English, as the parser now writes them |
 | `probe-files`: `live-posix-240.sh`, `live-posix-3600.sh`, `live-powershell-3600.ps1` | 3 | carried to `crates/hardware` |
 
 The two third-party libraries the package used, an event-stream parser and an XML parser, went with the

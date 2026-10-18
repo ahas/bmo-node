@@ -1,0 +1,121 @@
+@@host
+example-host
+@@kernel
+7.0.0-31-generic
+@@version
+Linux version 7
+@@os
+PRETTY_NAME="Ubuntu 24.04"
+@@model
+model name	: AMD Ryzen 9 3900X 12-Core Processor
+@@layout
+/sys/devices/system/cpu/cpu0/topology/core_id:0
+/sys/devices/system/cpu/cpu0/topology/physical_package_id:0
+@@df
+/dev/nvme0n1p2 ext4 1000 400 600 40% /
+@@services
+system running 3
+@@uptime
+100
+@@loadavg
+0.50 0.40 0.30 1/2 3
+@@meminfo
+MemTotal: 1000 kB
+MemAvailable: 400 kB
+SwapTotal: 0 kB
+SwapFree: 0 kB
+@@stat
+cpu  0 0 0 10000 0 0 0 0
+cpu0 0 0 0 10000 0 0 0 0
+@@rapl
+1000000
+@@clock
+/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq:3600000
+@@end
+@@uptime
+102
+@@loadavg
+0.50 0.40 0.30 1/2 3
+@@meminfo
+MemTotal: 1000 kB
+MemAvailable: 400 kB
+SwapTotal: 0 kB
+SwapFree: 0 kB
+@@stat
+cpu  50 0 0 10150 0 0 0 0
+cpu0 50 0 0 10150 0 0 0 0
+@@rapl
+61000000
+@@clock
+/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq:3600000
+@@end
+@@uptime
+101
+@@loadavg
+0.50 0.40 0.30 1/2 3
+@@meminfo
+MemTotal: 1000 kB
+MemAvailable: 400 kB
+SwapTotal: 0 kB
+SwapFree: 0 kB
+@@stat
+cpu  60 0 0 10040 0 0 0 0
+cpu0 60 0 0 10040 0 0 0 0
+@@rapl
+62000000
+@@clock
+/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq:3600000
+@@end
+@@uptime
+103.5
+@@loadavg
+0.50 0.40 0.30 1/2 3
+@@meminfo
+MemTotal: 1000 kB
+MemAvailable: 400 kB
+SwapTotal: 0 kB
+SwapFree: 0 kB
+@@stat
+cpu  90 0 0 10260 0 0 0 0
+cpu0 90 0 0 10260 0 0 0 0
+@@rapl
+denied
+@@cpumhz
+processor	: 0
+cpu MHz		: 2894.561
+@@end
+@@host
+example-host
+@@kernel
+7.0.0-31-generic
+@@version
+Linux version 7
+@@os
+PRETTY_NAME="Ubuntu 24.04"
+@@model
+model name	: AMD Ryzen 9 3900X 12-Core Processor
+@@layout
+/sys/devices/system/cpu/cpu0/topology/core_id:0
+/sys/devices/system/cpu/cpu0/topology/physical_package_id:0
+@@df
+/dev/nvme0n1p2 ext4 1000 400 600 40% /
+@@services
+system running 3
+@@uptime
+104
+@@loadavg
+0.50 0.40 0.30 1/2 3
+@@meminfo
+MemTotal: 1000 kB
+MemAvailable: 400 kB
+SwapTotal: 0 kB
+SwapFree: 0 kB
+@@stat
+cpu  100 0 0 10300 0 0 0 0
+cpu0 100 0 0 10300 0 0 0 0
+@@rapl
+80000000
+@@cpumhz
+processor	: 0
+cpu MHz		: 2894.561
+@@end

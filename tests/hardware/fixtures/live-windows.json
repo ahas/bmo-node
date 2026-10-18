@@ -1,0 +1,419 @@
+[
+  null,
+  {
+    "view": {
+      "host": "HOME-PC",
+      "kernel": "10.0.22631",
+      "os": "Windows 11 Pro (build 22631)",
+      "hostOs": null,
+      "wsl": false,
+      "sensorLibrary": "ok",
+      "uptimeSeconds": 3600,
+      "load": null,
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "threadCount": 4,
+        "usage": 0.3,
+        "celsius": 55.5,
+        "limitCelsius": null,
+        "mhz": 4400,
+        "peakMhz": 4500,
+        "watts": 25,
+        "chip": {
+          "label": "AMD Ryzen 7 5800X 8-Core Processor",
+          "celsius": 62,
+          "rows": [
+            [
+              {
+                "label": "CCD0",
+                "role": "compute",
+                "celsius": null,
+                "direction": "column",
+                "items": [
+                  {
+                    "kind": "cluster",
+                    "label": "CCX0",
+                    "cache": "L3",
+                    "left": [
+                      {
+                        "label": "C0",
+                        "usage": 0.15,
+                        "mhz": 4500,
+                        "celsius": null,
+                        "threads": [
+                          {
+                            "cpu": 0,
+                            "usage": 0.3
+                          },
+                          {
+                            "cpu": 1,
+                            "usage": 0
+                          }
+                        ]
+                      }
+                    ],
+                    "right": [
+                      {
+                        "label": "C1",
+                        "usage": 0.105,
+                        "mhz": 4300,
+                        "celsius": 61,
+                        "threads": [
+                          {
+                            "cpu": 2,
+                            "usage": 0.105
+                          },
+                          {
+                            "cpu": 3,
+                            "usage": null
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              null
+            ],
+            [
+              {
+                "label": "IOD",
+                "role": "io",
+                "celsius": null,
+                "direction": "column",
+                "items": [
+                  {
+                    "kind": "part",
+                    "label": "Memory · PCIe",
+                    "off": false
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        "sensors": [
+          {
+            "chip": "k10temp",
+            "device": null,
+            "label": "Tctl",
+            "celsius": 55.5,
+            "limitCelsius": null
+          },
+          {
+            "chip": "coretemp",
+            "device": null,
+            "label": "Core 1",
+            "celsius": 61,
+            "limitCelsius": null
+          },
+          {
+            "chip": "coretemp",
+            "device": null,
+            "label": "Package id 0",
+            "celsius": 62,
+            "limitCelsius": null
+          }
+        ]
+      },
+      "memory": {
+        "usedKb": 16777216,
+        "totalKb": 33554432,
+        "share": 0.5,
+        "swapUsedKb": 524288,
+        "swapTotalKb": 4194304,
+        "swapShare": 0.125
+      },
+      "gpus": [
+        {
+          "index": 0,
+          "name": "NVIDIA GeForce RTX 3080",
+          "usage": 0.07,
+          "celsius": 45,
+          "limitCelsius": null,
+          "throttling": null,
+          "mhz": 210,
+          "maxMhz": 2100,
+          "memoryMhz": 405,
+          "watts": 31.5,
+          "wattLimit": 320,
+          "wattShare": 0.0984375,
+          "memoryUsedMb": 1200,
+          "memoryTotalMb": 10240,
+          "memoryShare": 0.1171875,
+          "fanPercent": 30
+        },
+        {
+          "index": 1,
+          "name": "NVIDIA GeForce RTX 3080",
+          "usage": null,
+          "celsius": null,
+          "limitCelsius": null,
+          "throttling": null,
+          "mhz": null,
+          "maxMhz": null,
+          "memoryMhz": null,
+          "watts": null,
+          "wattLimit": null,
+          "wattShare": null,
+          "memoryUsedMb": null,
+          "memoryTotalMb": null,
+          "memoryShare": null,
+          "fanPercent": null
+        }
+      ],
+      "storage": [
+        {
+          "key": "win0",
+          "name": "Samsung SSD 980 1TB",
+          "kind": "nvme",
+          "sizeBytes": 1000204886016,
+          "celsius": null,
+          "limitCelsius": null,
+          "volumes": [
+            {
+              "mount": "C:",
+              "fsType": "NTFS",
+              "totalKb": 975738876,
+              "usedKb": 487869438,
+              "availableKb": 487869438,
+              "share": 0.5
+            }
+          ],
+          "usedKb": 487869438,
+          "totalKb": 975738876,
+          "share": 0.5
+        }
+      ],
+      "board": {
+        "sensors": [],
+        "fans": []
+      },
+      "services": {
+        "running": null,
+        "failed": null
+      }
+    },
+    "sample": {
+      "cpu|use": 30,
+      "cpu|temp": 55.5,
+      "cpu|watts": 25,
+      "cpu|mhz": 4400,
+      "memory|gb": 16,
+      "gpu0|use": 7,
+      "gpu0|temp": 45,
+      "gpu0|watts": 31.5,
+      "gpu0|mhz": 210,
+      "gpu0:vram|gb": 1.17,
+      "storage:win0|gb": 465.27
+    }
+  },
+  null,
+  {
+    "view": {
+      "host": "HOME-PC",
+      "kernel": "10.0.22631",
+      "os": "Windows 11 Pro (build 22631)",
+      "hostOs": null,
+      "wsl": false,
+      "sensorLibrary": "ok",
+      "uptimeSeconds": 3600,
+      "load": null,
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "threadCount": 4,
+        "usage": 0.5,
+        "celsius": 55.5,
+        "limitCelsius": null,
+        "mhz": 4400,
+        "peakMhz": 4500,
+        "watts": null,
+        "chip": {
+          "label": "AMD Ryzen 7 5800X 8-Core Processor",
+          "celsius": 62,
+          "rows": [
+            [
+              {
+                "label": "CCD0",
+                "role": "compute",
+                "celsius": null,
+                "direction": "column",
+                "items": [
+                  {
+                    "kind": "cluster",
+                    "label": "CCX0",
+                    "cache": "L3",
+                    "left": [
+                      {
+                        "label": "C0",
+                        "usage": 0.25,
+                        "mhz": 4500,
+                        "celsius": null,
+                        "threads": [
+                          {
+                            "cpu": 0,
+                            "usage": 0.5
+                          },
+                          {
+                            "cpu": 1,
+                            "usage": 0
+                          }
+                        ]
+                      }
+                    ],
+                    "right": [
+                      {
+                        "label": "C1",
+                        "usage": 0.105,
+                        "mhz": 4300,
+                        "celsius": 61,
+                        "threads": [
+                          {
+                            "cpu": 2,
+                            "usage": 0.105
+                          },
+                          {
+                            "cpu": 3,
+                            "usage": null
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              null
+            ],
+            [
+              {
+                "label": "IOD",
+                "role": "io",
+                "celsius": null,
+                "direction": "column",
+                "items": [
+                  {
+                    "kind": "part",
+                    "label": "Memory · PCIe",
+                    "off": false
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        "sensors": [
+          {
+            "chip": "k10temp",
+            "device": null,
+            "label": "Tctl",
+            "celsius": 55.5,
+            "limitCelsius": null
+          },
+          {
+            "chip": "coretemp",
+            "device": null,
+            "label": "Core 1",
+            "celsius": 61,
+            "limitCelsius": null
+          },
+          {
+            "chip": "coretemp",
+            "device": null,
+            "label": "Package id 0",
+            "celsius": 62,
+            "limitCelsius": null
+          }
+        ]
+      },
+      "memory": {
+        "usedKb": 16777216,
+        "totalKb": 33554432,
+        "share": 0.5,
+        "swapUsedKb": 524288,
+        "swapTotalKb": 4194304,
+        "swapShare": 0.125
+      },
+      "gpus": [
+        {
+          "index": 0,
+          "name": "NVIDIA GeForce RTX 3080",
+          "usage": 0.07,
+          "celsius": 45,
+          "limitCelsius": null,
+          "throttling": null,
+          "mhz": 210,
+          "maxMhz": 2100,
+          "memoryMhz": 405,
+          "watts": 31.5,
+          "wattLimit": 320,
+          "wattShare": 0.0984375,
+          "memoryUsedMb": 1200,
+          "memoryTotalMb": 10240,
+          "memoryShare": 0.1171875,
+          "fanPercent": 30
+        },
+        {
+          "index": 1,
+          "name": "NVIDIA GeForce RTX 3080",
+          "usage": null,
+          "celsius": null,
+          "limitCelsius": null,
+          "throttling": null,
+          "mhz": null,
+          "maxMhz": null,
+          "memoryMhz": null,
+          "watts": null,
+          "wattLimit": null,
+          "wattShare": null,
+          "memoryUsedMb": null,
+          "memoryTotalMb": null,
+          "memoryShare": null,
+          "fanPercent": null
+        }
+      ],
+      "storage": [
+        {
+          "key": "win0",
+          "name": "Samsung SSD 980 1TB",
+          "kind": "nvme",
+          "sizeBytes": 1000204886016,
+          "celsius": null,
+          "limitCelsius": null,
+          "volumes": [
+            {
+              "mount": "C:",
+              "fsType": "NTFS",
+              "totalKb": 975738876,
+              "usedKb": 487869438,
+              "availableKb": 487869438,
+              "share": 0.5
+            }
+          ],
+          "usedKb": 487869438,
+          "totalKb": 975738876,
+          "share": 0.5
+        }
+      ],
+      "board": {
+        "sensors": [],
+        "fans": []
+      },
+      "services": {
+        "running": null,
+        "failed": null
+      }
+    },
+    "sample": {
+      "cpu|use": 50,
+      "cpu|temp": 55.5,
+      "cpu|mhz": 4400,
+      "memory|gb": 16,
+      "gpu0|use": 7,
+      "gpu0|temp": 45,
+      "gpu0|watts": 31.5,
+      "gpu0|mhz": 210,
+      "gpu0:vram|gb": 1.17,
+      "storage:win0|gb": 465.27
+    }
+  }
+]

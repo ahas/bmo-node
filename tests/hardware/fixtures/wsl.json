@@ -1,0 +1,299 @@
+[
+  {
+    "view": {
+      "host": "example-host",
+      "kernel": "6.6.87.2-microsoft-standard-WSL2",
+      "os": "Ubuntu 24.04.4 LTS",
+      "hostOs": "Windows 11 Pro (build 26200)",
+      "wsl": true,
+      "sensorLibrary": "ok",
+      "uptimeSeconds": 647247,
+      "load": [
+        1.68,
+        1.66,
+        1.38
+      ],
+      "cpu": {
+        "model": "AMD Ryzen 7 3700X 8-Core Processor",
+        "threadCount": 4,
+        "usage": 0.125,
+        "celsius": 55.3,
+        "limitCelsius": null,
+        "mhz": 3983,
+        "peakMhz": 4125,
+        "watts": 24.3,
+        "chip": {
+          "label": "AMD Ryzen 7 3700X 8-Core Processor",
+          "celsius": 55.3,
+          "rows": [
+            [
+              {
+                "label": "CCD0",
+                "role": "compute",
+                "celsius": 50.1,
+                "direction": "column",
+                "items": [
+                  {
+                    "kind": "cluster",
+                    "label": "CCX0",
+                    "cache": "L3 16 MB",
+                    "left": [
+                      {
+                        "label": "C0",
+                        "usage": 0.375,
+                        "mhz": 4125,
+                        "celsius": null,
+                        "threads": [
+                          {
+                            "cpu": 0,
+                            "usage": 0.5
+                          },
+                          {
+                            "cpu": 2,
+                            "usage": 0.25
+                          }
+                        ]
+                      }
+                    ],
+                    "right": []
+                  },
+                  {
+                    "kind": "part",
+                    "label": "Infinity Fabric",
+                    "off": false
+                  },
+                  {
+                    "kind": "cluster",
+                    "label": "CCX1",
+                    "cache": "L3",
+                    "left": [
+                      {
+                        "label": "C1",
+                        "usage": 0,
+                        "mhz": 3905,
+                        "celsius": null,
+                        "threads": [
+                          {
+                            "cpu": 1,
+                            "usage": 0
+                          },
+                          {
+                            "cpu": 3,
+                            "usage": 0
+                          }
+                        ]
+                      }
+                    ],
+                    "right": []
+                  }
+                ]
+              },
+              null
+            ],
+            [
+              {
+                "label": "IOD",
+                "role": "io",
+                "celsius": null,
+                "direction": "column",
+                "items": [
+                  {
+                    "kind": "part",
+                    "label": "Memory · PCIe",
+                    "off": false
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        "sensors": [
+          {
+            "chip": "k10temp",
+            "device": null,
+            "label": "Tctl",
+            "celsius": 55.3,
+            "limitCelsius": null
+          },
+          {
+            "chip": "k10temp",
+            "device": null,
+            "label": "Tccd1",
+            "celsius": 50.1,
+            "limitCelsius": null
+          }
+        ]
+      },
+      "memory": {
+        "usedKb": 16473808,
+        "totalKb": 33477544,
+        "share": 0.49208532143218153,
+        "swapUsedKb": 1667256,
+        "swapTotalKb": 16777212,
+        "swapShare": 0.09937622532277711
+      },
+      "gpus": [
+        {
+          "index": 0,
+          "name": "NVIDIA GeForce RTX 3060 Ti",
+          "usage": 0.03,
+          "celsius": 40,
+          "limitCelsius": null,
+          "throttling": null,
+          "mhz": 210,
+          "maxMhz": 2100,
+          "memoryMhz": 405,
+          "watts": 18.75,
+          "wattLimit": 200,
+          "wattShare": 0.09375,
+          "memoryUsedMb": 33,
+          "memoryTotalMb": 8192,
+          "memoryShare": 0.0040283203125,
+          "fanPercent": null
+        }
+      ],
+      "storage": [
+        {
+          "key": "/dev/sdc",
+          "name": "/dev/sdc",
+          "kind": null,
+          "sizeBytes": 1081101176832,
+          "celsius": null,
+          "limitCelsius": null,
+          "volumes": [
+            {
+              "mount": "/",
+              "fsType": "ext4",
+              "totalKb": 1055762868,
+              "usedKb": 120000000,
+              "availableKb": 881905396,
+              "share": 0.11977178731553613
+            }
+          ],
+          "usedKb": 120000000,
+          "totalKb": 1001905396,
+          "share": 0.11977178731553613
+        },
+        {
+          "key": "nvme0n1",
+          "name": "Samsung SSD 9100 PRO 1TB",
+          "kind": "virtual",
+          "sizeBytes": 1000204886016,
+          "celsius": null,
+          "limitCelsius": null,
+          "volumes": [
+            {
+              "mount": "/",
+              "fsType": "ext4",
+              "totalKb": 957199192,
+              "usedKb": 465539056,
+              "availableKb": 444730684,
+              "share": 0.5114297834397966
+            }
+          ],
+          "usedKb": 465539056,
+          "totalKb": 910269740,
+          "share": 0.5114297834397966
+        },
+        {
+          "key": "win0",
+          "name": "ST3000DM007-1WY10G",
+          "kind": "hdd",
+          "sizeBytes": 3000592982016,
+          "celsius": 41.9,
+          "limitCelsius": null,
+          "volumes": [
+            {
+              "mount": "D:",
+              "fsType": "NTFS",
+              "totalKb": 2930266584,
+              "usedKb": 1953125000,
+              "availableKb": 977141584,
+              "share": 0.6665349189266802
+            }
+          ],
+          "usedKb": 1953125000,
+          "totalKb": 2930266584,
+          "share": 0.6665349189266802
+        },
+        {
+          "key": "win1",
+          "name": "Samsung SSD 850 EVO 250GB",
+          "kind": "ssd",
+          "sizeBytes": 250059350016,
+          "celsius": 39,
+          "limitCelsius": null,
+          "volumes": [
+            {
+              "mount": "C:",
+              "fsType": "NTFS",
+              "totalKb": 242591740,
+              "usedKb": 190665564,
+              "availableKb": 51926176,
+              "share": 0.7859524153625346
+            }
+          ],
+          "usedKb": 190665564,
+          "totalKb": 242591740,
+          "share": 0.7859524153625346
+        },
+        {
+          "key": "win4",
+          "name": "Seagate Expansion Desk",
+          "kind": "usb",
+          "sizeBytes": 8001563221504,
+          "celsius": null,
+          "limitCelsius": null,
+          "volumes": [],
+          "usedKb": null,
+          "totalKb": null,
+          "share": null
+        }
+      ],
+      "board": {
+        "sensors": [
+          {
+            "chip": "nct6798d",
+            "device": null,
+            "label": "Temperature #1",
+            "celsius": 39,
+            "limitCelsius": null
+          }
+        ],
+        "fans": [
+          {
+            "chip": "nct6798d",
+            "label": "Fan #2",
+            "rpm": 641
+          }
+        ]
+      },
+      "services": {
+        "running": 66,
+        "failed": [
+          "ssh.socket",
+          "podman.service (user)"
+        ]
+      }
+    },
+    "sample": {
+      "cpu|use": 12.5,
+      "cpu|temp": 55.3,
+      "cpu|watts": 24.3,
+      "cpu|mhz": 3983,
+      "memory|gb": 15.71,
+      "gpu0|use": 3,
+      "gpu0|temp": 40,
+      "gpu0|watts": 18.8,
+      "gpu0|mhz": 210,
+      "gpu0:vram|gb": 0.03,
+      "storage:/dev/sdc|gb": 114.44,
+      "storage:nvme0n1|gb": 443.97,
+      "storage:win0|gb": 1862.65,
+      "storage:win0|temp": 41.9,
+      "storage:win1|gb": 181.83,
+      "storage:win1|temp": 39,
+      "fan:nct6798d:Fan #2|rpm": 641
+    }
+  }
+]
