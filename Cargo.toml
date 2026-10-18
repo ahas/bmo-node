@@ -25,11 +25,13 @@ http-body-util = "0.1.3"
 hyper = { version = "1.6.0", features = ["client", "http1"] }
 hyper-util = { version = "0.1.16", features = ["tokio"] }
 libc = "0.2.177"
+serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.138"
 subtle = "2.6.1"
 tempfile = "3.20.0"
 tokio = { version = "1.47.0", features = ["macros", "rt", "rt-multi-thread", "net", "time", "signal", "io-util", "process"] }
 tokio-tungstenite = "0.29.0"
+toml = { version = "0.8.23", default-features = false, features = ["parse"] }
 
 [package]
 name = "node-checks"

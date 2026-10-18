@@ -4,3 +4,7 @@ description = "The node service's policy files and their readers."
 version.workspace = true
 edition.workspace = true
 publish = false
+
+[dependencies]
+serde.workspace = true
+toml.workspace = true

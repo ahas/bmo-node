@@ -1,0 +1,23 @@
+# What a node's last check came to, and how each reads at a glance: reached, not reached, or not yet asked
+# (docs/nodes.md, 「The states」). Each state is named by its code; the web console words it.
+
+[connected]
+tone = "good"
+
+[disconnected]
+tone = "bad"
+
+[auth]
+tone = "bad"
+
+[hostkey]
+tone = "bad"
+
+[unreachable]
+tone = "bad"
+
+[error]
+tone = "bad"
+
+[unknown]
+tone = "unknown"

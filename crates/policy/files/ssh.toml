@@ -1,0 +1,42 @@
+# How the node service logs in to an ssh node (docs/nodes.md, 「How a node's state is known」): the check,
+# the node's shell, the hardware monitor and the login handed to agency all start OpenSSH from these options.
+
+# A login nobody is at: it asks nobody for anything, gives up connecting after five seconds, takes a
+# host key the first time and holds to it after, and says only its errors.
+[batch]
+options = ["BatchMode=yes", "ConnectTimeout=5", "StrictHostKeyChecking=accept-new", "LogLevel=ERROR"]
+# Where the row names a key, that key alone is offered.
+key_options = ["IdentitiesOnly=yes"]
+
+# A person's login from a node's pane: the same host key rule, and nothing held back from asking,
+# since somebody is there to answer.
+[person]
+options = ["StrictHostKeyChecking=accept-new"]
+key_options = []
+
+# The check's own login, which runs nothing and is stopped once it has taken this long.
+[check]
+command = "exit"
+wait_seconds = 12
+
+# What a login that ended met, read off OpenSSH's words: the first state one of whose phrases its
+# standard error holds, in any case. A login that ended otherwise is an error.
+[[ended]]
+state = "auth"
+said = ["Permission denied", "Too many authentication failures"]
+
+[[ended]]
+state = "hostkey"
+said = ["Host key verification failed", "REMOTE HOST IDENTIFICATION HAS CHANGED"]
+
+[[ended]]
+state = "unreachable"
+said = [
+  "timed out",
+  "Connection refused",
+  "No route to host",
+  "Network is unreachable",
+  "Could not resolve",
+  "Name or service not known",
+  "Connection closed by remote host",
+]

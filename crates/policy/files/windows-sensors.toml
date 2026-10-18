@@ -1,0 +1,6 @@
+# The sensor library a machine's Windows is read through (docs/hardware.md, 「The Windows side」): where it
+# is kept under %ProgramData%, which the hardware monitor's sensor script loads it from, and the release of
+# LibreHardwareMonitor and the driver package `bmo-node hardware-setup` puts there.
+library_dir = 'bmo\lhm'
+release = "v0.9.6"
+driver_package = "namazso.PawnIO"
