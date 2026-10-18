@@ -56,7 +56,7 @@ an empty object where nothing is sent.
 | `/machine/room` | nothing | `held`: what this machine is short of for another launch, each an English reason with its figure; empty where it has room (`docs/machine.md`) |
 | `/links/state` | `node` | `up` (boolean): the node's last check found it connected and was made within the link window (`docs/nodes.md`, 「A node's link」); false for a node not listed |
 | `/nodes/list` | nothing | `nodes`, in the list's order: each `node`, `label`, `kind` (`ssh` or `jake`), `state` and `detail?` |
-| `/nodes/login` | `node` | `ssh`: the arguments that open a batch SSH login to the node, ahead of the command, or null where the node has no SSH route |
+| `/nodes/login` | `node` | `ssh`: the arguments that open a batch SSH login to the node, ahead of the command, or null where the node has no SSH route; refused `no-node` for a node not listed |
 
 - **The held reasons** are `memory pressure <full>% >= <limit>%`, `available memory <available>GB <
   <limit>GB`, `load <load> >= <threads> threads x <limit>` and `disk free <free>GB < <limit>GB`, each

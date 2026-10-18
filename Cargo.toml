@@ -38,6 +38,7 @@ serde ={ version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.138"
 sse-stream = "0.2.6"
 subtle = "2.6.1"
+sysinfo = { version = "0.38.4", default-features = false, features = ["network", "system"] }
 tempfile = "3.20.0"
 tokio = { version = "1.47.0", features = ["macros", "rt", "rt-multi-thread", "net", "time", "signal", "io-util", "process"] }
 tokio-tungstenite = "0.29.0"
@@ -66,7 +67,9 @@ llm-bridge = { path = "crates/llm-bridge" }
 node-check = { path = "crates/node-check" }
 node-server = { path = "crates/server" }
 policy = { path = "crates/policy" }
+reqwest.workspace = true
 rusqlite.workspace = true
+serde.workspace = true
 serde_json.workspace = true
 store = { path = "crates/store" }
 tempfile.workspace = true

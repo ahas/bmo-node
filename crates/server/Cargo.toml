@@ -4,3 +4,25 @@ description = "The node service: its routes, its loops and the bmo-node command.
 version.workspace = true
 edition.workspace = true
 publish = false
+
+[[bin]]
+name = "bmo-node"
+path = "src/main.rs"
+test = false
+
+[dependencies]
+axum.workspace = true
+clap.workspace = true
+futures-util.workspace = true
+hardware = { path = "../hardware" }
+node-check = { path = "../node-check" }
+policy = { path = "../policy" }
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+store = { path = "../store" }
+subtle.workspace = true
+sysinfo.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+toml.workspace = true
