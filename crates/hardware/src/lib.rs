@@ -8,6 +8,7 @@ pub mod history;
 pub mod hub_exec;
 pub mod js;
 pub mod live;
+pub mod machine;
 pub mod probe;
 pub mod record;
 pub mod roads;

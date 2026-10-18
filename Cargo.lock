@@ -659,6 +659,7 @@ dependencies = [
  "base64 0.22.1",
  "flate2",
  "futures-util",
+ "libc",
  "node-check",
  "percent-encoding",
  "policy",

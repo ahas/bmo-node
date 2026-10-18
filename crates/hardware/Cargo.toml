@@ -9,6 +9,7 @@ publish = false
 base64.workspace = true
 flate2.workspace = true
 futures-util.workspace = true
+libc.workspace = true
 node-check = { path = "../node-check" }
 percent-encoding.workspace = true
 policy = { path = "../policy" }
