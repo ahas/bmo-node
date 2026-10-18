@@ -4,3 +4,8 @@ description = "The node service's own store: the node list, the hubs, the hardwa
 version.workspace = true
 edition.workspace = true
 publish = false
+
+[dependencies]
+policy = { path = "../policy" }
+rusqlite.workspace = true
+url.workspace = true

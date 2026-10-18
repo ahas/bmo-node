@@ -1,1 +1,148 @@
-//! The node service's own store (docs/store.md).
+//! The node service's own store (docs/store.md): one SQLite file in the data root's `node/` folder holding
+//! the node list, the hubs, the hardware history and the settings, and the path of the live record beside
+//! it. No other unit reads these files.
+
+use std::fmt;
+use std::path::{Path, PathBuf};
+use std::sync::{Mutex, MutexGuard};
+use std::time::{SystemTime, UNIX_EPOCH};
+
+use rusqlite::Connection;
+
+pub mod history;
+mod migration;
+pub mod nodes;
+pub mod settings;
+
+pub use migration::HUB_SEED;
+
+/// The folder under the data root everything of the node service's stands in.
+pub const FOLDER: &str = "node";
+
+/// The store's own file in that folder.
+pub const STORE_FILE: &str = "node.db";
+
+/// The live record's file in that folder (docs/hardware.md, 「Live」).
+pub const RECORD_FILE: &str = "hardware-live.db";
+
+/// The node service's folder under a data root.
+pub fn folder(data_root: &Path) -> PathBuf {
+  data_root.join(FOLDER)
+}
+
+/// The store's file under a data root.
+pub fn store_path(data_root: &Path) -> PathBuf {
+  folder(data_root).join(STORE_FILE)
+}
+
+/// The live record's file under a data root.
+pub fn live_record_path(data_root: &Path) -> PathBuf {
+  folder(data_root).join(RECORD_FILE)
+}
+
+/// A request the store refuses, with its code (docs/api.md, 「Conventions」) and an English sentence.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Refusal {
+  pub code: &'static str,
+  pub message: String,
+}
+
+impl Refusal {
+  pub fn new(code: &'static str, message: impl Into<String>) -> Self {
+    Self {
+      code,
+      message: message.into(),
+    }
+  }
+}
+
+/// Why a call to the store did not do what it was asked.
+#[derive(Debug)]
+pub enum StoreError {
+  /// The request is one the store does not take, said as a refusal.
+  Refused(Refusal),
+  /// The database failed.
+  Database(rusqlite::Error),
+  /// The store's folder could not be made.
+  Folder(std::io::Error),
+}
+
+impl StoreError {
+  pub fn refused(code: &'static str, message: impl Into<String>) -> Self {
+    Self::Refused(Refusal::new(code, message))
+  }
+
+  /// The refusal this error is, where it is one.
+  pub fn refusal(&self) -> Option<&Refusal> {
+    match self {
+      Self::Refused(refusal) => Some(refusal),
+      _ => None,
+    }
+  }
+}
+
+impl fmt::Display for StoreError {
+  fn fmt(&self, out: &mut fmt::Formatter<'_>) -> fmt::Result {
+    match self {
+      Self::Refused(refusal) => write!(out, "{} ({})", refusal.message, refusal.code),
+      Self::Database(error) => write!(out, "the node store failed: {error}"),
+      Self::Folder(error) => write!(out, "the node store's folder could not be made: {error}"),
+    }
+  }
+}
+
+impl std::error::Error for StoreError {}
+
+impl From<rusqlite::Error> for StoreError {
+  fn from(error: rusqlite::Error) -> Self {
+    Self::Database(error)
+  }
+}
+
+pub type Result<T> = std::result::Result<T, StoreError>;
+
+/// The store: one connection, used by one caller at a time.
+pub struct Store {
+  connection: Mutex<Connection>,
+}
+
+impl Store {
+  /// The store at its file under the data root, its folder made and its migrations run.
+  pub fn open_in(data_root: &Path) -> Result<Self> {
+    std::fs::create_dir_all(folder(data_root)).map_err(StoreError::Folder)?;
+    Self::open(&store_path(data_root))
+  }
+
+  /// The store at a file, its migrations run.
+  pub fn open(path: &Path) -> Result<Self> {
+    let connection = Connection::open(path)?;
+
+    connection.pragma_update(None, "journal_mode", "WAL")?;
+    connection.pragma_update(None, "synchronous", "NORMAL")?;
+    connection.busy_timeout(std::time::Duration::from_secs(5))?;
+    Self::settled(connection)
+  }
+
+  /// A store held in memory alone, its migrations run.
+  pub fn in_memory() -> Result<Self> {
+    Self::settled(Connection::open_in_memory()?)
+  }
+
+  fn settled(mut connection: Connection) -> Result<Self> {
+    migration::settle(&mut connection, now_seconds())?;
+
+    Ok(Self {
+      connection: Mutex::new(connection),
+    })
+  }
+
+  /// The connection, held for one caller.
+  pub(crate) fn connection(&self) -> MutexGuard<'_, Connection> {
+    self.connection.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+  }
+}
+
+/// Now, in seconds since the epoch.
+pub fn now_seconds() -> i64 {
+  SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |since| since.as_secs() as i64)
+}
