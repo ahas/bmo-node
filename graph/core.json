@@ -1,0 +1,62 @@
+[
+  {
+    "id": "core/policy",
+    "title": "Node policy files",
+    "what": "The node service's policy read from TOML at build time: node states and their tones, the SSH check's options and patience, the Windows sensor release, and the node name rule, in crates/policy.",
+    "files": [
+      "crates/policy/src/lib.rs",
+      "crates/policy/src/node_states.rs",
+      "crates/policy/src/nodes.rs",
+      "crates/policy/src/ssh.rs",
+      "crates/policy/src/windows_sensors.rs",
+      "crates/policy/files/node-states.toml",
+      "crates/policy/files/ssh.toml",
+      "crates/policy/files/windows-sensors.toml",
+      "tests/policy/main.rs"
+    ],
+    "symbols": [],
+    "aliases": [],
+    "needs": [],
+    "base": "92607dac8f5df5fae94a23d5288b0897704af64d"
+  },
+  {
+    "id": "core/store",
+    "title": "Node store",
+    "what": "The node service's SQLite store under the data root's node folder: the node list, the hubs, the hardware settings and the hardware history with its rollups, migrated by user_version, in crates/store.",
+    "files": [
+      "crates/store/src/lib.rs",
+      "crates/store/src/migration.rs",
+      "crates/store/src/nodes.rs",
+      "crates/store/src/settings.rs",
+      "crates/store/src/history.rs",
+      "docs/store.md",
+      "tests/store/main.rs",
+      "tests/store/nodes.rs",
+      "tests/store/settings.rs",
+      "tests/store/history.rs"
+    ],
+    "symbols": [],
+    "aliases": [],
+    "needs": [
+      "core/policy"
+    ],
+    "base": "92607dac8f5df5fae94a23d5288b0897704af64d"
+  },
+  {
+    "id": "core/repository-rules",
+    "title": "Repository rules checks",
+    "what": "The tests that hold the repository to its own rules: no directory named after its parent, only Cargo manifests at the root, dependencies only on the base libraries, and no personal names, hosts, paths or Korean in code.",
+    "files": [
+      "tests/layout.rs",
+      "tests/dependencies.rs",
+      "tests/literals.rs",
+      "testbed.toml",
+      "CLAUDE.md",
+      "docs/inventory.md"
+    ],
+    "symbols": [],
+    "aliases": [],
+    "needs": [],
+    "base": "92607dac8f5df5fae94a23d5288b0897704af64d"
+  }
+]

@@ -1,0 +1,52 @@
+[
+  {
+    "id": "nodes/node-check",
+    "title": "Node check",
+    "what": "The check of every listed node: an SSH node by a batch login, a jake node through its hub with the hub's token, each answer read into a state and written back to the node list; a library and the node-check binary in crates/node-check.",
+    "files": [
+      "crates/node-check/src/lib.rs",
+      "crates/node-check/src/main.rs",
+      "crates/node-check/src/hub.rs",
+      "crates/node-check/src/pass.rs",
+      "crates/node-check/src/rows.rs",
+      "crates/node-check/src/ssh.rs",
+      "crates/node-check/src/store_rows.rs",
+      "docs/nodes.md",
+      "tests/node-check/main.rs",
+      "tests/node-check/check.rs",
+      "tests/node-check/ssh.rs",
+      "tests/node-check/hub_token.rs"
+    ],
+    "symbols": [],
+    "aliases": [],
+    "needs": [
+      "core/policy",
+      "core/store"
+    ],
+    "base": "92607dac8f5df5fae94a23d5288b0897704af64d"
+  },
+  {
+    "id": "nodes/node-command",
+    "title": "Node command",
+    "what": "The bmo-node command's node verbs and Windows sensor setup: add, set, remove, check, target and list nodes and hubs over the store, and hand a Windows machine the sensor setup script, in the server crate's cli module.",
+    "files": [
+      "crates/server/src/cli.rs",
+      "crates/server/src/main.rs",
+      "docs/nodes.md",
+      "tests/cli/main.rs",
+      "tests/cli/verbs.rs",
+      "tests/cli/list.rs",
+      "tests/cli/setup.rs",
+      "tests/cli/store_rules.rs"
+    ],
+    "symbols": [],
+    "aliases": [],
+    "needs": [
+      "core/store",
+      "nodes/node-check",
+      "hardware/roads-and-probe",
+      "server/routes"
+    ],
+    "base": "92607dac8f5df5fae94a23d5288b0897704af64d"
+  }
+]

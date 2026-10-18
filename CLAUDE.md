@@ -51,6 +51,9 @@ which job a process serves, whether a launch goes ahead and what the chat agent 
   - `server`: the `bmo-node` binary: the routes, the loops and the command (`docs/api.md`).
 - `docs/`: the canonical documents.
 - `deploy/`: the service units, `bmo-node.service` and `bmo-llm-bridge.service`.
+- `graph/`: the code dependency graph, one node per feature in four areas (`core`, `nodes`, `hardware`,
+  `server`), each with its files and the features it needs. A commit that changes the files a node names,
+  or moves one, brings that node up to date in the same commit.
 - `testbed.toml`: how the testbed tests, checks, builds and deploys the repository.
 - `tests/`: every test, with the probe's fixtures under `tests/hardware/fixtures`.
 

@@ -1,0 +1,81 @@
+[
+  {
+    "id": "server/routes",
+    "title": "Node service API",
+    "what": "The bmo-node HTTP service: the bearer-guarded routes for agency's four calls, the node list, the hardware monitor, the machine standing and the event stream, and its configuration and health, in crates/server.",
+    "files": [
+      "crates/server/src/lib.rs",
+      "crates/server/src/config.rs",
+      "crates/server/src/reply.rs",
+      "crates/server/src/events.rs",
+      "crates/server/src/views.rs",
+      "crates/server/src/this_machine.rs",
+      "crates/server/src/main.rs",
+      "crates/server/src/routes/mod.rs",
+      "crates/server/src/routes/agency.rs",
+      "crates/server/src/routes/nodes.rs",
+      "crates/server/src/routes/hardware.rs",
+      "crates/server/src/routes/stream.rs",
+      "docs/api.md",
+      "tests/server/main.rs",
+      "tests/server/support.rs",
+      "tests/server/agency.rs",
+      "tests/server/nodes.rs",
+      "tests/server/names.rs",
+      "tests/server/registry.rs",
+      "tests/server/hardware.rs",
+      "tests/server/once.rs",
+      "tests/server/stream.rs"
+    ],
+    "symbols": [],
+    "aliases": [],
+    "needs": [
+      "core/store",
+      "nodes/node-check",
+      "hardware/monitor",
+      "hardware/machine-standing",
+      "hardware/roads-and-probe"
+    ],
+    "base": "92607dac8f5df5fae94a23d5288b0897704af64d"
+  },
+  {
+    "id": "server/loops",
+    "title": "Node service loops",
+    "what": "The three passes the node service runs while it serves: the node check every minute with its list-shape event, the hardware recorder, and the machine look publishing pressure, in the server crate's loops module.",
+    "files": [
+      "crates/server/src/loops.rs",
+      "deploy/bmo-node.service",
+      "tests/server/pass.rs"
+    ],
+    "symbols": [],
+    "aliases": [],
+    "needs": [
+      "server/routes",
+      "nodes/node-check",
+      "hardware/monitor",
+      "hardware/machine-standing"
+    ],
+    "base": "92607dac8f5df5fae94a23d5288b0897704af64d"
+  },
+  {
+    "id": "server/llm-bridge",
+    "title": "LLM bridge",
+    "what": "The llm-bridge tunnel door: a node behind an HTTPS-only network dials in with its SSH inside a WebSocket, and the door checks the bearer against its listed key files and pipes the socket to this machine's own SSH; a binary of its own in crates/llm-bridge.",
+    "files": [
+      "crates/llm-bridge/src/lib.rs",
+      "crates/llm-bridge/src/main.rs",
+      "crates/llm-bridge/src/door.rs",
+      "crates/llm-bridge/src/keys.rs",
+      "deploy/bmo-llm-bridge.service",
+      "docs/llm-bridge.md",
+      "tests/llm-bridge/main.rs",
+      "tests/llm-bridge/contract.rs",
+      "tests/llm-bridge/keys.rs",
+      "tests/support/binary.rs"
+    ],
+    "symbols": [],
+    "aliases": [],
+    "needs": [],
+    "base": "92607dac8f5df5fae94a23d5288b0897704af64d"
+  }
+]
