@@ -44,7 +44,7 @@ which job a process serves, whether a launch goes ahead and what the chat agent 
 - `crates/`: the Rust crates.
   - `policy`: the policy files, `node-states.toml`, `ssh.toml` and `windows-sensors.toml`, and their readers.
   - `store`: node's own database and the live record's path (`docs/store.md`).
-  - `node-check`: whether each node answers, and a node's shell (`docs/nodes.md`).
+  - `node-check`: whether each node answers, the SSH login's arguments and a hub's token (`docs/nodes.md`).
   - `hardware`: the probe, its parser, the recorder, the history and the machine reading
     (`docs/hardware.md`, `docs/machine.md`).
   - `llm-bridge`: the tunnel door (`docs/llm-bridge.md`).

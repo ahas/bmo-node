@@ -65,7 +65,7 @@ service's API (`docs/api.md`); nothing else keeps a list of its own.
     every hub it is handed which agents are attached; `node-check nodes` checks every row it is handed,
     reading a jake node off the hub answers handed with it.
   - How OpenSSH is started for a node and how its end is read are the policy's `ssh.toml`, so the check,
-    the node's shell, the hardware monitor and the login arguments handed to agency log in the same way.
+    the hardware monitor and the login arguments handed to agency log in the same way.
 - **When a check runs:**
   - the service checks every node when it starts and once a minute after, all nodes at once, and writes
     each check to the node's row;
@@ -143,24 +143,14 @@ The command is `bmo-node --config <file> node`, and the registry routes do the s
   connection type or a hub already listed is refused, and nothing is written.
 - Every change publishes `nodes-changed`.
 
-## A node's shell
+## Reaching a node
 
-- **A service kept on a node is built, fed and asked through the node's own shell,** never through a port
-  of its own opened to the network: a node may stand on a network this machine has no route into, and
-  the shell reaches it wherever the node list does.
-- **Three verbs, the same on either connection type:** run a command with bytes on its standard input,
-  write a whole file on the node, and read one back. A path on the node is absolute.
-- **A command runs in bash on either connection type:** the jake agent runs it in a login bash, and an ssh
-  login hands it to `bash -c` inside the account's shell, whose environment it keeps.
-  - An ssh node answers them over a batch login: the input on the login's standard input, a file through
-    `cat`.
-  - A jake node answers them through its hub: the input in the exec's environment overlay, decoded in
-    front of the command, and a file through the hub's own transfer. An exec is stopped after five
-    minutes.
-- **A node whose login answers in PowerShell has no bash shell;** each bash verb is refused there as the
-  node out of reach. Such a node is asked through its PowerShell instead: the same three verbs, a command
-  being a PowerShell script handed as two lines of base64 on the login's input, its input reaching the
-  script as bytes in `$NodeInput`, a file going up as a script's input and coming back in base64.
-- **A node that cannot be reached is told apart from a command that failed:** a login that never happens,
-  a hub that refuses or an agent that is gone is the node out of reach; a command that ran is its exit
-  code.
+- **The service reaches a node in two ways and no others:** the check's own login or hub status
+  (「How a node's state is known」), and the hardware monitor's road, which runs a script on the node and
+  hands its output on as it comes (`docs/hardware.md`, 「Which machines」). The Windows sensor setup runs
+  over that same road.
+- **A service kept on a node is built, fed and asked over the node's own login by the unit that keeps it,**
+  with the login's arguments from `/nodes/login` and the node's reach from `GET /nodes/{name}/reach`
+  (`docs/api.md`). The node service carries no general shell for other units and no file transfer.
+- **A node that cannot be reached is told apart from a script that failed:** a login that never happens, a
+  hub that refuses or an agent that is gone is the node out of reach; a script that ran is its exit code.

@@ -31,7 +31,7 @@ Treatments:
 | `bot/bmo-server/src/control/hardware.rs` | 1 | `crates/server` | carried; its refusals are English |
 | `bot/bmo-server/src/control/nodes.rs` | 1 | `crates/server` | carried, apart from the node links route, which is agency's |
 | `bot/bmo-server/src/verbs/nodes.rs` | 1 | `crates/server`, the `bmo-node` command | carried |
-| `bot/bmo-server/src/verbs/hardware_setup.rs` | 1 | `crates/server`, the `bmo-node` command | carried; it reaches a node through node-check's own shell instead of the file viewer's road |
+| `bot/bmo-server/src/verbs/hardware_setup.rs` | 1 | `crates/server`, the `bmo-node` command | carried; it reaches a node over the hardware monitor's road instead of the file viewer's |
 
 The query reading a node with its hub, written out in four places in the old repository, is one query of
 `crates/store` here.
@@ -62,11 +62,15 @@ scripts.
 | `hardware-chips`, `hardware-history`, `hardware-series`, `hardware-live-record`, `hardware-parity`, `hardware-probe`, `hardware-storage`, `hardware-view`, `hardware-windows` | 9 | realised in Rust by `crates/hardware` |
 | `hardware-probe-files` | 1 | realised in Rust: the probe scripts stand written in `crates/hardware` and the recorder embeds them |
 | `machine-pressure`, `machine-room` | 2 | realised in Rust by the machine module |
-| `jake-hub`, `ssh-login`, `node-shell` | 3 | realised in Rust by `crates/node-check` |
+| `ssh-login` | 1 | realised in Rust by `crates/node-check` |
+| `jake-hub` | 1 | in part: the hub's token and status are realised by `crates/node-check`, its exec stream by `crates/hardware`'s road; its file transfer is bmo-voice's, its one user |
+| `node-shell` | 1 | bmo-voice's and bmo-kakaotalk's, who run their services on a node over its login; kakaotalk carries its own |
 | `hardware-read`, `node-view`, `this-machine` | 3 | realised in Rust by `crates/server`'s hardware reads and node views |
 | `process-memory` | 1 | agency's: its `machine memory` verb |
 | `hardware-chips.test`, `hardware-history.test`, `hardware-live-record.test`, `hardware-parity.test`, `hardware-probe.test`, `hardware-storage.test`, `hardware-view.test`, `hardware-windows.test` | 8 | each assertion held by a Rust test in `tests/hardware` |
-| `jake-hub.test`, `ssh-login.test`, `node-shell.test` | 3 | each assertion held by a Rust test in `tests/node-check` |
+| `ssh-login.test` | 1 | each assertion held by a Rust test in `tests/node-check` |
+| `jake-hub.test` | 1 | the token's assertions held in `tests/node-check`, the exec stream's in `tests/hardware`; the file transfer's go with bmo-voice |
+| `node-shell.test` | 1 | goes with bmo-voice and bmo-kakaotalk |
 | `machine-room.test` | 1 | each assertion held by a Rust test in `tests/machine` |
 | `hardware-read.test`, `this-machine.test` | 2 | each assertion held by a Rust test in `tests/server` |
 | `nodes.test` | 1 | each assertion held by a Rust test in `tests/cli` |
@@ -173,4 +177,5 @@ process; no unit of their own stood for them.
 - **bmo-explorer:** the remote browser (`verbs/remote_browser`).
 - **bmo-web:** the console's node list, node screens, monitor screens and their routes, which call this
   service's API.
-- **bmo-voice and bmo-kakaotalk:** their node readers, through the API.
+- **bmo-voice and bmo-kakaotalk:** their node readers, through the API, and the node shell (and, for
+  voice, the hub's file transfer) they run their services on a node by.

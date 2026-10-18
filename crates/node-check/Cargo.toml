@@ -1,6 +1,22 @@
 [package]
 name = "node-check"
-description = "Whether each node answers, and a node's shell."
+description = "Whether each node answers: one login that runs nothing for an ssh node, its hub asked for a jake node."
 version.workspace = true
 edition.workspace = true
 publish = false
+
+[[bin]]
+name = "node-check"
+path = "src/main.rs"
+test = false
+
+[dependencies]
+clap.workspace = true
+dotenvy.workspace = true
+futures.workspace = true
+policy = { path = "../policy" }
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+store = { path = "../store" }
+tokio.workspace = true
