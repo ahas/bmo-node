@@ -1,0 +1,17 @@
+[Unit]
+Description=The tunnel door: nodes' SSH tunnels taken inside a WebSocket and joined to this machine's SSH (docs/llm-bridge.md)
+After=network-online.target
+
+[Service]
+Type=simple
+# The deploy tree's bin/ holds the door; it reads the door's list under the data root.
+WorkingDirectory=%h/.local/share/bmo-node/deploy
+ExecStart=%h/.local/share/bmo-node/deploy/bin/llm-bridge
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+# Linked and enabled by every deployment, and restarted only where the deployment changed the binary, so
+# every tunnel's SSH is cut only by a new door.
+X-BMO-Deploy=binary

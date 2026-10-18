@@ -1,6 +1,19 @@
 [package]
 name = "llm-bridge"
-description = "The tunnel door a node's tunnel dials in by."
+description = "The tunnel door a node's tunnel dials in by: SSH carried inside a WebSocket."
 version.workspace = true
 edition.workspace = true
 publish = false
+
+# Its binary holds no tests of its own, so `cargo test` links no test binary of it.
+[[bin]]
+name = "llm-bridge"
+path = "src/main.rs"
+test = false
+
+[dependencies]
+axum = { workspace = true, features = ["ws"] }
+clap.workspace = true
+futures-util.workspace = true
+subtle.workspace = true
+tokio.workspace = true
