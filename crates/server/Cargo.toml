@@ -12,6 +12,7 @@ test = false
 
 [dependencies]
 axum.workspace = true
+chrono.workspace = true
 clap.workspace = true
 futures-util.workspace = true
 hardware = { path = "../hardware" }

@@ -6,6 +6,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use clap::{Parser, Subcommand};
+use node_check::Machine;
+use node_server::cli::{NodesArgs, hardware_setup, nodes};
 use node_server::config::Config;
 use node_server::{Service, app, start};
 use store::Store;
@@ -29,6 +31,13 @@ enum Step {
   Serve,
   /// Asks the service the configuration names whether it is ready; ends 0 where it is.
   Health,
+  /// Lists and changes the nodes against the store (docs/nodes.md, 「Registering and changing a node」).
+  Node(Box<NodesArgs>),
+  /// Puts the Windows sensor library and its driver in place on the nodes named, or on every node.
+  HardwareSetup {
+    /// The nodes to set up; every node where none is named.
+    nodes: Vec<String>,
+  },
 }
 
 #[tokio::main]
@@ -45,12 +54,51 @@ async fn main() -> ExitCode {
   let ended = match cli.step {
     Step::Serve => serve(config).await,
     Step::Health => health(config).await,
+    Step::Node(args) => {
+      return command(&config, |store| async move {
+        nodes(&store, &Machine::local(), *args).await.map(|lines| (lines, 0))
+      })
+      .await;
+    }
+    Step::HardwareSetup { nodes } => {
+      return command(&config, |store| async move { hardware_setup(&store, &nodes).await }).await;
+    }
   };
 
   match ended {
     Ok(()) => ExitCode::SUCCESS,
     Err(why) => {
       eprintln!("bmo-node: {why}");
+      ExitCode::FAILURE
+    }
+  }
+}
+
+/// One command over the store the configuration names: its lines printed, a refusal said on the standard
+/// error, and the exit 1 where it was refused or any part of it failed.
+async fn command<Run, Ran>(config: &Config, run: Run) -> ExitCode
+where
+  Run: FnOnce(Store) -> Ran,
+  Ran: Future<Output = Result<(Vec<String>, usize), String>>,
+{
+  let store = match Store::open_in(&config.data_root()) {
+    Ok(store) => store,
+    Err(why) => {
+      eprintln!("bmo-node: {why}");
+      return ExitCode::FAILURE;
+    }
+  };
+
+  match run(store).await {
+    Ok((lines, failed)) => {
+      for line in lines {
+        println!("{line}");
+      }
+
+      if failed > 0 { ExitCode::FAILURE } else { ExitCode::SUCCESS }
+    }
+    Err(why) => {
+      eprintln!("{why}");
       ExitCode::FAILURE
     }
   }

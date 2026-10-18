@@ -141,7 +141,10 @@ The command is `bmo-node --config <file> node`, and the registry routes do the s
   it; a node missing a field its type needs is refused.
 - A name already taken, a name the rule refuses, a port outside 1 to 65535, a field of the other
   connection type or a hub already listed is refused, and nothing is written.
-- Every change publishes `nodes-changed`.
+- A change made through a route publishes `nodes-changed` at once. The command writes the store itself, so
+  it works whether or not the service runs; the service's next pass, which holds the list's shape (each
+  node's name, label and place) to the pass before, publishes it.
+- The list prints each node's state by its code and each moment in UTC.
 
 ## Reaching a node
 

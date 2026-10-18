@@ -317,7 +317,7 @@ pub fn read_windows(lines: &[String]) -> Option<WindowsReading> {
 }
 
 /// A script as Windows PowerShell takes one encoded command: its text in UTF-16, as base64.
-fn encoded(script: &str) -> String {
+pub fn encoded_command(script: &str) -> String {
   let units: Vec<u8> = script.encode_utf16().flat_map(u16::to_le_bytes).collect();
 
   STANDARD.encode(units)
@@ -338,5 +338,5 @@ pub fn powershell_command(script: &str) -> String {
     "$z = New-Object IO.Compression.GZipStream((New-Object IO.MemoryStream(,[Convert]::FromBase64String('{packed}'))), [IO.Compression.CompressionMode]::Decompress)\n& ([ScriptBlock]::Create((New-Object IO.StreamReader($z, [Text.Encoding]::UTF8)).ReadToEnd()))"
   );
 
-  format!("powershell -NoProfile -NonInteractive -EncodedCommand {}", encoded(&unpack))
+  format!("powershell -NoProfile -NonInteractive -EncodedCommand {}", encoded_command(&unpack))
 }

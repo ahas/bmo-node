@@ -1,5 +1,6 @@
 //! The node service: its routes, its loops and the `bmo-node` command (docs/api.md).
 
+pub mod cli;
 pub mod config;
 pub mod events;
 mod loops;
@@ -47,6 +48,8 @@ pub struct Service {
   pub events: Events,
   ready: AtomicBool,
   once: Mutex<HashMap<String, (i64, Once)>>,
+  /// The list's shape at the last pass, which a pass holds the list to.
+  shape: Mutex<Option<Vec<(String, String, i64)>>>,
 }
 
 impl Service {
@@ -74,7 +77,18 @@ impl Service {
       events: Events::default(),
       ready: AtomicBool::new(false),
       once: Mutex::new(HashMap::new()),
+      shape: Mutex::new(None),
     }
+  }
+
+  /// Whether the list's shape moved since the pass before, the first pass reading as no move; the shape
+  /// kept for the next.
+  pub(crate) fn shape_moved(&self, shape: Vec<(String, String, i64)>) -> bool {
+    let mut held = self.shape.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    let moved = held.as_ref().is_some_and(|before| *before != shape);
+
+    *held = Some(shape);
+    moved
   }
 
   /// Whether the store stands and the loops have started.
