@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use bmo_node_client::ErrorCode;
 use rusqlite::Connection;
 
 pub mod history;
@@ -40,15 +41,15 @@ pub fn live_record_path(data_root: &Path) -> PathBuf {
   folder(data_root).join(RECORD_FILE)
 }
 
-/// A request the store refuses, with its code (docs/api.md, 「Conventions」) and an English sentence.
+/// A request the store refuses, with its code (docs/api.md, 「Wire format」) and an English sentence.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Refusal {
-  pub code: &'static str,
+  pub code: ErrorCode,
   pub message: String,
 }
 
 impl Refusal {
-  pub fn new(code: &'static str, message: impl Into<String>) -> Self {
+  pub fn new(code: ErrorCode, message: impl Into<String>) -> Self {
     Self {
       code,
       message: message.into(),
@@ -68,7 +69,7 @@ pub enum StoreError {
 }
 
 impl StoreError {
-  pub fn refused(code: &'static str, message: impl Into<String>) -> Self {
+  pub fn refused(code: ErrorCode, message: impl Into<String>) -> Self {
     Self::Refused(Refusal::new(code, message))
   }
 

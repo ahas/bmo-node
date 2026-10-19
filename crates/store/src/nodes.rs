@@ -2,6 +2,7 @@
 //! changing a node」). A node is always read with its hub, in one query, so its kind, its agent and its hub's
 //! token file come together. No row holds a credential, only where one is kept.
 
+use bmo_node_client::ErrorCode;
 use policy::node_states::NodeState;
 use policy::nodes::{NodeKind, is_node_name};
 use rusqlite::{Connection, OptionalExtension, Row, params};
@@ -191,23 +192,23 @@ fn next_position(connection: &Connection) -> rusqlite::Result<i64> {
   connection.query_row("SELECT COALESCE(MAX(position), -1) + 1 FROM nodes", [], |row| row.get(0))
 }
 
-fn refused(code: &'static str, message: impl Into<String>) -> StoreError {
+fn refused(code: ErrorCode, message: impl Into<String>) -> StoreError {
   StoreError::refused(code, message)
 }
 
 fn no_node(name: &str) -> StoreError {
-  refused("no-node", format!("no node named {name}"))
+  refused(ErrorCode::NoNode, format!("no node named {name}"))
 }
 
 fn checked_label(label: &str) -> Result<String> {
   let trimmed = label.trim();
 
   if trimmed.is_empty() || trimmed.contains('\n') {
-    return Err(refused("bad-field", "a label is one line of words"));
+    return Err(refused(ErrorCode::BadField, "a label is one line of words"));
   }
 
   if trimmed.encode_utf16().count() > LABEL_MOST {
-    return Err(refused("bad-field", format!("a label is at most {LABEL_MOST} characters")));
+    return Err(refused(ErrorCode::BadField, format!("a label is at most {LABEL_MOST} characters")));
   }
 
   Ok(trimmed.to_owned())
@@ -217,7 +218,7 @@ fn checked_word(value: &str, what: &str) -> Result<String> {
   let trimmed = value.trim();
 
   if trimmed.is_empty() || trimmed.chars().any(char::is_whitespace) {
-    return Err(refused("bad-field", format!("{what} is one word with no spaces")));
+    return Err(refused(ErrorCode::BadField, format!("{what} is one word with no spaces")));
   }
 
   Ok(trimmed.to_owned())
@@ -225,8 +226,7 @@ fn checked_word(value: &str, what: &str) -> Result<String> {
 
 fn checked_role(role: Option<String>) -> Result<Option<String>> {
   match role {
-    Some(role) if !role.split('+').all(is_node_name) => Err(refused(
-      "bad-field",
+    Some(role) if !role.split('+').all(is_node_name) => Err(refused(ErrorCode::BadField,
       format!(
         "a role names one service, or several joined by +, each lowercase letters, digits and hyphens, not \"{role}\""
       ),
@@ -238,7 +238,7 @@ fn checked_role(role: Option<String>) -> Result<Option<String>> {
 /// A hub's control address held to one form: an http or https address with no trailing slash.
 pub fn checked_hub_url(value: &str) -> Result<String> {
   let refusal =
-    || refused("bad-field", format!("a hub's control address is an http address, not \"{value}\""));
+    || refused(ErrorCode::BadField, format!("a hub's control address is an http address, not \"{value}\""));
   let url = url::Url::parse(value.trim()).map_err(|_| refusal())?;
 
   if !matches!(url.scheme(), "http" | "https") {
@@ -252,15 +252,13 @@ pub fn checked_hub_url(value: &str) -> Result<String> {
 
 fn checked_login(login: SshLogin) -> Result<SshLogin> {
   if !(1..=65_535).contains(&login.port) {
-    return Err(refused(
-      "bad-field",
+    return Err(refused(ErrorCode::BadField,
       format!("a port is a whole number from 1 to 65535, not {}", login.port),
     ));
   }
 
   if !LOGIN_SHELLS.contains(&login.shell.as_str()) {
-    return Err(refused(
-      "bad-field",
+    return Err(refused(ErrorCode::BadField,
       format!("a login shell is one of {}, not \"{}\"", LOGIN_SHELLS.join(", "), login.shell),
     ));
   }
@@ -342,7 +340,7 @@ impl Store {
         .query_row("SELECT EXISTS (SELECT 1 FROM hubs WHERE url = ?1)", [&url], |row| row.get(0))?;
 
     if listed {
-      return Err(refused("hub-taken", format!("the hub {url} is already listed")));
+      return Err(refused(ErrorCode::HubTaken, format!("the hub {url} is already listed")));
     }
 
     connection.execute(
@@ -385,8 +383,7 @@ impl Store {
     login: SshLogin,
   ) -> Result<Node> {
     if !is_node_name(name) {
-      return Err(refused(
-        "name-rule",
+      return Err(refused(ErrorCode::NameRule,
         format!("a node's name is lowercase letters, digits and hyphens, at most 32, not \"{name}\""),
       ));
     }
@@ -397,7 +394,7 @@ impl Store {
     let connection = self.connection();
 
     if exists_on(&connection, name)? {
-      return Err(refused("name-taken", format!("a node named {name} already exists")));
+      return Err(refused(ErrorCode::NameTaken, format!("a node named {name} already exists")));
     }
 
     let at = now_seconds();
@@ -449,8 +446,7 @@ impl Store {
       .collect();
 
       if !fields.is_empty() {
-        return Err(refused(
-          "bad-field",
+        return Err(refused(ErrorCode::BadField,
           format!(
             "{} is not a field of a jake node, which takes a label and a role alone",
             fields.join(", ")
@@ -467,7 +463,7 @@ impl Store {
     }
 
     let (Some(host), Some(user)) = (node.host.clone(), node.user.clone()) else {
-      return Err(refused("incomplete", format!("{name} is missing a field its connection type needs")));
+      return Err(refused(ErrorCode::Incomplete, format!("{name} is missing a field its connection type needs")));
     };
     let current = SshLogin {
       host,

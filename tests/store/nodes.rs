@@ -12,7 +12,7 @@ fn login(host: &str) -> SshLogin {
 }
 
 fn code(error: store::StoreError) -> &'static str {
-  error.refusal().map(|refusal| refusal.code).unwrap_or("not a refusal")
+  error.refusal().map(|refusal| refusal.code.as_str()).unwrap_or("not a refusal")
 }
 
 #[test]

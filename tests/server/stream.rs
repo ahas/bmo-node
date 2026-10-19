@@ -2,6 +2,8 @@
 
 use std::time::Duration;
 
+use bmo_node_client::NodeClient;
+use bmo_node_client::events::{Event, EventKind, MachinePressure};
 use futures_util::StreamExt;
 use serde_json::json;
 
@@ -33,45 +35,21 @@ async fn the_standing_is_empty_until_the_minute_look_keeps_one() {
 #[tokio::test]
 async fn a_stream_hands_on_the_kinds_it_names_and_only_those() {
   let stood = Stand::default().up().await;
-  let answer = stood
-    .client
-    .get(format!("{}/events?kinds=machine-pressure", stood.base))
-    .bearer_auth(TOKEN)
-    .send()
-    .await
-    .unwrap();
+  let client = NodeClient::new(&stood.base, TOKEN).unwrap();
+  // The stream answers once it has its subscription, so nothing published after this is missed.
+  let mut events = Box::pin(client.events(&[EventKind::MachinePressure]).await.unwrap());
+  let pressure = MachinePressure::Disk {
+    free_gb: 3.0,
+    limit_gb: 20.0,
+    reading: None,
+  };
 
-  assert_eq!(answer.headers()["content-type"], "text/event-stream");
+  stood.service.events.nodes_changed();
+  stood.service.events.publish(Event::MachinePressure(pressure.clone()));
 
-  let mut events = answer.bytes_stream();
+  let first = tokio::time::timeout(Duration::from_secs(10), events.next()).await.unwrap().unwrap().unwrap();
 
-  // Give the stream its subscription before anything is published.
-  tokio::time::sleep(Duration::from_millis(200)).await;
-  stood.service.events.publish("nodes-changed", json!({}));
-  stood
-    .service
-    .events
-    .publish("machine-pressure", json!({ "cause": "disk", "freeGb": 3 }));
-
-  let text = tokio::time::timeout(Duration::from_secs(10), async {
-    let mut text = String::new();
-
-    while let Some(chunk) = events.next().await {
-      text.push_str(&String::from_utf8_lossy(&chunk.unwrap()));
-
-      if text.contains("freeGb") {
-        break;
-      }
-    }
-
-    text
-  })
-  .await
-  .unwrap();
-
-  assert!(text.contains("event: machine-pressure"));
-  assert!(text.contains(r#"data: {"cause":"disk","freeGb":3}"#));
-  assert!(!text.contains("nodes-changed"));
+  assert_eq!(first, Event::MachinePressure(pressure));
 }
 
 #[tokio::test]

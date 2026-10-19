@@ -10,16 +10,7 @@ use serde::Serialize;
 use super::js::number;
 use super::probe::Sensor;
 use super::windows::WindowsDisk;
-
-#[derive(Clone, Debug, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct StorageVolume {
-  pub mount: String,
-  pub fs_type: Option<String>,
-  pub total_kb: f64,
-  pub used_kb: f64,
-  pub available_kb: f64,
-}
+pub use bmo_node_client::hardware::StorageVolume;
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]

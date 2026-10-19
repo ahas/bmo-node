@@ -1,5 +1,6 @@
 # How the node service logs in to an ssh node (docs/nodes.md, 「How a node's state is known」): the check,
-# the node's shell, the hardware monitor and the login handed to agency all start OpenSSH from these options.
+# the node's shell, the hardware monitor and the login and connection the service hands out all start
+# OpenSSH from these options.
 
 # A login nobody is at: it asks nobody for anything, gives up connecting after five seconds, takes a
 # host key the first time and holds to it after, and says only its errors.

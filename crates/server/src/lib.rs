@@ -15,8 +15,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use axum::Router;
+use bmo_node_client::hardware::HardwareView;
 use hardware::live::{Hands, Road};
-use serde_json::Value;
 use store::Store;
 use tokio::sync::OnceCell;
 
@@ -25,8 +25,9 @@ pub use loops::{machine_look, node_pass, start};
 use crate::events::Events;
 use crate::this_machine::ThisMachine;
 
-/// A reading taken once, kept for one period and joined while it is under way.
-type Once = Arc<OnceCell<(i64, Result<Value, String>)>>;
+/// A reading taken once, with when it was taken in milliseconds, kept for one period and joined while it
+/// is under way.
+type Once = Arc<OnceCell<(i64, Result<HardwareView, String>)>>;
 
 /// Everything a route and a loop stand on.
 pub struct Service {

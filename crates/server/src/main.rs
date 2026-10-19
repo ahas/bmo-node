@@ -5,6 +5,7 @@ use std::process::ExitCode;
 use std::sync::Arc;
 use std::time::Duration;
 
+use bmo_node_client::NodeClient;
 use clap::{Parser, Subcommand};
 use node_check::Machine;
 use node_server::cli::{NodesArgs, hardware_setup, nodes};
@@ -124,18 +125,12 @@ async fn serve(config: Config) -> Result<(), String> {
 }
 
 async fn health(config: Config) -> Result<(), String> {
-  let client = reqwest::Client::builder()
+  let http = reqwest::Client::builder()
     .timeout(Duration::from_secs(5))
     .build()
     .map_err(|why| why.to_string())?;
-  let answer = client
-    .get(format!("{}/health", config.local_address()))
-    .bearer_auth(&config.token)
-    .send()
-    .await
-    .map_err(|why| format!("the service did not answer: {why}"))?;
-  let health: serde_json::Value =
-    answer.json().await.map_err(|why| format!("the health did not read: {why}"))?;
+  let client = NodeClient::with_http(&config.local_address(), &config.token, http)?;
+  let health = client.health().await.map_err(|why| why.to_string())?;
 
-  if health["ready"] == true { Ok(()) } else { Err("the service is not ready".into()) }
+  if health.ready { Ok(()) } else { Err("the service is not ready".into()) }
 }

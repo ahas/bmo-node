@@ -40,7 +40,7 @@ together.
 ## What the store does not hold
 
 - **No credential:** a row names where a key or a token is kept, never the key or the token.
-- **Nothing of another unit's:** the work node tables, a link's state and the agents are agency's.
+- **Nothing of another unit's:** the work node tables, a tunnel's state and the agents are other units'.
 
 ## Moving in from the old archive
 

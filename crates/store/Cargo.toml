@@ -6,6 +6,7 @@ edition.workspace = true
 publish = false
 
 [dependencies]
+bmo-node-client = { path = "../client" }
 policy = { path = "../policy" }
 rusqlite.workspace = true
 url.workspace = true

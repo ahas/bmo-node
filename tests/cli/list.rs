@@ -61,7 +61,11 @@ async fn registers_changes_and_removes_a_node_and_refuses_what_the_table_refuses
 
   assert_eq!(
     target,
-    json!({ "kind": "ssh", "host": "192.0.2.82", "port": 2222, "user": "someone", "keyPath": null, "shell": "posix", "role": "voice" })
+    json!({
+      "kind": "ssh", "host": "192.0.2.82", "port": 2222, "user": "someone", "keyPath": null, "shell": "posix",
+      "options": ["BatchMode=yes", "ConnectTimeout=5", "StrictHostKeyChecking=accept-new", "LogLevel=ERROR"],
+      "role": "voice",
+    })
   );
   run(&["--set", "pc-node", "--role", "none"]).await.unwrap();
 
@@ -174,7 +178,7 @@ async fn says_each_node_s_address_where_its_credential_is_kept_its_state_and_whe
   assert!(text.contains("    Permission denied (publickey,password)."));
   assert_eq!(format_node_list(&[]), "(no nodes)");
   assert_eq!(
-    target(&listed[0]).unwrap().to_string(),
-    r#"{"agent":"agent_a","hubUrl":"http://127.0.0.1:8791","kind":"jake","role":null,"tokenFile":"~/.local/share/jake/hub.env"}"#
+    serde_json::to_value(target(&listed[0]).unwrap()).unwrap(),
+    json!({ "kind": "jake", "hubUrl": "http://127.0.0.1:8791", "tokenFile": "~/.local/share/jake/hub.env", "agent": "agent_a", "role": null })
   );
 }

@@ -1,7 +1,7 @@
 //! Every route of docs/api.md, each behind the bearer token.
 
-mod agency;
 mod hardware;
+mod machine;
 mod nodes;
 mod stream;
 
@@ -9,10 +9,11 @@ use std::sync::Arc;
 
 use axum::Router;
 use axum::extract::{Request, State};
-use axum::http::{StatusCode, header};
+use axum::http::header;
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
-use axum::routing::{get, post};
+use axum::routing::{get, post, put};
+use bmo_node_client::ErrorCode;
 use store::nodes::Node;
 use subtle::ConstantTimeEq;
 
@@ -23,23 +24,19 @@ pub type Shared = State<Arc<Service>>;
 
 pub fn router(service: Arc<Service>) -> Router {
   Router::new()
-    .route("/machine/room", post(agency::machine_room))
-    .route("/links/state", post(agency::link_state))
-    .route("/nodes/list", post(agency::node_rows))
-    .route("/nodes/login", post(agency::node_login))
     .route("/nodes", get(nodes::list).post(nodes::add))
-    .route("/nodes/view", get(nodes::views))
     .route("/nodes/check", post(nodes::check))
-    .route("/nodes/{name}", axum::routing::patch(nodes::set).delete(nodes::remove))
-    .route("/nodes/{name}/reach", get(nodes::reach))
+    .route("/nodes/{name}", get(nodes::one).patch(nodes::set).delete(nodes::remove))
     .route("/nodes/{name}/target", get(nodes::target))
+    .route("/nodes/{name}/login", get(nodes::login))
     .route("/hubs", post(nodes::add_hub).delete(nodes::remove_hub))
-    .route("/hardware/tracking", post(hardware::tracking))
-    .route("/hardware/cpu-limit", post(hardware::cpu_limit))
     .route("/hardware/{machine}", get(hardware::latest))
     .route("/hardware/{machine}/live", get(hardware::live))
     .route("/hardware/{machine}/history", get(hardware::history))
-    .route("/machine/standing", get(stream::standing))
+    .route("/hardware/{machine}/tracking", put(hardware::tracking))
+    .route("/hardware/{machine}/cpu-limit", put(hardware::cpu_limit))
+    .route("/machine/room", get(machine::room))
+    .route("/machine/standing", get(machine::standing))
     .route("/events", get(stream::events))
     .route("/health", get(stream::health))
     .fallback(no_route)
@@ -48,7 +45,7 @@ pub fn router(service: Arc<Service>) -> Router {
 }
 
 async fn no_route() -> Reply {
-  Reply::Failed(StatusCode::NOT_FOUND, "no-route", "no route at this method and path".into())
+  Reply::new(ErrorCode::NoRoute, "no route at this method and path")
 }
 
 /// Every route needs the configured token.
@@ -60,8 +57,7 @@ async fn bearer(State(service): Shared, request: Request, next: Next) -> Respons
     .and_then(|value| value.strip_prefix("Bearer "));
 
   if !given.is_some_and(|given| same(given, &service.token)) {
-    return Reply::Failed(StatusCode::UNAUTHORIZED, "unauthorized", "the token is missing or wrong".into())
-      .into_response();
+    return Reply::new(ErrorCode::Unauthorized, "the token is missing or wrong").into_response();
   }
 
   next.run(request).await

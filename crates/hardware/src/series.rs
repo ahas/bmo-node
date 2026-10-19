@@ -4,39 +4,13 @@
 
 use std::collections::BTreeMap;
 
-use serde::Serialize;
 use serde_json::{Map, Value};
 use store::Store;
 
 use super::history::{ROLLUP_SECONDS, parsed};
 use super::js::round_to;
 use super::record::Reader;
-
-/// The live record's readings of one machine: when each was taken, and each figure's value at each of
-/// those instants, none where that reading did not carry it.
-#[derive(Clone, Debug, Default, PartialEq, Serialize)]
-pub struct LiveRange {
-  pub at: Vec<i64>,
-  pub series: BTreeMap<String, Vec<Option<f64>>>,
-}
-
-/// One series across a span: each point's lowest, highest and mean, none where nothing was recorded.
-#[derive(Clone, Debug, Default, PartialEq, Serialize)]
-pub struct HistoryBand {
-  pub min: Vec<Option<f64>>,
-  pub max: Vec<Option<f64>>,
-  pub mean: Vec<Option<f64>>,
-}
-
-/// One span of the history: the start of each point's stretch and the width of one, and each figure's
-/// band.
-#[derive(Clone, Debug, Default, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct HistoryRange {
-  pub at: Vec<i64>,
-  pub point_seconds: i64,
-  pub series: BTreeMap<String, HistoryBand>,
-}
+pub use bmo_node_client::hardware::{HistoryBand, HistoryRange, LiveRange};
 
 /// The finest the store's rows are: one a minute. A narrower point is the live record's.
 pub const HISTORY_ROW_SECONDS: i64 = 60;
@@ -140,6 +114,15 @@ impl Points {
   }
 }
 
+/// Milliseconds in a second: a range answers its instants in epoch milliseconds, and the record and the
+/// store keep them in seconds.
+pub const MS_PER_SECOND: i64 = 1_000;
+
+/// Instants in seconds, as a range answers them.
+fn in_ms(at: Vec<i64>) -> Vec<i64> {
+  at.into_iter().map(|second| second * MS_PER_SECOND).collect()
+}
+
 /// The starts of the points between two instants, the first at a whole point.
 fn starts(from: i64, to: i64, point_seconds: i64) -> Vec<i64> {
   let start = from.div_euclid(point_seconds) * point_seconds;
@@ -186,7 +169,7 @@ pub fn read_history(
   }
 
   Ok(HistoryRange {
-    at,
+    at: in_ms(at),
     point_seconds,
     series: points.bands(),
   })
@@ -212,7 +195,7 @@ pub fn read_live_history(
   add_live(&mut points, &range, start, to, point_seconds);
 
   Ok(HistoryRange {
-    at,
+    at: in_ms(at),
     point_seconds,
     series: points.bands(),
   })
@@ -221,7 +204,9 @@ pub fn read_live_history(
 /// A live range's readings before `to` added to the points they fall in.
 fn add_live(points: &mut Points, range: &LiveRange, start: i64, to: i64, point_seconds: i64) {
   for (row, instant) in range.at.iter().enumerate() {
-    if *instant >= to {
+    let instant = instant.div_euclid(MS_PER_SECOND);
+
+    if instant >= to {
       continue;
     }
 
@@ -244,7 +229,7 @@ pub fn gather_live(range: &LiveRange, from: i64, to: i64, point_seconds: i64) ->
   add_live(&mut points, range, start, to, point_seconds);
 
   HistoryRange {
-    at,
+    at: in_ms(at),
     point_seconds,
     series: points.bands(),
   }

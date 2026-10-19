@@ -351,9 +351,10 @@ pub async fn nodes(store: &Store, machine: &Machine, args: NodesArgs) -> Result<
         .ok_or_else(|| format!("no node named {name}"))?;
 
       vec![
-        views::target(&node)
-          .map_err(|_| format!("{name} lacks a field its connection type needs"))?
-          .to_string(),
+        serde_json::to_string(
+          &views::target(&node).map_err(|_| format!("{name} lacks a field its connection type needs"))?,
+        )
+        .map_err(|why| why.to_string())?,
       ]
     }
     NodeCommand::Check(name) => {

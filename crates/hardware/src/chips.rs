@@ -6,60 +6,10 @@
 use std::sync::LazyLock;
 
 use regex::Regex;
-use serde::Serialize;
 
 use super::js::{round, shown};
 use super::probe::{CpuThread, Sensor};
-
-#[derive(Clone, Debug, PartialEq, Serialize)]
-pub struct ThreadUse {
-  pub cpu: f64,
-  pub usage: Option<f64>,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize)]
-pub struct CoreView {
-  pub label: String,
-  /// Share busy across the core's threads, 0 to 1.
-  pub usage: Option<f64>,
-  pub mhz: Option<f64>,
-  pub celsius: Option<f64>,
-  pub threads: Vec<ThreadUse>,
-}
-
-/// A group of cores around their shared cache, or a part of a die that is not a core.
-#[derive(Clone, Debug, PartialEq, Serialize)]
-#[serde(tag = "kind", rename_all = "lowercase")]
-pub enum Item {
-  Cluster {
-    label: String,
-    cache: String,
-    left: Vec<CoreView>,
-    right: Vec<CoreView>,
-  },
-  Part {
-    label: String,
-    off: bool,
-  },
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize)]
-pub struct DieView {
-  pub label: String,
-  pub role: &'static str,
-  pub celsius: Option<f64>,
-  /// Which way its items stand: one above the other, or side by side.
-  pub direction: &'static str,
-  pub items: Vec<Item>,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize)]
-pub struct ChipView {
-  pub label: String,
-  pub celsius: Option<f64>,
-  /// The package's rows of dies, top to bottom; a none is a place on the package with no die in it.
-  pub rows: Vec<Vec<Option<DieView>>>,
-}
+pub use bmo_node_client::hardware::{ChipView, CoreView, DieView, Item, ThreadUse};
 
 #[derive(Clone)]
 struct Core {
@@ -235,9 +185,9 @@ fn views(cores: &[Core], temps: &Temperatures) -> Vec<CoreView> {
 fn compute_die(label: String, celsius: Option<f64>, direction: &'static str, items: Vec<Item>) -> DieView {
   DieView {
     label,
-    role: "compute",
+    role: "compute".into(),
     celsius,
-    direction,
+    direction: direction.into(),
     items,
   }
 }
@@ -276,9 +226,9 @@ fn am4(
     .into_iter();
   let io = DieView {
     label: "IOD".into(),
-    role: "io",
+    role: "io".into(),
     celsius: None,
-    direction: "column",
+    direction: "column".into(),
     items: vec![part("Memory · PCIe", false)],
   };
 

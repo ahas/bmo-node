@@ -1,72 +1,71 @@
-//! How a route answers (docs/api.md, 「Conventions」): its own object, a refusal as an answer, or the error
-//! shape for a request that could not be answered at all.
+//! How a route answers (docs/api.md, 「Wire format」): its own type, or, for a failure and a refusal alike,
+//! the status its code is answered with and a body of `code` and `error`.
 
 use axum::Json;
 use axum::body::Bytes;
-use axum::http::StatusCode;
+use axum::extract::Query;
+use axum::http::{StatusCode, Uri};
 use axum::response::{IntoResponse, Response};
+use bmo_node_client::{ErrorCode, WireError};
 use serde::de::DeserializeOwned;
-use serde_json::{Value, json};
-use store::{Refusal, StoreError};
+use store::StoreError;
 
-/// What a route answers where it does not answer its own object.
+/// What a route answers where it does not answer its own type.
 #[derive(Debug)]
-pub enum Reply {
-  /// The request is one the service does not take: 200, `answered` false, its code and message.
-  Refused(Refusal),
-  /// The request could not be answered at all: the status, its code and an English sentence.
-  Failed(StatusCode, &'static str, String),
-}
+pub struct Reply(pub WireError);
 
 impl Reply {
-  pub fn refused(code: &'static str, message: impl Into<String>) -> Self {
-    Self::Refused(Refusal::new(code, message))
+  pub fn new(code: ErrorCode, error: impl Into<String>) -> Self {
+    Self(WireError::new(code, error))
   }
 
   pub fn bad_request(error: impl Into<String>) -> Self {
-    Self::Failed(StatusCode::BAD_REQUEST, "bad-request", error.into())
+    Self::new(ErrorCode::BadRequest, error)
   }
 
   pub fn failed(error: impl Into<String>) -> Self {
-    Self::Failed(StatusCode::INTERNAL_SERVER_ERROR, "failed", error.into())
+    Self::new(ErrorCode::Failed, error)
   }
 
   pub fn no_node(name: &str) -> Self {
-    Self::refused("no-node", format!("no node named {name}"))
+    Self::new(ErrorCode::NoNode, format!("no node named {name}"))
   }
 }
 
 impl IntoResponse for Reply {
   fn into_response(self) -> Response {
-    match self {
-      Self::Refused(refusal) => Json(json!({
-        "answered": false,
-        "refusal": { "code": refusal.code, "message": refusal.message },
-      }))
-      .into_response(),
-      Self::Failed(status, code, error) => {
-        (status, Json(json!({ "code": code, "error": error }))).into_response()
-      }
-    }
+    let status = StatusCode::from_u16(self.0.code.status()).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+
+    (status, Json(self.0)).into_response()
   }
 }
 
 impl From<StoreError> for Reply {
   fn from(error: StoreError) -> Self {
     match error {
-      StoreError::Refused(refusal) => Self::Refused(refusal),
+      StoreError::Refused(refusal) => Self::new(refusal.code, refusal.message),
       other => Self::failed(other.to_string()),
     }
   }
 }
 
-/// A route's answer: its own object, or a reply of the other kinds.
-pub type Answer = Result<Json<Value>, Reply>;
+/// A route's answer: its own type, or a reply in the error shape.
+pub type Answer<T> = Result<Json<T>, Reply>;
 
-/// A body read as the route's own shape; an empty body reads as an empty object.
+/// A route's answer for a thing it made: 201 and the thing, or a reply in the error shape.
+pub type Made<T> = Result<(StatusCode, Json<T>), Reply>;
+
+/// A body read as the route's own type; an empty body reads as an empty object.
 pub fn body<T: DeserializeOwned>(bytes: &Bytes) -> Result<T, Reply> {
   let text: &[u8] = if bytes.iter().all(u8::is_ascii_whitespace) { b"{}" } else { bytes };
 
   serde_json::from_slice(text)
     .map_err(|why| Reply::bad_request(format!("the body is not the shape the route takes: {why}")))
+}
+
+/// A query read as the route's own type.
+pub fn query<T: DeserializeOwned>(uri: &Uri) -> Result<T, Reply> {
+  Query::try_from_uri(uri)
+    .map(|Query(query)| query)
+    .map_err(|why| Reply::bad_request(format!("the query is not the shape the route takes: {why}")))
 }

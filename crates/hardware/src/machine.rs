@@ -10,12 +10,14 @@ use std::collections::BTreeMap;
 use std::ffi::CString;
 use std::path::{Path, PathBuf};
 
-use serde::Serialize;
-use serde_json::{Value, json};
+use serde_json::json;
+
+pub use bmo_node_client::events::{Event, MachinePressure};
 use store::Store;
 use store::settings::{MachineLimit, leading_float};
 
 use super::js::{round_to, shown};
+pub use bmo_node_client::machine::{Largest, Place, Pressure, PressureLine, Reading, Standing};
 
 /// How often the watch looks.
 pub const WATCH_MS: i64 = 60_000;
@@ -50,39 +52,6 @@ const GIGABYTE: f64 = 1024.0 * 1024.0 * 1024.0;
 /// A figure to a tenth, written without a point where it is whole.
 fn tenth(value: f64) -> String {
   shown(round_to(value, 10.0))
-}
-
-/// The share of a stretch some or all tasks stood stalled, in percent, over 10, 60 and 300 seconds.
-#[derive(Clone, Debug, PartialEq, Serialize)]
-pub struct PressureLine {
-  pub avg10: f64,
-  pub avg60: f64,
-  pub avg300: f64,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize)]
-pub struct Pressure {
-  pub some: PressureLine,
-  /// None for a resource the kernel keeps no `full` line for.
-  pub full: Option<PressureLine>,
-}
-
-/// The machine as its kernel reads, every reading that cannot be had none rather than a nought.
-#[derive(Clone, Debug, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Reading {
-  /// When it was read, in milliseconds.
-  pub at: i64,
-  pub load1: f64,
-  pub threads: i64,
-  pub mem_total_gb: f64,
-  pub mem_available_gb: f64,
-  pub swap_total_gb: f64,
-  pub swap_free_gb: f64,
-  /// The free space of the disk the caller named, for a writer that is not the root user.
-  pub disk_free_gb: Option<f64>,
-  pub memory: Option<Pressure>,
-  pub cpu: Option<Pressure>,
 }
 
 fn pressure_line(fields: &[&str]) -> Option<PressureLine> {
@@ -344,34 +313,6 @@ pub fn held(reading: Option<&Reading>, limits: &Limits) -> Vec<String> {
   held
 }
 
-/// What one agent place holds of the machine.
-#[derive(Clone, Debug, PartialEq, Serialize)]
-pub struct Place {
-  pub place: String,
-  pub megabytes: i64,
-  pub browsers: i64,
-}
-
-/// One of the largest processes.
-#[derive(Clone, Debug, PartialEq, Serialize)]
-pub struct Largest {
-  pub pid: i64,
-  pub name: String,
-  pub megabytes: i64,
-  pub place: Option<String>,
-}
-
-/// The machine as the minute look read it (docs/api.md, 「The machine's standing」).
-#[derive(Clone, Debug, PartialEq, Serialize)]
-pub struct Standing {
-  /// None where the machine could not be read, which holds nothing.
-  pub reading: Option<Reading>,
-  pub held: Vec<String>,
-  pub browsers: i64,
-  pub places: Vec<Place>,
-  pub largest: Vec<Largest>,
-}
-
 /// The machine judged against the limits: what is held, and what each place and the largest processes
 /// hold.
 pub fn judge(reading: Option<Reading>, processes: &[Process], limits: &Limits) -> Standing {
@@ -431,11 +372,8 @@ pub fn proc_root() -> PathBuf {
 
 /// Where a machine-pressure event goes; the server publishes it, a test keeps it.
 pub trait Publish: Send + Sync {
-  fn publish(&self, kind: &str, data: Value);
+  fn publish(&self, event: Event);
 }
-
-/// The event kind a pressure on this machine is told as.
-pub const PRESSURE_EVENT: &str = "machine-pressure";
 
 /// This machine read now and judged against the store's limits, the data root's disk among it.
 pub fn here(store: &Store, proc_root: &Path, data_root: &Path, now_ms: i64) -> store::Result<Standing> {
@@ -449,7 +387,7 @@ pub fn here(store: &Store, proc_root: &Path, data_root: &Path, now_ms: i64) -> s
 }
 
 /// The standing the minute look last kept, where it kept one.
-pub fn kept(store: &Store) -> store::Result<Option<Value>> {
+pub fn kept(store: &Store) -> store::Result<Option<Standing>> {
   Ok(store.setting(STANDING_KEY)?.and_then(|text| serde_json::from_str(&text).ok()))
 }
 
@@ -495,18 +433,14 @@ fn watch_pressure(
   }
 
   store.set_setting(PRESSURE_TOLD_KEY, &now_ms.to_string())?;
-  publish.publish(
-    PRESSURE_EVENT,
-    json!({
-      "cause": "memory",
-      "fullPct": full,
-      "alertPct": alert,
-      "minutes": (stood_ms as f64 / 60_000.0).round() as i64,
-      "reading": standing.reading,
-      "places": standing.places,
-      "largest": standing.largest,
-    }),
-  );
+  publish.publish(Event::MachinePressure(MachinePressure::Memory {
+    full_pct: full,
+    alert_pct: alert,
+    minutes: (stood_ms as f64 / 60_000.0).round() as i64,
+    reading: standing.reading.clone(),
+    places: standing.places.clone(),
+    largest: standing.largest.clone(),
+  }));
 
   Ok(())
 }
@@ -535,15 +469,11 @@ fn watch_disk(
   }
 
   store.set_setting(DISK_TOLD_KEY, "1")?;
-  publish.publish(
-    PRESSURE_EVENT,
-    json!({
-      "cause": "disk",
-      "freeGb": round_to(free, 10.0),
-      "limitGb": line,
-      "reading": standing.reading,
-    }),
-  );
+  publish.publish(Event::MachinePressure(MachinePressure::Disk {
+    free_gb: round_to(free, 10.0),
+    limit_gb: line,
+    reading: standing.reading.clone(),
+  }));
 
   Ok(())
 }

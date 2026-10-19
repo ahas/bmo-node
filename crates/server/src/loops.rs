@@ -7,11 +7,9 @@ use std::time::Duration;
 use hardware::Recorder;
 use hardware::live::Hands;
 use node_check::pass::check_nodes;
-use serde_json::json;
 use tokio::task::JoinHandle;
 
 use crate::Service;
-use crate::events::NODES_CHANGED;
 
 /// How often each loop runs.
 const MINUTE: Duration = Duration::from_secs(60);
@@ -30,7 +28,7 @@ pub async fn node_pass(service: &Service) -> Result<bool, store::StoreError> {
   let changed = checked.changed || moved;
 
   if changed {
-    service.events.publish(NODES_CHANGED, json!({}));
+    service.events.nodes_changed();
   }
 
   Ok(changed)

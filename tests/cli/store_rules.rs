@@ -18,7 +18,7 @@ fn home() -> SshLogin {
 }
 
 fn code(error: store::StoreError) -> &'static str {
-  error.refusal().map(|refusal| refusal.code).unwrap_or("not a refusal")
+  error.refusal().map(|refusal| refusal.code.as_str()).unwrap_or("not a refusal")
 }
 
 #[test]
@@ -144,8 +144,12 @@ fn a_windows_login_is_kept_carried_in_its_target_said_beside_its_address_and_a_c
     ("powershell", NodeState::Unknown, None)
   );
   assert_eq!(
-    target(&moved).unwrap(),
-    json!({ "kind": "ssh", "host": "192.0.2.82", "port": 2222, "user": "tester", "keyPath": "~/.ssh/id_home", "shell": "powershell", "role": null })
+    serde_json::to_value(target(&moved).unwrap()).unwrap(),
+    json!({
+      "kind": "ssh", "host": "192.0.2.82", "port": 2222, "user": "tester", "keyPath": "~/.ssh/id_home",
+      "shell": "powershell", "role": null,
+      "options": ["BatchMode=yes", "ConnectTimeout=5", "StrictHostKeyChecking=accept-new", "LogLevel=ERROR", "IdentitiesOnly=yes"],
+    })
   );
   assert_eq!(moved.address(), "tester@192.0.2.82:2222 (PowerShell)");
   assert_eq!(

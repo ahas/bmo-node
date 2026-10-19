@@ -7,125 +7,18 @@
 use std::sync::LazyLock;
 
 use regex::Regex;
-use serde::Serialize;
 use serde_json::{Map, Value, json};
 
-use super::chips::{ChipView, chip_view};
+use super::chips::chip_view;
 use super::js::{round, round_to};
-use super::probe::{Fan, Gpu, Memory, Sensor, ServiceCount, Snapshot, Watts};
-use super::storage::{StorageDevice, StorageVolume, is_drive_sensor};
+use super::probe::{Gpu, Memory, Sensor, ServiceCount, Snapshot, Watts};
+use super::storage::{StorageDevice, is_drive_sensor};
+pub use bmo_node_client::hardware::{BoardView, CpuView, GpuView, HardwareView, MemoryView, ServicesView, StorageView, VolumeView};
 
 fn share_of(part: Option<f64>, whole: Option<f64>) -> Option<f64> {
   let (part, whole) = (part?, whole?);
 
   (whole > 0.0).then(|| (part / whole).clamp(0.0, 1.0))
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CpuView {
-  pub model: Option<String>,
-  pub thread_count: usize,
-  pub usage: Option<f64>,
-  /// The package's temperature: the chip's own package sensor, or the hottest of the CPU's sensors; and
-  /// the limit that sensor's chip names, none where it names none (「Temperature limits」).
-  pub celsius: Option<f64>,
-  pub limit_celsius: Option<f64>,
-  /// The mean effective clock across the threads that answered one, and the fastest of them.
-  pub mhz: Option<f64>,
-  pub peak_mhz: Option<f64>,
-  pub watts: Option<Watts>,
-  pub chip: Option<ChipView>,
-  pub sensors: Vec<Sensor>,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct MemoryView {
-  pub used_kb: Option<f64>,
-  pub total_kb: Option<f64>,
-  pub share: Option<f64>,
-  pub swap_used_kb: Option<f64>,
-  pub swap_total_kb: Option<f64>,
-  pub swap_share: Option<f64>,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct GpuView {
-  pub index: f64,
-  pub name: String,
-  pub usage: Option<f64>,
-  pub celsius: Option<f64>,
-  /// The temperature it slows down at, and whether thermal slowdown holds its clocks down now.
-  pub limit_celsius: Option<f64>,
-  pub throttling: Option<bool>,
-  pub mhz: Option<f64>,
-  pub max_mhz: Option<f64>,
-  pub memory_mhz: Option<f64>,
-  pub watts: Option<f64>,
-  pub watt_limit: Option<f64>,
-  pub watt_share: Option<f64>,
-  pub memory_used_mb: Option<f64>,
-  pub memory_total_mb: Option<f64>,
-  pub memory_share: Option<f64>,
-  pub fan_percent: Option<f64>,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct VolumeView {
-  #[serde(flatten)]
-  pub volume: StorageVolume,
-  pub share: f64,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct StorageView {
-  pub key: String,
-  pub name: String,
-  pub kind: Option<&'static str>,
-  pub size_bytes: Option<f64>,
-  pub celsius: Option<f64>,
-  pub limit_celsius: Option<f64>,
-  pub volumes: Vec<VolumeView>,
-  /// Across its volumes; none where none of it is mounted.
-  pub used_kb: Option<f64>,
-  pub total_kb: Option<f64>,
-  pub share: Option<f64>,
-}
-
-/// Everything the board reports that belongs to no other piece: its own temperatures and its fans.
-#[derive(Clone, Debug, PartialEq, Serialize)]
-pub struct BoardView {
-  pub sensors: Vec<Sensor>,
-  pub fans: Vec<Fan>,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize)]
-pub struct ServicesView {
-  pub running: Option<f64>,
-  pub failed: Option<Vec<String>>,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct HardwareView {
-  pub host: Option<String>,
-  pub kernel: Option<String>,
-  pub os: Option<String>,
-  pub host_os: Option<String>,
-  pub wsl: bool,
-  pub sensor_library: Option<&'static str>,
-  pub uptime_seconds: Option<f64>,
-  pub load: Option<[f64; 3]>,
-  pub cpu: CpuView,
-  pub memory: MemoryView,
-  pub gpus: Vec<GpuView>,
-  pub storage: Vec<StorageView>,
-  pub board: BoardView,
-  pub services: ServicesView,
 }
 
 // The CPU's own sensors, by the drivers that read the processor itself.
@@ -234,7 +127,7 @@ fn storage_view(device: &StorageDevice) -> StorageView {
   StorageView {
     key: device.key.clone(),
     name: device.name.clone(),
-    kind: device.kind,
+    kind: device.kind.map(str::to_owned),
     size_bytes: device.size_bytes,
     celsius: device.celsius,
     limit_celsius: device.limit_celsius,
@@ -274,7 +167,7 @@ pub fn hardware_view(snapshot: &Snapshot) -> HardwareView {
     os: snapshot.os.clone(),
     host_os: snapshot.host_os.clone(),
     wsl: snapshot.wsl,
-    sensor_library: snapshot.sensor_library,
+    sensor_library: snapshot.sensor_library.map(str::to_owned),
     uptime_seconds: snapshot.uptime_seconds,
     load: snapshot.load,
     cpu: cpu_view(snapshot),

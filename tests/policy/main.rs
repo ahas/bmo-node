@@ -1,7 +1,7 @@
 //! The node policy's files read as their types: every node state declared with its tone, the logins'
 //! options and how a login's end is read, the Windows sensor setup, and what a node's name and kind may be.
 
-use policy::node_states::{NODE_STATES, NodeState, Tone};
+use policy::node_states::{NODE_STATES, NodeState, StateTone, Tone};
 use policy::nodes::{NodeKind, is_node_name};
 use policy::ssh::SSH;
 use policy::windows_sensors::WINDOWS_SENSORS;

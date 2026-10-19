@@ -65,7 +65,7 @@ service's API (`docs/api.md`); nothing else keeps a list of its own.
     every hub it is handed which agents are attached; `node-check nodes` checks every row it is handed,
     reading a jake node off the hub answers handed with it.
   - How OpenSSH is started for a node and how its end is read are the policy's `ssh.toml`, so the check,
-    the hardware monitor and the login arguments handed to agency log in the same way.
+    the hardware monitor and the login arguments and connection the service hands out log in the same way.
 - **When a check runs:**
   - the service checks every node when it starts and once a minute after, all nodes at once, and writes
     each check to the node's row;
@@ -100,15 +100,14 @@ service's API (`docs/api.md`); nothing else keeps a list of its own.
 
 `connected`, `disconnected`, `auth`, `hostkey`, `unreachable`, `error` and `unknown`. The policy's
 `node-states.toml` gives each its tone at a glance: `good` for `connected`, `unknown` for `unknown`, and
-`bad` for every other. The service hands the state and its tone; the console words them.
+`bad` for every other. The service hands the state and its tone; a caller words them.
 
 ## A node's link
 
-- **`/links/state` answers whether a node is reachable now,** from the node's own checks: `up` where its
-  last check found it `connected` and was made within the link window, three minutes, which covers two
-  passes and the check's own wait. A node not listed, never checked, or last checked longer ago is not
-  up.
-- The tunnel agency holds open to a work node is agency's own and is read on agency's side.
+- **A node's `up` says whether it is reachable now,** from the node's own checks: true where its last
+  check found it `connected` and was made within the link window, three minutes, which covers two passes
+  and the check's own wait. A node never checked, or last checked longer ago, is not up.
+- A tunnel another unit holds open to a node is that unit's own and is read on its side.
 
 ## This machine
 
@@ -135,10 +134,11 @@ The command is `bmo-node --config <file> node`, and the registry routes do the s
   check of something else.
 - `--remove <name>` removes a node.
 - `--check [<name>]` checks every node, or one, now.
-- `--target <name>` prints the one node's connection as JSON, for a tool outside the service that reaches
-  a node by its registered name: its connection type with the address, port, account, key path and shell
-  of an ssh node, or the agent, hub and token file of a jake node, and its role. A credential is never in
-  it; a node missing a field its type needs is refused.
+- `--target <name>` prints the one node's connection as JSON, as `GET /nodes/{name}/target` answers it,
+  for a tool outside the service that reaches a node by its registered name: its connection type with the
+  address, port, account, key path, shell and OpenSSH options of an ssh node, or the agent, hub and token
+  file of a jake node, and its role. A credential is never in it; a node missing a field its type needs is
+  refused.
 - A name already taken, a name the rule refuses, a port outside 1 to 65535, a field of the other
   connection type or a hub already listed is refused, and nothing is written.
 - A change made through a route publishes `nodes-changed` at once. The command writes the store itself, so
@@ -153,7 +153,7 @@ The command is `bmo-node --config <file> node`, and the registry routes do the s
   hands its output on as it comes (`docs/hardware.md`, 「Which machines」). The Windows sensor setup runs
   over that same road.
 - **A service kept on a node is built, fed and asked over the node's own login by the unit that keeps it,**
-  with the login's arguments from `/nodes/login` and the node's reach from `GET /nodes/{name}/reach`
-  (`docs/api.md`). The node service carries no general shell for other units and no file transfer.
+  with the node's connection from `GET /nodes/{name}/target`, or its batch login's arguments from `GET
+  /nodes/{name}/login` (`docs/api.md`). The node service carries no general shell for other units and no file transfer.
 - **A node that cannot be reached is told apart from a script that failed:** a login that never happens, a
   hub that refuses or an agent that is gone is the node out of reach; a script that ran is its exit code.

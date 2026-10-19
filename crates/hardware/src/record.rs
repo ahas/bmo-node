@@ -11,7 +11,7 @@ use std::sync::mpsc;
 use rusqlite::{Connection, OpenFlags, params};
 use serde_json::{Map, Value};
 
-use super::series::{LiveRange, measures};
+use super::series::{LiveRange, MS_PER_SECOND, measures};
 use super::view::{HardwareView, history_sample};
 
 /// How far back the record reaches, which holds the two shortest spans of the history whole
@@ -255,9 +255,9 @@ impl Reader {
       .collect()
   }
 
-  /// A machine's readings after `since` as columns: when each was taken, and each figure's value at each,
-  /// none where a reading did not carry it; only the figures measuring what `metrics` names where it
-  /// names any (docs/api.md, 「Hardware」).
+  /// A machine's readings after the second `since` as columns: when each was taken, in milliseconds, and
+  /// each figure's value at each, none where a reading did not carry it; only the figures measuring what
+  /// `metrics` names where it names any (docs/api.md, 「Hardware」).
   pub fn range(&self, machine: &str, since: i64, metrics: &[String]) -> rusqlite::Result<LiveRange> {
     let rows = self.samples(machine, since + 1, i64::MAX)?;
     let mut series: BTreeMap<String, Vec<Option<f64>>> = BTreeMap::new();
@@ -277,7 +277,7 @@ impl Reader {
     }
 
     Ok(LiveRange {
-      at: rows.iter().map(|row| row.at).collect(),
+      at: rows.iter().map(|row| row.at * MS_PER_SECOND).collect(),
       series,
     })
   }

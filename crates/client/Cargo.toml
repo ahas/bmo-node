@@ -1,0 +1,13 @@
+[package]
+name = "bmo-node-client"
+description = "The node service's client: every body of its API as a type, the OpenAPI document generated from them, and a call for every route."
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+futures-util.workspace = true
+reqwest = { workspace = true, features = ["query", "stream"] }
+schemars.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sse-stream.workspace = true

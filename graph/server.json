@@ -2,7 +2,7 @@
   {
     "id": "server/routes",
     "title": "Node service API",
-    "what": "The bmo-node HTTP service: the bearer-guarded routes for agency's four calls, the node list, the hardware monitor, the machine standing and the event stream, and its configuration and health, in crates/server.",
+    "what": "The bmo-node HTTP service: the bearer-guarded routes by resource (nodes, hubs, hardware, this machine, the event stream and health) answering in the client crate's types, and its configuration, in crates/server.",
     "files": [
       "crates/server/src/lib.rs",
       "crates/server/src/config.rs",
@@ -12,8 +12,8 @@
       "crates/server/src/this_machine.rs",
       "crates/server/src/main.rs",
       "crates/server/src/routes/mod.rs",
-      "crates/server/src/routes/agency.rs",
       "crates/server/src/routes/nodes.rs",
+      "crates/server/src/routes/machine.rs",
       "crates/server/src/routes/hardware.rs",
       "crates/server/src/routes/stream.rs",
       "docs/api.md",
@@ -30,13 +30,14 @@
     "symbols": [],
     "aliases": [],
     "needs": [
+      "core/client",
       "core/store",
       "nodes/node-check",
       "hardware/monitor",
       "hardware/machine-standing",
       "hardware/roads-and-probe"
     ],
-    "base": "92607dac8f5df5fae94a23d5288b0897704af64d"
+    "base": "aa3b58e6543e54dcd310c1213e9b1eb2438e2a31"
   },
   {
     "id": "server/loops",

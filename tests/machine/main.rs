@@ -5,11 +5,12 @@
 use std::path::Path;
 use std::sync::Mutex;
 
+use bmo_node_client::events::EventKind;
 use hardware::machine::{
-  Limits, Place, Pressure, PressureLine, Process, Publish, Reading, Standing, WATCH_MS, judge, kept, look,
+  Event,  Limits, Place, Pressure, PressureLine, Process, Publish, Reading, Standing, WATCH_MS, judge, kept, look,
   memory_full, parse_meminfo, parse_pressure, read_machine, read_processes,
 };
-use serde_json::{Value, json};
+use serde_json::Value;
 use store::Store;
 
 #[test]
@@ -392,9 +393,9 @@ fn the_machine_is_read_out_of_the_kernel_s_files_and_judged_against_the_store_s_
 struct Told(Mutex<Vec<Value>>);
 
 impl Publish for Told {
-  fn publish(&self, kind: &str, data: Value) {
-    assert_eq!(kind, "machine-pressure");
-    self.0.lock().unwrap().push(data);
+  fn publish(&self, event: Event) {
+    assert_eq!(event.kind(), EventKind::MachinePressure);
+    self.0.lock().unwrap().push(event.data());
   }
 }
 
@@ -503,5 +504,5 @@ fn the_machine_watch_tells_the_disk_and_the_pressure_once_and_keeps_the_standing
 
   // The standing kept where the console reads it.
   look(&store, &standing(2.0, None), 0, &told).unwrap();
-  assert_eq!(kept(&store).unwrap(), Some(json!(standing(2.0, None))));
+  assert_eq!(kept(&store).unwrap(), Some(standing(2.0, None)));
 }

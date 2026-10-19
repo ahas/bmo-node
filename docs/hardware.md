@@ -4,7 +4,7 @@ Every machine's hardware: this one and every node of the list (`docs/nodes.md`).
 the same probe over its own road, and every reading is described the same way: one group per piece of
 hardware (the CPU with its chip laid out as it physically stands, each GPU, memory, every storage device,
 the board), each carrying its own use, capacity, temperature and power, so the piece at fault is the one
-that shows it. Every tracked machine is read live, once a second, and kept for a month. The console draws
+that shows it. Every tracked machine is read live, once a second, and kept for a month. A screen draws
 what this service answers (`docs/api.md`, 「Hardware」).
 
 ## Which machines
@@ -18,7 +18,7 @@ what this service answers (`docs/api.md`, 「Hardware」).
     is a machine of its own; the hub is never read or shown as one.
 - The same road runs any other shell script the monitor hands a machine; the Windows setup below is one.
 - **A machine is shown once.** A node that is this machine (`docs/nodes.md`, 「This machine」) carries
-  `thisMachine`, and the console folds it into this machine's tile, since the local reading is the same
+  `thisMachine`, and a screen folds it into this machine's tile, since the local reading is the same
   probe on the same machine.
 
 ## The probe
@@ -225,13 +225,13 @@ flowchart TD
 - **Off means the machine is not read at all:** the recorder stops its live run, nothing is added to the
   live record, and `GET /hardware/{machine}` answers it as not tracked instead of reading it.
 - **The minute rows stop with it,** so a machine whose tracking is off leaves a gap in its history.
-- **`POST /hardware/tracking` moves the switch;** the recorder follows it at once, and every minute's pass
+- **`PUT /hardware/{machine}/tracking` moves the switch;** the recorder follows it at once, and every minute's pass
   reads the settings again as well.
 
 ## The chip
 
 - **The chip is described as it physically stands:** the dies where they sit on the package, and inside
-  each die the cores, the caches and the rest in their places, each part with an English name the console
+  each die the cores, the caches and the rest in their places, each part with an English name a screen
   may word in its own language.
 - The CPU model decides the layout, and the machine's own topology decides how many of each part:
   - **AMD Zen 2 desktop** (Ryzen 3000 without a G): up to two CCDs side by side above the I/O die, each
@@ -257,7 +257,7 @@ flowchart TD
     critical one;
   - a CPU whose chip names none (AMD's `k10temp`, a Windows machine's sensor library): the limit set for
     that machine.
-- **A machine's CPU limit is the setting `hardware_cpu_limit:<machine>`,** moved by `POST
-  /hardware/cpu-limit`. A limit set stands over the one the chip names, and the reading says which of the
+- **A machine's CPU limit is the setting `hardware_cpu_limit:<machine>`,** moved by `PUT
+  /hardware/{machine}/cpu-limit`. A limit set stands over the one the chip names, and the reading says which of the
   two it is. With neither, the CPU's temperature has no limit.
 - **No limit of any part stands in the code.**

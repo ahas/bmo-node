@@ -2,8 +2,8 @@
 
 Jobs, their browsers and model training share one machine, and nothing about a free checkout says the
 machine has room for another job. So the node service reads the machine every minute, answers whether it
-has room for another launch, and tells a pressure that stands. What a job, an agent or the queue does with
-that is agency's (agency's `docs/agent-control.md`, 「Room on the machine」).
+has room for another launch, and tells a pressure that stands. What a job, an agent or a queue does with
+that is the caller's.
 
 ## What is read
 
@@ -17,7 +17,7 @@ that is agency's (agency's `docs/agent-control.md`, 「Room on the machine」).
   50 MB or more of memory and swap together.
 - **Whose a process is:** the agent place its environment names, `BMO_AGENT_PLACE`, which every agent's
   pane carries and every process under it inherits. The service hands the place's name; which job a place
-  stands for is agency's.
+  stands for is the caller's.
 - **A reading that cannot be had holds nothing.** A machine nobody could read is not judged short, and the
   standing says it could not be read.
 - `BMO_PROC_ROOT` names another root for every reading, for a test.
@@ -36,12 +36,12 @@ that is agency's (agency's `docs/agent-control.md`, 「Room on the machine」).
   | `alert_memory_full_pct` | 10 | memory `full` at or above which pressure is told |
   | `alert_minutes` | 2 | how long that pressure stands before it is told |
 
-- **The limits on job counts are agency's,** since only agency knows which jobs are open.
+- **The limits on job counts are the caller's,** since only the caller knows which jobs are open.
 
 ## Room for a launch
 
-- **`/machine/room` answers `held`:** every one of the four launch limits this machine meets, each named
-  with its figure and its limit (`docs/api.md`, 「Agency's calls」), read now. Empty is room.
+- **`GET /machine/room` answers `held`:** every one of the four launch limits this machine meets, each
+  named with its figure and its limit (`docs/api.md`, 「This machine」), read now. Empty is room.
 - **A machine that could not be read holds nothing.**
 - The caller holds a launch while anything is held, beside its own limits.
 
@@ -59,10 +59,10 @@ that is agency's (agency's `docs/agent-control.md`, 「Room on the machine」).
   there, and again only after it has risen to the line and fallen again.
 - **What was told is kept,** as settings of node's store, so a restart neither tells a standing pressure
   again nor forgets one that recovered.
-- The service tells nobody else: the event is published, and the consumer that tells the chat agent reads
-  it from the event stream.
+- The service tells nobody else: the event is published, and a consumer that tells anyone reads it from
+  the event stream.
 
-## What stays with agency
+## What stays with the caller
 
 The open jobs on this machine and which of them run a browser, the job-count limits, which process
 belongs to which job, herdr's unanswered calls, handing the queue back once the machine has room again,

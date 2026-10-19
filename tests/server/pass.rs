@@ -2,6 +2,7 @@
 
 use std::time::Duration;
 
+use bmo_node_client::events::EventKind;
 use store::nodes::SshLogin;
 use tokio::sync::broadcast::error::TryRecvError;
 
@@ -16,7 +17,7 @@ async fn the_node_pass_checks_every_node_and_tells_the_screens_only_when_a_state
 
     loop {
       match told.try_recv() {
-        Ok((kind, _)) if kind == "nodes-changed" => seen += 1,
+        Ok(event) if event.kind() == EventKind::NodesChanged => seen += 1,
         Ok(_) => {}
         Err(TryRecvError::Empty | TryRecvError::Closed) => return seen,
         Err(TryRecvError::Lagged(_)) => {}

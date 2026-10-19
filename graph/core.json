@@ -58,5 +58,28 @@
     "aliases": [],
     "needs": [],
     "base": "92607dac8f5df5fae94a23d5288b0897704af64d"
+  },
+  {
+    "id": "core/client",
+    "title": "Node service client",
+    "what": "The bmo-node-client crate in crates/client: every body of the boundary API as a type, the OpenAPI document generated from them into docs/openapi.json, and a call for every route and the event stream.",
+    "files": [
+      "crates/client/Cargo.toml",
+      "crates/client/src/lib.rs",
+      "crates/client/src/call.rs",
+      "crates/client/src/error.rs",
+      "crates/client/src/fields.rs",
+      "crates/client/src/events.rs",
+      "crates/client/src/hardware.rs",
+      "crates/client/src/machine.rs",
+      "crates/client/src/nodes.rs",
+      "crates/client/src/openapi.rs",
+      "crates/client/examples/openapi.rs",
+      "docs/openapi.json"
+    ],
+    "symbols": [],
+    "aliases": [],
+    "needs": [],
+    "base": "aa3b58e6543e54dcd310c1213e9b1eb2438e2a31"
   }
 ]

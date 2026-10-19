@@ -19,6 +19,14 @@ pub struct SshRun {
   pub stderr: String,
 }
 
+/// The OpenSSH options a kind of login gives the target, each after `-o`: the login's own, then those a
+/// key brings where the target names one.
+pub fn login_options(login: &Login, target: &SshTarget) -> Vec<String> {
+  let key_options = target.key_path.as_ref().map(|_| login.key_options.as_slice()).unwrap_or_default();
+
+  login.options.iter().chain(key_options).cloned().collect()
+}
+
 /// The arguments a kind of login is started with, `command` run there where it is given.
 pub fn login_args(
   machine: &Machine,
@@ -26,13 +34,10 @@ pub fn login_args(
   target: &SshTarget,
   command: Option<&str>,
 ) -> Vec<String> {
-  let mut args = Vec::new();
-  let mut option = |value: &str| args.extend(["-o".to_owned(), value.to_owned()]);
-
-  login.options.iter().for_each(|one| option(one));
+  let mut args: Vec<String> =
+    login_options(login, target).into_iter().flat_map(|option| ["-o".to_owned(), option]).collect();
 
   if let Some(key) = &target.key_path {
-    login.key_options.iter().for_each(|one| option(one));
     args.extend(["-i".to_owned(), machine.expand_home(key).to_string_lossy().into_owned()]);
   }
 

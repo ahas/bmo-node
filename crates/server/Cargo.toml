@@ -12,6 +12,7 @@ test = false
 
 [dependencies]
 axum.workspace = true
+bmo-node-client = { path = "../client" }
 chrono.workspace = true
 clap.workspace = true
 futures-util.workspace = true

@@ -7,11 +7,12 @@ use std::collections::BTreeMap;
 use std::sync::LazyLock;
 
 use regex::Regex;
-use serde::{Serialize, Serializer};
+use serde::Serialize;
 
 use super::js::{number, parse_float, round, round_to};
 use super::storage::{StorageDevice, read_linux_storage, windows_storage};
 use super::windows::read_windows;
+pub use bmo_node_client::hardware::{Fan, Sensor, Watts};
 
 /// How long the probe run once waits between its two readings, which a reading without its own
 /// stretch is taken across.
@@ -77,26 +78,6 @@ impl CpuThread {
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Sensor {
-  pub chip: String,
-  /// The device the chip belongs to, where the kernel names one.
-  pub device: Option<String>,
-  pub label: String,
-  pub celsius: f64,
-  /// The critical temperature the chip names for this input, or the highest where it names no critical
-  /// one (docs/hardware.md, 「Temperature limits」).
-  pub limit_celsius: Option<f64>,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize)]
-pub struct Fan {
-  pub chip: String,
-  pub label: String,
-  pub rpm: f64,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct Gpu {
   pub index: f64,
   pub name: String,
@@ -128,22 +109,6 @@ pub struct Memory {
   pub available_kb: f64,
   pub swap_total_kb: f64,
   pub swap_free_kb: f64,
-}
-
-/// Package power over the sample: watts, or the counter refusing the account.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum Watts {
-  Read(f64),
-  Denied,
-}
-
-impl Serialize for Watts {
-  fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-    match self {
-      Self::Read(watts) => serializer.serialize_f64(*watts),
-      Self::Denied => serializer.serialize_str("denied"),
-    }
-  }
 }
 
 /// Everything the probe printed, as figures.
