@@ -21,7 +21,7 @@ Version 0.1.0-rev.2.
 | `deploy/` | The service units, `bmo-node.service` and `bmo-llm-bridge.service` |
 | `docs/` | The canonical documents, and `openapi.json`, the contract the clients are generated from |
 | `packages/` | The TypeScript client `bmo-node-client`, generated from `docs/openapi.json` |
-| `tests/` | Every test, with the probe's fixtures under `tests/hardware/fixtures` |
+| `tests/` | Every test, with the checks that span the repository at the top and the probe's fixtures under `tests/hardware/fixtures` |
 
 ## Running it
 
@@ -41,9 +41,14 @@ generated from the code; the Rust client `bmo-node-client` (`crates/client`) and
 (`packages/node-client`) stand on it. The service calls no other unit. `docs/store.md` says what it keeps
 and where.
 
+`PERSONAL-DATA.md` states the personal data no file may hold: whose it is, what counts, where a value belongs
+instead, and the checks that hold it.
+
 ## Building and testing
 
 - `cargo check --workspace --all-targets`
-- `cargo test --workspace`
+- `cargo test --workspace`, which runs the repository-wide checks, `tests/personal_data.rs` among them: it fails
+  on a tracked file holding a mail address outside the reserved example domains, a person's home path, a
+  telephone number, a token or a private network address (`PERSONAL-DATA.md`).
 - `cargo fmt --all --check` and `cargo clippy --workspace --all-targets -- -D warnings`
 - `bun run check` in `packages/node-client`, after `bun install`

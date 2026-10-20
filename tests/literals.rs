@@ -172,10 +172,10 @@ fn no_file_holds_a_personal_literal() {
 
 #[test]
 fn a_literal_is_found_as_a_word_alone() {
-  assert!(holds("the path /home/someone/.local", "someone"));
-  assert!(holds("Someone wrote it", "someone"));
-  assert!(!holds("everyone", "someone"));
-  assert!(!holds("someones_file", "someone"));
+  assert!(holds("the path /home/tester/.local", "tester"));
+  assert!(holds("Tester wrote it", "tester"));
+  assert!(!holds("everyone", "tester"));
+  assert!(!holds("testers_file", "tester"));
   assert!(hangul('\u{D55C}'));
   assert!(!hangul('「'));
 }

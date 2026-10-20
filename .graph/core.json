@@ -57,20 +57,22 @@
   {
     "id": "core/repository-rules",
     "title": "Repository rules checks",
-    "what": "The tests that hold the repository to its own rules: no directory named after its parent, only Cargo manifests at the root, dependencies only on the base libraries, and no personal names, hosts, paths or Korean in code.",
+    "what": "The tests that hold the repository to its own rules: no directory named after its parent, only Cargo manifests at the root, dependencies only on the base libraries, no personal literal or personal-data pattern in a tracked file, and no Korean in code.",
     "files": [
       "tests/layout.rs",
       "tests/dependencies.rs",
       "tests/literals.rs",
+      "tests/personal_data.rs",
       "testbed.toml",
       "CLAUDE.md",
+      "PERSONAL-DATA.md",
       "docs/inventory.md"
     ],
     "symbols": [],
     "aliases": [],
     "needs": [],
-    "base": "aa395ebf0b8e9885eec087155db7da8d07c18c45",
-    "changed": 1792518220474
+    "base": "36fca606d59bdc41dc111c12b65deb567e612847",
+    "changed": 1792519133127
   },
   {
     "id": "core/store",

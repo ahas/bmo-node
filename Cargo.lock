@@ -1388,6 +1388,7 @@ dependencies = [
  "node-check",
  "node-server",
  "policy",
+ "regex",
  "reqwest",
  "rusqlite",
  "serde",

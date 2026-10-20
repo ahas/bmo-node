@@ -80,6 +80,7 @@ node-check = { path = "crates/node-check" }
 node-server = { path = "crates/server" }
 policy = { path = "crates/policy" }
 reqwest.workspace = true
+regex.workspace = true
 rusqlite.workspace = true
 serde.workspace = true
 serde_json.workspace = true

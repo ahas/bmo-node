@@ -32,6 +32,10 @@ which job a process serves, whether a launch goes ahead and what the chat agent 
   role instead: the owner, a node, this machine. A path is written from `$HOME` or from a setting.
   `tests/literals.rs` fails on the account name, the host name and the committer's address of the machine it
   runs on.
+- **No personal data in a tracked file.** A mail address outside the reserved example domains, a person's home
+  path, a telephone number, a token and a private network address are never written; a value is read from a
+  setting and an example is neutral. `tests/personal_data.rs` fails on one, and `PERSONAL-DATA.md` states the
+  rule whole.
 - **No credential in a row, an answer, an event or a log line,** only where one is kept.
 - **No directory named after its parent.** `tests/layout.rs` fails on one.
 - **Only Cargo manifests at the root,** beside `testbed.toml`, the testbed's declaration. The root

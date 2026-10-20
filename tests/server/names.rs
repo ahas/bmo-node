@@ -7,7 +7,10 @@ use store::Store;
 use store::nodes::{SshLogin, agent_node_name};
 
 fn here() -> ThisMachine {
-  ThisMachine::new(Some("host-a".into()), vec!["192.0.2.84".parse().unwrap(), "fe80::1".parse().unwrap()])
+  ThisMachine::new(
+    Some("host-a".into()),
+    vec!["192.0.2.84".parse().unwrap(), "2001:db8::1".parse().unwrap()],
+  )
 }
 
 #[test]
@@ -29,7 +32,7 @@ fn a_loopback_address_localhost_the_host_name_and_an_own_address_name_this_machi
     "localhost",
     "HOST-A",
     "192.0.2.84",
-    "FE80::1",
+    "2001:DB8::1",
   ] {
     assert!(here().names(host), "{host}");
   }
@@ -37,7 +40,7 @@ fn a_loopback_address_localhost_the_host_name_and_an_own_address_name_this_machi
 
 #[test]
 fn another_machine_s_address_or_name_does_not() {
-  for host in ["192.0.2.82", "host-b", "10.0.0.1", "::2"] {
+  for host in ["192.0.2.82", "host-b", "198.51.100.7", "::2"] {
     assert!(!here().names(host), "{host}");
   }
 }
