@@ -181,6 +181,8 @@ async fn this_machine_s_standing_is_the_minute_look_s_with_each_process_s_scope(
   std::fs::write(process.join("status"), "Name:\tpython3\nVmRSS:\t900000 kB\nVmSwap:\t0 kB\n").unwrap();
   std::fs::write(process.join("cmdline"), "python3").unwrap();
   std::fs::write(process.join("environ"), format!("{SCOPE}=lab-run\0")).unwrap();
+  // The host's free disk is not this test's subject: hold the disk alert below what any disk gives.
+  stood.store().set_setting("machine_limit:alert_disk_free_gb", "0.001").unwrap();
   node_server::machine_look(&stood.service).await.unwrap();
 
   let standing = stood.get("/machines/local").await["standing"].clone();
