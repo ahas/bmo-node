@@ -55,9 +55,10 @@ which job a process serves, whether a launch goes ahead and what the chat agent 
 - `packages/node-client`: the TypeScript client, generated from `docs/openapi.json`.
 - `docs/`: the canonical documents, and `openapi.json`, the contract the clients are generated from.
 - `deploy/`: the service units, `bmo-node.service` and `bmo-llm-bridge.service`.
-- `graph/`: the code dependency graph, one node per feature in four areas (`core`, `nodes`, `hardware`,
-  `server`), each with its files and the features it needs. A commit that changes the files a node names,
-  or moves one, brings that node up to date in the same commit.
+- `.graph/`: the code dependency graph in bmo-graph's format, one node per feature in five areas (`core`,
+  `nodes`, `hardware`, `server`, `api`), each with its files and the features it needs, and a boundary node for
+  each API the repository exposes. It is written only by `bmo-graph` run in this checkout, and a commit that
+  changes the files a node names, or moves one, brings that node up to date in the same commit.
 - `testbed.toml`: how the testbed tests, checks, builds and deploys the repository.
 - `tests/`: every test, with the probe's fixtures under `tests/hardware/fixtures`.
 

@@ -1,0 +1,128 @@
+[
+  {
+    "id": "server/llm-bridge",
+    "title": "LLM bridge",
+    "what": "The llm-bridge tunnel door: a node behind an HTTPS-only network dials in with its SSH inside a WebSocket, and the door checks the bearer against its listed key files and pipes the socket to this machine's own SSH; a binary of its own in crates/llm-bridge.",
+    "files": [
+      "crates/llm-bridge/src/lib.rs",
+      "crates/llm-bridge/src/main.rs",
+      "crates/llm-bridge/src/door.rs",
+      "crates/llm-bridge/src/keys.rs",
+      "deploy/bmo-llm-bridge.service",
+      "docs/llm-bridge.md",
+      "tests/llm-bridge/main.rs",
+      "tests/llm-bridge/contract.rs",
+      "tests/llm-bridge/keys.rs",
+      "tests/support/binary.rs"
+    ],
+    "symbols": [
+      "Door",
+      "router"
+    ],
+    "aliases": [],
+    "needs": [],
+    "base": "d29e8207d9d1be1d43c93b32ff16ce07e981cd96",
+    "changed": 1792498550685
+  },
+  {
+    "id": "server/loops",
+    "title": "Node service loops",
+    "what": "The three passes the node service runs while it serves: the node check every minute with its list-shape event, the hardware recorder, and the machine look publishing pressure, in the server crate's loops module.",
+    "files": [
+      "crates/server/src/loops.rs",
+      "deploy/bmo-node.service",
+      "tests/server/pass.rs"
+    ],
+    "symbols": [
+      "node_pass",
+      "machine_look",
+      "start"
+    ],
+    "aliases": [],
+    "needs": [
+      "core/client",
+      "nodes/node-check",
+      "hardware/monitor",
+      "hardware/machine-standing",
+      "server/routes"
+    ],
+    "base": "d29e8207d9d1be1d43c93b32ff16ce07e981cd96",
+    "changed": 1792498550681
+  },
+  {
+    "id": "server/plugin",
+    "title": "Node harness plugin",
+    "what": "The ahas-node harness plugin in crates/plugin: the MCP server bmo-node mcp starts, its seven tools each calling one route through the client, the ahas-node skill, and the generator of docs/openapi.json.",
+    "files": [
+      "crates/plugin/Cargo.toml",
+      "crates/plugin/src/lib.rs",
+      "crates/plugin/src/tools.rs",
+      "crates/plugin/src/server.rs",
+      "crates/plugin/src/openapi.rs",
+      "crates/plugin/examples/openapi.rs",
+      "crates/plugin/skills/ahas-node/SKILL.md",
+      "docs/openapi.json",
+      "tests/openapi.rs",
+      "tests/server/mcp.rs"
+    ],
+    "symbols": [
+      "NodeServer",
+      "openapi_json",
+      "tools"
+    ],
+    "aliases": [],
+    "needs": [
+      "core/client"
+    ],
+    "base": "d29e8207d9d1be1d43c93b32ff16ce07e981cd96",
+    "changed": 1792498550678
+  },
+  {
+    "id": "server/routes",
+    "title": "Node service API",
+    "what": "The bmo-node HTTP service: the bearer-guarded routes by resource (nodes, node checks, hubs, machines and their readings, the event stream with its window, health) answering in the client crate's types, and its configuration, in crates/server.",
+    "files": [
+      "crates/server/src/lib.rs",
+      "crates/server/src/config.rs",
+      "crates/server/src/reply.rs",
+      "crates/server/src/events.rs",
+      "crates/server/src/views.rs",
+      "crates/server/src/machines.rs",
+      "crates/server/src/this_machine.rs",
+      "crates/server/src/main.rs",
+      "crates/server/src/routes/mod.rs",
+      "crates/server/src/routes/nodes.rs",
+      "crates/server/src/routes/hubs.rs",
+      "crates/server/src/routes/machines.rs",
+      "crates/server/src/routes/stream.rs",
+      "docs/api.md",
+      "tests/server/main.rs",
+      "tests/server/support.rs",
+      "tests/server/nodes.rs",
+      "tests/server/hubs.rs",
+      "tests/server/machines.rs",
+      "tests/server/names.rs",
+      "tests/server/once.rs",
+      "tests/server/stream.rs"
+    ],
+    "symbols": [
+      "Service",
+      "app",
+      "start",
+      "router"
+    ],
+    "aliases": [],
+    "needs": [
+      "core/client",
+      "core/policy",
+      "core/store",
+      "nodes/node-check",
+      "hardware/roads-and-probe",
+      "hardware/monitor",
+      "hardware/machine-standing",
+      "server/plugin"
+    ],
+    "base": "d29e8207d9d1be1d43c93b32ff16ce07e981cd96",
+    "changed": 1792498550675
+  }
+]

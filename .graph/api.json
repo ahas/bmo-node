@@ -1,0 +1,98 @@
+[
+  {
+    "id": "api/cli",
+    "title": "Command API",
+    "what": "The words of bmo-node reached as bmo node and bmo hardware-setup, with the service's own serve, health and mcp steps, and its exit codes, as docs/api.md states them.",
+    "files": [
+      "docs/api.md",
+      "crates/server/src/cli.rs",
+      "crates/server/src/main.rs"
+    ],
+    "symbols": [
+      "NOUNS"
+    ],
+    "aliases": [],
+    "needs": [
+      "nodes/node-command"
+    ],
+    "base": "d29e8207d9d1be1d43c93b32ff16ce07e981cd96",
+    "changed": 1792498550691,
+    "boundary": {
+      "side": "exposes"
+    }
+  },
+  {
+    "id": "api/client",
+    "title": "Published clients",
+    "what": "The clients the node service publishes: the Rust crate with every body and a call for every route, and the TypeScript package generated from the same OpenAPI document.",
+    "files": [
+      "docs/api.md",
+      "docs/openapi.json",
+      "crates/client/src/lib.rs",
+      "crates/client/src/call.rs",
+      "packages/node-client/src/index.ts",
+      "packages/node-client/src/schema.ts",
+      "packages/node-client/package.json"
+    ],
+    "symbols": [
+      "NodeClient"
+    ],
+    "aliases": [],
+    "needs": [
+      "api/http",
+      "core/client"
+    ],
+    "base": "d29e8207d9d1be1d43c93b32ff16ce07e981cd96",
+    "changed": 1792498550693,
+    "boundary": {
+      "side": "exposes"
+    }
+  },
+  {
+    "id": "api/http",
+    "title": "HTTP API",
+    "what": "The node service's HTTP API: its routes and event stream, the bearer token, pages and refusal codes, as docs/api.md and docs/openapi.json state them.",
+    "files": [
+      "docs/api.md",
+      "docs/openapi.json",
+      "crates/server/src/routes/mod.rs"
+    ],
+    "symbols": [
+      "router"
+    ],
+    "aliases": [],
+    "needs": [
+      "server/routes"
+    ],
+    "base": "d29e8207d9d1be1d43c93b32ff16ce07e981cd96",
+    "changed": 1792498550688,
+    "boundary": {
+      "side": "exposes"
+    }
+  },
+  {
+    "id": "api/mcp",
+    "title": "Harness plugin tools",
+    "what": "The ahas-node harness plugin's MCP server and its seven tools, each one call of one route, and the skill that tells a harness when to use it.",
+    "files": [
+      "docs/api.md",
+      "crates/plugin/src/server.rs",
+      "crates/plugin/src/tools.rs",
+      "crates/plugin/skills/ahas-node/SKILL.md"
+    ],
+    "symbols": [
+      "NodeServer",
+      "tools"
+    ],
+    "aliases": [],
+    "needs": [
+      "server/plugin",
+      "api/client"
+    ],
+    "base": "d29e8207d9d1be1d43c93b32ff16ce07e981cd96",
+    "changed": 1792498550696,
+    "boundary": {
+      "side": "exposes"
+    }
+  }
+]

@@ -17,18 +17,22 @@
       "tests/node-check/ssh.rs",
       "tests/node-check/hub_token.rs"
     ],
-    "symbols": [],
+    "symbols": [
+      "check_row",
+      "NodeRow"
+    ],
     "aliases": [],
     "needs": [
       "core/policy",
       "core/store"
     ],
-    "base": "29665993bf94e7e1b577a1abad8e23150579cee2"
+    "base": "d29e8207d9d1be1d43c93b32ff16ce07e981cd96",
+    "changed": 1792498550670
   },
   {
     "id": "nodes/node-command",
     "title": "Node command",
-    "what": "The bmo-node command: the nouns it declares to bmo, the node verbs (add, set, remove, check, target, list) and hubs over the store, and the Windows sensor setup, in the server crate's cli module.",
+    "what": "The bmo-node command: the nouns it declares to bmo, the node verbs (list, add, set, remove, check, target) and the hubs' add and remove over the store, and the Windows sensor setup, in the server crate's cli module.",
     "files": [
       "crates/server/src/cli.rs",
       "crates/server/src/main.rs",
@@ -41,14 +45,22 @@
       "tests/cli/setup.rs",
       "tests/cli/store_rules.rs"
     ],
-    "symbols": [],
+    "symbols": [
+      "NOUNS",
+      "nodes",
+      "hardware_setup"
+    ],
     "aliases": [],
     "needs": [
+      "core/client",
+      "core/policy",
       "core/store",
       "nodes/node-check",
       "hardware/roads-and-probe",
-      "server/routes"
+      "server/routes",
+      "server/plugin"
     ],
-    "base": "29665993bf94e7e1b577a1abad8e23150579cee2"
+    "base": "d29e8207d9d1be1d43c93b32ff16ce07e981cd96",
+    "changed": 1792498550672
   }
 ]
