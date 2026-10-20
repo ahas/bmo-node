@@ -17,7 +17,7 @@
     "symbols": [],
     "aliases": [],
     "needs": [],
-    "base": "92607dac8f5df5fae94a23d5288b0897704af64d"
+    "base": "29665993bf94e7e1b577a1abad8e23150579cee2"
   },
   {
     "id": "core/store",
@@ -40,7 +40,7 @@
     "needs": [
       "core/policy"
     ],
-    "base": "92607dac8f5df5fae94a23d5288b0897704af64d"
+    "base": "29665993bf94e7e1b577a1abad8e23150579cee2"
   },
   {
     "id": "core/repository-rules",
@@ -57,29 +57,32 @@
     "symbols": [],
     "aliases": [],
     "needs": [],
-    "base": "92607dac8f5df5fae94a23d5288b0897704af64d"
+    "base": "29665993bf94e7e1b577a1abad8e23150579cee2"
   },
   {
     "id": "core/client",
-    "title": "Node service client",
-    "what": "The bmo-node-client crate in crates/client: every body of the boundary API as a type, the OpenAPI document generated from them into docs/openapi.json, and a call for every route and the event stream.",
+    "title": "Node service clients",
+    "what": "The node service's clients: bmo-node-client in crates/client, every body of the boundary API as a type and a call for every route and the event stream, and the TypeScript client in packages/node-client generated from docs/openapi.json.",
     "files": [
       "crates/client/Cargo.toml",
       "crates/client/src/lib.rs",
       "crates/client/src/call.rs",
       "crates/client/src/error.rs",
       "crates/client/src/fields.rs",
+      "crates/client/src/page.rs",
       "crates/client/src/events.rs",
       "crates/client/src/hardware.rs",
-      "crates/client/src/machine.rs",
+      "crates/client/src/machines.rs",
       "crates/client/src/nodes.rs",
-      "crates/client/src/openapi.rs",
-      "crates/client/examples/openapi.rs",
-      "docs/openapi.json"
+      "packages/node-client/package.json",
+      "packages/node-client/tsconfig.json",
+      "packages/node-client/check.ts",
+      "packages/node-client/src/index.ts",
+      "packages/node-client/src/schema.ts"
     ],
     "symbols": [],
     "aliases": [],
     "needs": [],
-    "base": "aa3b58e6543e54dcd310c1213e9b1eb2438e2a31"
+    "base": "29665993bf94e7e1b577a1abad8e23150579cee2"
   }
 ]

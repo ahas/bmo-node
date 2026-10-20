@@ -1,6 +1,6 @@
 //! The node list and the hubs, read and changed (docs/nodes.md, 「What a row holds」 and 「Registering and
 //! changing a node」). A node is always read with its hub, in one query, so its kind, its agent and its hub's
-//! token file come together. No row holds a credential, only where one is kept.
+//! id and token file come together. No row holds a credential, only where one is kept.
 
 use bmo_node_client::ErrorCode;
 use policy::node_states::NodeState;
@@ -18,13 +18,10 @@ pub const LOGIN_SHELLS: [&str; 2] = ["posix", "powershell"];
 /// The language a login that names none answers in.
 pub const DEFAULT_LOGIN_SHELL: &str = "posix";
 
-/// The most characters a label holds, as the console counts them.
+/// The most characters a label holds, counted in UTF-16 units as a browser counts them.
 pub const LABEL_MOST: usize = 48;
 
-/// The service a node's role names to carry a worker's jobs and heavy runs.
-pub const JOBS_SERVICE: &str = "jobs";
-
-/// One node as the list holds it, with its hub's token file beside a jake node.
+/// One node as the list holds it, with its hub's id and token file beside a hub node.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Node {
   pub name: String,
@@ -38,7 +35,9 @@ pub struct Node {
   pub shell: String,
   pub agent: Option<String>,
   pub hub_url: Option<String>,
-  /// A jake node's hub's token file; none where the hub is not listed.
+  /// A hub node's hub's id; none where the hub is not listed.
+  pub hub_id: Option<i64>,
+  /// A hub node's hub's token file; none where the hub is not listed.
   pub token_file: Option<String>,
   pub role: Option<String>,
   pub position: i64,
@@ -66,7 +65,7 @@ impl Node {
 
   /// Where the node is reached, as one line a person reads. It names no credential.
   pub fn address(&self) -> String {
-    if self.kind == NodeKind::Jake {
+    if self.kind == NodeKind::Hub {
       return format!(
         "{} @ {}",
         self.agent.as_deref().unwrap_or_default(),
@@ -85,20 +84,30 @@ impl Node {
     )
   }
 
-  /// Where the node's credential is kept: an ssh node's key path, or the token file of a jake node's hub.
+  /// Where the node's credential is kept: an ssh node's key path, or the token file of a hub node's hub.
   pub fn credential(&self) -> Option<&str> {
     match self.kind {
       NodeKind::Ssh => self.key_path.as_deref(),
-      NodeKind::Jake => self.token_file.as_deref(),
+      NodeKind::Hub => self.token_file.as_deref(),
     }
   }
 }
 
-/// One hub: its control address and the file its token stands in.
+/// One hub: its id, its control address, the file its token stands in, its label and when it was listed.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Hub {
+  pub id: i64,
   pub url: String,
   pub token_file: String,
+  pub label: Option<String>,
+  pub created_at: i64,
+}
+
+/// A hub taken off the list, with the names of the nodes reached through it, removed with it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HubRemoved {
+  pub url: String,
+  pub removed: Vec<String>,
 }
 
 /// An ssh node's login as a person registers it.
@@ -144,11 +153,23 @@ pub struct Checked {
   pub at: i64,
 }
 
-// Every node with its hub's token file beside it: the one query a node is read by.
+// Every node with its hub's id and token file beside it: the one query a node is read by.
 const NODE_SELECT: &str = "SELECT nodes.name, nodes.label, nodes.kind, nodes.host, nodes.port, nodes.user,
   nodes.key_path, nodes.shell, nodes.agent, nodes.hub_url, hubs.token_file, nodes.role, nodes.position,
-  nodes.state, nodes.detail, nodes.checked_at, nodes.connected_at
+  nodes.state, nodes.detail, nodes.checked_at, nodes.connected_at, hubs.id
   FROM nodes LEFT JOIN hubs ON hubs.url = nodes.hub_url";
+
+const HUB_SELECT: &str = "SELECT id, url, token_file, label, created_at FROM hubs";
+
+fn hub_of(row: &Row<'_>) -> rusqlite::Result<Hub> {
+  Ok(Hub {
+    id: row.get(0)?,
+    url: row.get(1)?,
+    token_file: row.get(2)?,
+    label: row.get(3)?,
+    created_at: row.get(4)?,
+  })
+}
 
 fn node_of(row: &Row<'_>) -> rusqlite::Result<Node> {
   let kind: String = row.get(2)?;
@@ -168,6 +189,7 @@ fn node_of(row: &Row<'_>) -> rusqlite::Result<Node> {
       .unwrap_or_else(|| DEFAULT_LOGIN_SHELL.to_owned()),
     agent: row.get(8)?,
     hub_url: row.get(9)?,
+    hub_id: row.get(17)?,
     token_file: row.get(10)?,
     role: row.get(11)?,
     position: row.get(12)?,
@@ -197,7 +219,7 @@ fn refused(code: ErrorCode, message: impl Into<String>) -> StoreError {
 }
 
 fn no_node(name: &str) -> StoreError {
-  refused(ErrorCode::NoNode, format!("no node named {name}"))
+  refused(ErrorCode::NotFound, format!("no node named {name}"))
 }
 
 fn checked_label(label: &str) -> Result<String> {
@@ -226,7 +248,8 @@ fn checked_word(value: &str, what: &str) -> Result<String> {
 
 fn checked_role(role: Option<String>) -> Result<Option<String>> {
   match role {
-    Some(role) if !role.split('+').all(is_node_name) => Err(refused(ErrorCode::BadField,
+    Some(role) if !role.split('+').all(is_node_name) => Err(refused(
+      ErrorCode::BadField,
       format!(
         "a role names one service, or several joined by +, each lowercase letters, digits and hyphens, not \"{role}\""
       ),
@@ -237,8 +260,12 @@ fn checked_role(role: Option<String>) -> Result<Option<String>> {
 
 /// A hub's control address held to one form: an http or https address with no trailing slash.
 pub fn checked_hub_url(value: &str) -> Result<String> {
-  let refusal =
-    || refused(ErrorCode::BadField, format!("a hub's control address is an http address, not \"{value}\""));
+  let refusal = || {
+    refused(
+      ErrorCode::BadField,
+      format!("a hub's control address is an http address, not \"{value}\""),
+    )
+  };
   let url = url::Url::parse(value.trim()).map_err(|_| refusal())?;
 
   if !matches!(url.scheme(), "http" | "https") {
@@ -252,13 +279,15 @@ pub fn checked_hub_url(value: &str) -> Result<String> {
 
 fn checked_login(login: SshLogin) -> Result<SshLogin> {
   if !(1..=65_535).contains(&login.port) {
-    return Err(refused(ErrorCode::BadField,
+    return Err(refused(
+      ErrorCode::BadField,
       format!("a port is a whole number from 1 to 65535, not {}", login.port),
     ));
   }
 
   if !LOGIN_SHELLS.contains(&login.shell.as_str()) {
-    return Err(refused(ErrorCode::BadField,
+    return Err(refused(
+      ErrorCode::BadField,
       format!("a login shell is one of {}, not \"{}\"", LOGIN_SHELLS.join(", "), login.shell),
     ));
   }
@@ -272,7 +301,7 @@ fn checked_login(login: SshLogin) -> Result<SshLogin> {
   })
 }
 
-/// The name a jake agent's node takes: the agent's name held to the node-name rule, every other run of
+/// The name an agent's node takes: the agent's name held to the node-name rule, every other run of
 /// characters a hyphen.
 pub fn agent_node_name(agent: &str) -> String {
   let mut name = String::new();
@@ -317,61 +346,80 @@ impl Store {
   /// Every hub, in the order they were listed.
   pub fn hubs(&self) -> Result<Vec<Hub>> {
     let connection = self.connection();
-    let mut query = connection.prepare("SELECT url, token_file FROM hubs ORDER BY created_at, url")?;
-    let hubs = query
-      .query_map([], |row| {
-        Ok(Hub {
-          url: row.get(0)?,
-          token_file: row.get(1)?,
-        })
-      })?
-      .collect::<rusqlite::Result<Vec<_>>>()?;
+    let mut query = connection.prepare(&format!("{HUB_SELECT} ORDER BY id"))?;
+    let hubs = query.query_map([], hub_of)?.collect::<rusqlite::Result<Vec<_>>>()?;
 
     Ok(hubs)
   }
 
-  /// A hub listed. A hub already listed is refused.
-  pub fn add_hub(&self, url: &str, token_file: &str) -> Result<Hub> {
+  /// One hub by its id.
+  pub fn hub(&self, id: i64) -> Result<Option<Hub>> {
+    Ok(
+      self
+        .connection()
+        .query_row(&format!("{HUB_SELECT} WHERE id = ?1"), [id], hub_of)
+        .optional()?,
+    )
+  }
+
+  /// One hub by its control address, held to the one form every address is kept in.
+  pub fn hub_at(&self, url: &str) -> Result<Option<Hub>> {
+    let url = checked_hub_url(url)?;
+
+    Ok(
+      self
+        .connection()
+        .query_row(&format!("{HUB_SELECT} WHERE url = ?1"), [&url], hub_of)
+        .optional()?,
+    )
+  }
+
+  /// A hub listed, with a label where one is given. A hub already listed is refused.
+  pub fn add_hub(&self, url: &str, token_file: &str, label: Option<&str>) -> Result<Hub> {
     let url = checked_hub_url(url)?;
     let token_file = checked_word(token_file, "a token file")?;
+    let label = label.map(checked_label).transpose()?;
     let connection = self.connection();
     let listed: bool =
       connection
         .query_row("SELECT EXISTS (SELECT 1 FROM hubs WHERE url = ?1)", [&url], |row| row.get(0))?;
 
     if listed {
-      return Err(refused(ErrorCode::HubTaken, format!("the hub {url} is already listed")));
+      return Err(refused(ErrorCode::Conflict, format!("the hub {url} is already listed")));
     }
 
     connection.execute(
-      "INSERT INTO hubs (url, token_file, created_at) VALUES (?1, ?2, ?3)",
-      params![url, token_file, now_seconds()],
+      "INSERT INTO hubs (url, token_file, label, created_at) VALUES (?1, ?2, ?3, ?4)",
+      params![url, token_file, label, now_seconds()],
     )?;
 
-    Ok(Hub { url, token_file })
+    Ok(connection.query_row(&format!("{HUB_SELECT} WHERE id = last_insert_rowid()"), [], hub_of)?)
   }
 
   /// A hub taken off the list with every node reached through it, since none of them can be reached
-  /// without it: the names of the nodes removed, or none where the hub was not listed.
-  pub fn remove_hub(&self, url: &str) -> Result<Option<Vec<String>>> {
-    let url = checked_hub_url(url)?;
+  /// without it: its address and the names of the nodes removed, or none where no hub has that id.
+  pub fn remove_hub(&self, id: i64) -> Result<Option<HubRemoved>> {
     let mut connection = self.connection();
     let unit = connection.transaction()?;
+    let Some(url) = unit
+      .query_row("SELECT url FROM hubs WHERE id = ?1", [id], |row| row.get::<_, String>(0))
+      .optional()?
+    else {
+      return Ok(None);
+    };
     let removed = {
       let mut query = unit
-        .prepare("SELECT name FROM nodes WHERE kind = 'jake' AND hub_url = ?1 ORDER BY position, name")?;
+        .prepare("SELECT name FROM nodes WHERE kind = 'hub' AND hub_url = ?1 ORDER BY position, name")?;
       query
         .query_map([&url], |row| row.get::<_, String>(0))?
         .collect::<rusqlite::Result<Vec<_>>>()?
     };
 
-    unit.execute("DELETE FROM nodes WHERE kind = 'jake' AND hub_url = ?1", [&url])?;
-
-    let listed = unit.execute("DELETE FROM hubs WHERE url = ?1", [&url])? > 0;
-
+    unit.execute("DELETE FROM nodes WHERE kind = 'hub' AND hub_url = ?1", [&url])?;
+    unit.execute("DELETE FROM hubs WHERE id = ?1", [id])?;
     unit.commit()?;
 
-    Ok(listed.then_some(removed))
+    Ok(Some(HubRemoved { url, removed }))
   }
 
   /// An ssh node registered, last in the list.
@@ -383,7 +431,8 @@ impl Store {
     login: SshLogin,
   ) -> Result<Node> {
     if !is_node_name(name) {
-      return Err(refused(ErrorCode::NameRule,
+      return Err(refused(
+        ErrorCode::NameRule,
         format!("a node's name is lowercase letters, digits and hyphens, at most 32, not \"{name}\""),
       ));
     }
@@ -394,7 +443,7 @@ impl Store {
     let connection = self.connection();
 
     if exists_on(&connection, name)? {
-      return Err(refused(ErrorCode::NameTaken, format!("a node named {name} already exists")));
+      return Err(refused(ErrorCode::Conflict, format!("a node named {name} already exists")));
     }
 
     let at = now_seconds();
@@ -419,7 +468,7 @@ impl Store {
     get_on(&connection, name)?.ok_or_else(|| no_node(name))
   }
 
-  /// A node changed. The connection type never changes, and a jake node takes a label and a role alone; a
+  /// A node changed. The connection type never changes, and a hub node takes a label and a role alone; a
   /// check made of another address, account, port, key or shell says nothing of the new one, so it is
   /// forgotten.
   pub fn update_node(&self, name: &str, changes: NodeChanges) -> Result<Node> {
@@ -433,7 +482,7 @@ impl Store {
       Some(role) => checked_role(role)?,
     };
 
-    if node.kind == NodeKind::Jake {
+    if node.kind == NodeKind::Hub {
       let fields: Vec<&str> = [
         ("host", changes.host.is_some()),
         ("port", changes.port.is_some()),
@@ -446,9 +495,10 @@ impl Store {
       .collect();
 
       if !fields.is_empty() {
-        return Err(refused(ErrorCode::BadField,
+        return Err(refused(
+          ErrorCode::BadField,
           format!(
-            "{} is not a field of a jake node, which takes a label and a role alone",
+            "{} is not a field of a hub node, which takes a label and a role alone",
             fields.join(", ")
           ),
         ));
@@ -463,7 +513,10 @@ impl Store {
     }
 
     let (Some(host), Some(user)) = (node.host.clone(), node.user.clone()) else {
-      return Err(refused(ErrorCode::Incomplete, format!("{name} is missing a field its connection type needs")));
+      return Err(refused(
+        ErrorCode::Incomplete,
+        format!("{name} is missing a field its connection type needs"),
+      ));
     };
     let current = SshLogin {
       host,
@@ -511,12 +564,12 @@ impl Store {
     Ok(self.connection().execute("DELETE FROM nodes WHERE name = ?1", [name])? > 0)
   }
 
-  /// The jake node for an agent attached to a hub, added last in the list where none stands for it yet,
+  /// The hub node for an agent attached to a hub, added last in the list where none stands for it yet,
   /// named after the agent and labelled with its name; whether one was added.
   pub fn add_agent(&self, hub: &str, agent: &str) -> Result<bool> {
     let connection = self.connection();
     let known: bool = connection.query_row(
-      "SELECT EXISTS (SELECT 1 FROM nodes WHERE kind = 'jake' AND hub_url = ?1 AND agent = ?2)",
+      "SELECT EXISTS (SELECT 1 FROM nodes WHERE kind = 'hub' AND hub_url = ?1 AND agent = ?2)",
       [hub, agent],
       |row| row.get(0),
     )?;
@@ -546,19 +599,19 @@ impl Store {
 
     connection.execute(
       "INSERT INTO nodes (name, label, kind, agent, hub_url, position, created_at, updated_at)
-       VALUES (?1, ?2, 'jake', ?3, ?4, ?5, ?6, ?6)",
+       VALUES (?1, ?2, 'hub', ?3, ?4, ?5, ?6, ?6)",
       params![name, label, agent, hub, next_position(&connection)?, at],
     )?;
 
     Ok(true)
   }
 
-  /// The jake node of an agent its hub says has departed, removed; whether there was one.
+  /// The hub node of an agent its hub says has departed, removed; whether there was one.
   pub fn remove_agent(&self, hub: &str, agent: &str) -> Result<bool> {
     Ok(
       self
         .connection()
-        .execute("DELETE FROM nodes WHERE kind = 'jake' AND hub_url = ?1 AND agent = ?2", [hub, agent])?
+        .execute("DELETE FROM nodes WHERE kind = 'hub' AND hub_url = ?1 AND agent = ?2", [hub, agent])?
         > 0,
     )
   }

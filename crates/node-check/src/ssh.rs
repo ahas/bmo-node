@@ -34,8 +34,10 @@ pub fn login_args(
   target: &SshTarget,
   command: Option<&str>,
 ) -> Vec<String> {
-  let mut args: Vec<String> =
-    login_options(login, target).into_iter().flat_map(|option| ["-o".to_owned(), option]).collect();
+  let mut args: Vec<String> = login_options(login, target)
+    .into_iter()
+    .flat_map(|option| ["-o".to_owned(), option])
+    .collect();
 
   if let Some(key) = &target.key_path {
     args.extend(["-i".to_owned(), machine.expand_home(key).to_string_lossy().into_owned()]);

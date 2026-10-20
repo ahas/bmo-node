@@ -1,22 +1,24 @@
-//! The nodes and the hubs (docs/api.md, 「Nodes」 and 「Hubs」): a node as every route answers it, its
-//! connection and its login, and the bodies that register, change and remove nodes and hubs.
+//! The nodes, the node checks and the hubs (docs/api.md, 「Nodes」, 「Node checks」 and 「Hubs」): a node as
+//! every route answers it, its target, and the bodies that register, change, check and remove nodes and
+//! hubs.
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::fields::present;
+use crate::page::page;
 
-/// A node's connection type: logged into over SSH, or a jake agent reached through its hub.
+/// A node's connection type: logged into over SSH, or an agent reached through its hub.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum NodeKind {
   Ssh,
-  Jake,
+  Hub,
 }
 
 impl NodeKind {
   /// Every connection type.
-  pub const ALL: [Self; 2] = [Self::Ssh, Self::Jake];
+  pub const ALL: [Self; 2] = [Self::Ssh, Self::Hub];
 
   /// The connection type a code names, or none where it names none.
   pub fn of_code(code: &str) -> Option<Self> {
@@ -27,7 +29,7 @@ impl NodeKind {
   pub fn name(self) -> &'static str {
     match self {
       Self::Ssh => "ssh",
-      Self::Jake => "jake",
+      Self::Hub => "hub",
     }
   }
 }
@@ -128,19 +130,21 @@ impl LoginShell {
   }
 }
 
-/// A node as every route answers it. It holds no credential, only where one is kept.
+/// A node as every route and event answers it. It holds no credential, only where one is kept.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Node {
   pub name: String,
   pub label: String,
   pub kind: NodeKind,
-  /// A jake node's agent, by the name its hub knows it by.
-  pub agent: Option<String>,
+  /// A hub node's hub.
+  pub hub_id: Option<i64>,
+  /// The name a hub node's hub knows its agent by.
+  pub agent_name: Option<String>,
   /// Where it is reached: `user@host`, `:port` after it where the port is not 22 and ` (PowerShell)` where
-  /// the login answers in PowerShell; `agent @ hub` for a jake node.
+  /// the login answers in PowerShell; `agent @ hub address` for a hub node.
   pub address: String,
-  /// Where the credential is kept: an ssh node's key path, or the token file of a jake node's hub.
+  /// Where the credential is kept: an ssh node's key path, or the token file of a hub node's hub.
   pub credential: Option<String>,
   /// The services the node is reserved for, joined by `+`.
   pub role: Option<String>,
@@ -156,20 +160,13 @@ pub struct Node {
   pub up: bool,
   /// An ssh node whose host names the service's own machine.
   pub this_machine: bool,
-  /// An ssh node other than the service's own machine, whose login is not PowerShell's and whose role is
-  /// none or names `jobs`.
-  pub takes_jobs: bool,
 }
 
-/// Nodes in the list's order.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
-pub struct NodeList {
-  pub nodes: Vec<Node>,
-}
+page!(NodePage, Node, "A page of nodes, in the list's order.");
 
-/// How much of the node list to read: the nodes after the one named, at most `limit` of them.
+/// Which page of the node list to read: the nodes after the one `after` names, at most `limit` of them.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
-pub struct NodeListQuery {
+pub struct NodesQuery {
   /// The name of the last node already read.
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub after: Option<String>,
@@ -178,52 +175,38 @@ pub struct NodeListQuery {
   pub limit: Option<u32>,
 }
 
-/// Which nodes to check now: the one named, or every node.
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
-pub struct CheckNodes {
-  #[serde(default, skip_serializing_if = "Option::is_none")]
-  pub name: Option<String>,
-}
-
-/// The one form a node is reached by, whatever reaches it.
+/// A removed node, by its key.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[serde(tag = "kind", rename_all = "lowercase")]
-pub enum Target {
-  Ssh(SshTarget),
-  Jake(JakeTarget),
+pub struct NodeKey {
+  pub name: String,
 }
 
-/// An ssh node's connection.
+/// How to reach a node, whatever reaches it; the fields of the other connection type are null.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct SshTarget {
-  pub host: String,
-  pub port: u16,
-  pub user: String,
+pub struct Target {
+  pub node_name: String,
+  pub kind: NodeKind,
+  pub role: Option<String>,
+  pub host: Option<String>,
+  pub port: Option<u16>,
+  pub user: Option<String>,
   /// The private key the login offers, as the row holds it; a leading `~/` is the home of the account that
   /// reads it.
   pub key_path: Option<String>,
-  pub shell: LoginShell,
+  pub shell: Option<LoginShell>,
   /// The OpenSSH options of a batch login, each given after `-o`, the options a key brings among them where
-  /// the node names a key; the same for `ssh`, `sftp` and `scp`.
-  pub options: Vec<String>,
-  pub role: Option<String>,
-}
-
-/// A jake node's connection: its agent and the hub it is reached through.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct JakeTarget {
-  pub hub_url: String,
-  pub token_file: String,
-  pub agent: String,
-  pub role: Option<String>,
-}
-
-/// The arguments that open a batch SSH login to a node, ahead of the command.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
-pub struct Login {
-  pub args: Vec<String>,
+  /// the node names a key; the same for `ssh`, `sftp` and `scp`. Empty for a hub node.
+  pub ssh_options: Vec<String>,
+  /// The same login laid out as `ssh` arguments ahead of the command. Empty for a hub node.
+  pub ssh_args: Vec<String>,
+  pub hub_id: Option<i64>,
+  /// The hub's control address.
+  pub hub_address: Option<String>,
+  /// The file the hub's control token is kept in.
+  pub hub_token_file: Option<String>,
+  /// The name the hub knows the node's agent by.
+  pub agent_name: Option<String>,
 }
 
 /// A new ssh node.
@@ -248,7 +231,8 @@ pub struct NewNode {
   pub role: Option<String>,
 }
 
-/// A change to a node: only the fields sent change, and null clears `keyPath` and `role`.
+/// A change to a node, as a JSON merge patch: only the fields sent change, and null clears `keyPath` and
+/// `role`.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct NodeChanges {
@@ -273,29 +257,42 @@ pub struct NodeChanges {
   pub shell: Option<LoginShell>,
 }
 
-/// The node a removal took away, by its name.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
-pub struct Removed {
-  pub removed: String,
+/// Which nodes to check now: those named, or every node where none is.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct NodeCheckAsk {
+  #[serde(default, skip_serializing_if = "Vec::is_empty")]
+  pub node_names: Vec<String>,
 }
 
-/// A jake hub: its control address and the file its token is kept in.
+/// The nodes a check reached, each as it stands after its check.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct NodeCheck {
+  pub items: Vec<Node>,
+}
+
+/// A hub: its control address and the file its token is kept in.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Hub {
-  pub url: String,
+  pub id: i64,
+  /// The hub's control address.
+  pub address: String,
+  /// The file whose `JAKE_CONTROL_TOKEN` line holds the control token.
   pub token_file: String,
+  pub label: Option<String>,
+  /// When it was listed, in epoch milliseconds.
+  pub created_at: i64,
 }
 
-/// The hub to remove, by its control address.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
-pub struct HubQuery {
-  pub url: String,
-}
+page!(HubPage, Hub, "A page of hubs, in the order they were listed.");
 
-/// A hub removed, and the jake nodes reached through it, removed with it.
+/// A hub to list.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
-pub struct HubRemoved {
-  pub url: String,
-  pub removed: Vec<String>,
+#[serde(rename_all = "camelCase")]
+pub struct NewHub {
+  pub address: String,
+  pub token_file: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub label: Option<String>,
 }

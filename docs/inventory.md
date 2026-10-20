@@ -39,18 +39,17 @@ The query reading a node with its hub, written out in four places in the old rep
 ### The machine watch
 
 The old minute watch over the machine served several units at once. Node carries what is a fact of the
-machine; agency keeps what turns on jobs, agents and herdr (`docs/machine.md`).
+machine; whatever turns on the work run there is the caller's (`docs/machine.md`).
 
 - **Carried:** reading memory and CPU pressure, `MemAvailable`, swap, the one-minute load against the
-  thread count, the free space of the data root's disk, and the processes worth naming with the agent
-  place each names; the six machine limits (`launch_memory_full_pct`, `launch_memory_available_gb`,
-  `launch_load_per_thread`, `launch_disk_free_gb`, `alert_memory_full_pct`, `alert_minutes`); a launch
-  held on the four hardware limits; memory pressure that stands and the disk under its line, each told
-  once and again only after it recovered; the standing a console shows.
-- **Agency's:** the job-count limits (`launch_jobs`, `launch_browser_jobs`), which process belongs to which
-  job, herdr's unanswered calls, handing the queue back once there is room, the work machines and their
-  rotation, a heavy run's placement, a node's room read over its link, and the sweep of finished items'
-  workbenches.
+  thread count, the free space of the data root's disk, and the processes worth naming with the scope
+  each names; the alert limits (`alert_memory_full_pct`, `alert_minutes`, and the disk's line as
+  `alert_disk_free_gb`); memory pressure that stands and the disk under its line, each an alert told once
+  as it starts and once as it ends; the standing a console shows.
+- **The caller's:** the launch limits and a launch held on them, the job-count limits, which process
+  belongs to which piece of work, handing work back once there is room, the work machines and their
+  rotation, a heavy run's placement, a node's room read over its link, and the sweep of finished work's
+  folders.
 
 ## The hardware TypeScript package: 73 files
 

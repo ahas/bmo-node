@@ -4,21 +4,18 @@
 use std::fmt;
 
 use futures_util::{Stream, StreamExt};
+use reqwest::header::ACCEPT;
 use reqwest::{Method, RequestBuilder, Url};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use sse_stream::SseStream;
 
 use crate::error::WireError;
-use crate::events::{Event, EventKind};
-use crate::hardware::{
-  CpuLimit, CpuLimitSet, HistoryQuery, HistoryRange, LatestReading, LiveQuery, LiveRange, Tracking,
-  TrackingSet,
-};
-use crate::machine::{Health, Room, Standing};
+use crate::events::{Event, EventPage, EventsQuery};
+use crate::hardware::{ReadingPage, ReadingsQuery};
+use crate::machines::{Health, Machine, MachineChanges, MachinePage};
 use crate::nodes::{
-  CheckNodes, Hub, HubQuery, HubRemoved, Login, NewNode, Node, NodeChanges, NodeList, NodeListQuery,
-  Removed, Target,
+  Hub, HubPage, NewHub, NewNode, Node, NodeChanges, NodeCheck, NodeCheckAsk, NodePage, NodesQuery, Target,
 };
 
 /// Why a call did not come back with its route's answer.
@@ -54,7 +51,9 @@ impl fmt::Display for CallError {
   fn fmt(&self, out: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self {
       Self::Answered { status, error } => write!(out, "the node service answered {status}: {error}"),
-      Self::Unreadable { status, body } => write!(out, "the node service answered {status} unreadably: {body}"),
+      Self::Unreadable { status, body } => {
+        write!(out, "the node service answered {status} unreadably: {body}")
+      }
       Self::Transport(why) => write!(out, "the node service could not be asked: {why}"),
     }
   }
@@ -133,6 +132,14 @@ impl NodeClient {
     Self::answer(self.request(Method::GET, segments)).await
   }
 
+  async fn get_query<T: DeserializeOwned>(
+    &self,
+    segments: &[&str],
+    query: &impl Serialize,
+  ) -> CallResult<T> {
+    Self::answer(self.request(Method::GET, segments).query(query)).await
+  }
+
   async fn send<T: DeserializeOwned>(
     &self,
     method: Method,
@@ -142,91 +149,16 @@ impl NodeClient {
     Self::answer(self.request(method, segments).json(body)).await
   }
 
-  /// `GET /nodes`.
-  pub async fn nodes(&self, query: &NodeListQuery) -> CallResult<NodeList> {
-    Self::answer(self.request(Method::GET, &["nodes"]).query(query)).await
-  }
+  /// A request answered with no body, as a removal is.
+  async fn remove(&self, segments: &[&str]) -> CallResult<()> {
+    let answer = self.request(Method::DELETE, segments).send().await?;
+    let status = answer.status();
 
-  /// `GET /nodes/{name}`.
-  pub async fn node(&self, name: &str) -> CallResult<Node> {
-    self.get(&["nodes", name]).await
-  }
+    if status.is_success() {
+      return Ok(());
+    }
 
-  /// `POST /nodes/check`.
-  pub async fn check_nodes(&self, which: &CheckNodes) -> CallResult<NodeList> {
-    self.send(Method::POST, &["nodes", "check"], which).await
-  }
-
-  /// `GET /nodes/{name}/target`.
-  pub async fn target(&self, name: &str) -> CallResult<Target> {
-    self.get(&["nodes", name, "target"]).await
-  }
-
-  /// `GET /nodes/{name}/login`.
-  pub async fn login(&self, name: &str) -> CallResult<Login> {
-    self.get(&["nodes", name, "login"]).await
-  }
-
-  /// `POST /nodes`.
-  pub async fn add_node(&self, node: &NewNode) -> CallResult<Node> {
-    self.send(Method::POST, &["nodes"], node).await
-  }
-
-  /// `PATCH /nodes/{name}`.
-  pub async fn change_node(&self, name: &str, changes: &NodeChanges) -> CallResult<Node> {
-    self.send(Method::PATCH, &["nodes", name], changes).await
-  }
-
-  /// `DELETE /nodes/{name}`.
-  pub async fn remove_node(&self, name: &str) -> CallResult<Removed> {
-    Self::answer(self.request(Method::DELETE, &["nodes", name])).await
-  }
-
-  /// `POST /hubs`.
-  pub async fn add_hub(&self, hub: &Hub) -> CallResult<Hub> {
-    self.send(Method::POST, &["hubs"], hub).await
-  }
-
-  /// `DELETE /hubs`.
-  pub async fn remove_hub(&self, url: &str) -> CallResult<HubRemoved> {
-    let query = HubQuery { url: url.to_owned() };
-
-    Self::answer(self.request(Method::DELETE, &["hubs"]).query(&query)).await
-  }
-
-  /// `GET /hardware/{machine}`.
-  pub async fn hardware(&self, machine: &str) -> CallResult<LatestReading> {
-    self.get(&["hardware", machine]).await
-  }
-
-  /// `GET /hardware/{machine}/live`.
-  pub async fn live(&self, machine: &str, query: &LiveQuery) -> CallResult<LiveRange> {
-    Self::answer(self.request(Method::GET, &["hardware", machine, "live"]).query(query)).await
-  }
-
-  /// `GET /hardware/{machine}/history`.
-  pub async fn history(&self, machine: &str, query: &HistoryQuery) -> CallResult<HistoryRange> {
-    Self::answer(self.request(Method::GET, &["hardware", machine, "history"]).query(query)).await
-  }
-
-  /// `PUT /hardware/{machine}/tracking`.
-  pub async fn set_tracking(&self, machine: &str, on: bool) -> CallResult<Tracking> {
-    self.send(Method::PUT, &["hardware", machine, "tracking"], &TrackingSet { on }).await
-  }
-
-  /// `PUT /hardware/{machine}/cpu-limit`.
-  pub async fn set_cpu_limit(&self, machine: &str, celsius: Option<f64>) -> CallResult<CpuLimit> {
-    self.send(Method::PUT, &["hardware", machine, "cpu-limit"], &CpuLimitSet { celsius }).await
-  }
-
-  /// `GET /machine/room`.
-  pub async fn room(&self) -> CallResult<Room> {
-    self.get(&["machine", "room"]).await
-  }
-
-  /// `GET /machine/standing`.
-  pub async fn standing(&self) -> CallResult<Standing> {
-    self.get(&["machine", "standing"]).await
+    Err(CallError::not_answered(status.as_u16(), answer.text().await?))
   }
 
   /// `GET /health`.
@@ -234,21 +166,89 @@ impl NodeClient {
     self.get(&["health"]).await
   }
 
-  /// `GET /events`: the events of the kinds named, every kind where none is, from now on. An event of a
-  /// kind this client does not know is passed over.
+  /// `GET /nodes`.
+  pub async fn nodes(&self, query: &NodesQuery) -> CallResult<NodePage> {
+    self.get_query(&["nodes"], query).await
+  }
+
+  /// `POST /nodes`.
+  pub async fn create_node(&self, node: &NewNode) -> CallResult<Node> {
+    self.send(Method::POST, &["nodes"], node).await
+  }
+
+  /// `GET /nodes/{nodeName}`.
+  pub async fn node(&self, node_name: &str) -> CallResult<Node> {
+    self.get(&["nodes", node_name]).await
+  }
+
+  /// `PATCH /nodes/{nodeName}`.
+  pub async fn change_node(&self, node_name: &str, changes: &NodeChanges) -> CallResult<Node> {
+    self.send(Method::PATCH, &["nodes", node_name], changes).await
+  }
+
+  /// `DELETE /nodes/{nodeName}`.
+  pub async fn delete_node(&self, node_name: &str) -> CallResult<()> {
+    self.remove(&["nodes", node_name]).await
+  }
+
+  /// `GET /nodes/{nodeName}/target`.
+  pub async fn target(&self, node_name: &str) -> CallResult<Target> {
+    self.get(&["nodes", node_name, "target"]).await
+  }
+
+  /// `POST /node-checks`.
+  pub async fn check_nodes(&self, ask: &NodeCheckAsk) -> CallResult<NodeCheck> {
+    self.send(Method::POST, &["node-checks"], ask).await
+  }
+
+  /// `GET /hubs`.
+  pub async fn hubs(&self) -> CallResult<HubPage> {
+    self.get(&["hubs"]).await
+  }
+
+  /// `POST /hubs`.
+  pub async fn create_hub(&self, hub: &NewHub) -> CallResult<Hub> {
+    self.send(Method::POST, &["hubs"], hub).await
+  }
+
+  /// `DELETE /hubs/{hubId}`.
+  pub async fn delete_hub(&self, hub_id: i64) -> CallResult<()> {
+    self.remove(&["hubs", &hub_id.to_string()]).await
+  }
+
+  /// `GET /machines`.
+  pub async fn machines(&self) -> CallResult<MachinePage> {
+    self.get(&["machines"]).await
+  }
+
+  /// `GET /machines/{machineName}`.
+  pub async fn machine(&self, machine_name: &str) -> CallResult<Machine> {
+    self.get(&["machines", machine_name]).await
+  }
+
+  /// `PATCH /machines/{machineName}`.
+  pub async fn change_machine(&self, machine_name: &str, changes: &MachineChanges) -> CallResult<Machine> {
+    self.send(Method::PATCH, &["machines", machine_name], changes).await
+  }
+
+  /// `GET /machines/{machineName}/readings`.
+  pub async fn readings(&self, machine_name: &str, query: &ReadingsQuery) -> CallResult<ReadingPage> {
+    self.get_query(&["machines", machine_name, "readings"], query).await
+  }
+
+  /// `GET /events` asked as a page, for a caller that polls.
+  pub async fn event_page(&self, query: &EventsQuery) -> CallResult<EventPage> {
+    let request = self.request(Method::GET, &["events"]).query(query).header(ACCEPT, "application/json");
+
+    Self::answer(request).await
+  }
+
+  /// `GET /events` as the stream of server-sent events, from the event `query.after` names or from now.
   pub async fn events(
     &self,
-    kinds: &[EventKind],
+    query: &EventsQuery,
   ) -> CallResult<impl Stream<Item = CallResult<Event>> + use<>> {
-    let mut request = self.request(Method::GET, &["events"]);
-
-    if !kinds.is_empty() {
-      let kinds: Vec<&str> = kinds.iter().map(|kind| kind.name()).collect();
-
-      request = request.query(&[("kinds", kinds.join(","))]);
-    }
-
-    let answer = request.send().await?;
+    let answer = self.request(Method::GET, &["events"]).query(query).send().await?;
     let status = answer.status();
 
     if !status.is_success() {
@@ -265,10 +265,13 @@ impl NodeClient {
           }));
         }
       };
-      let data = event.data.unwrap_or_default();
+      // A comment line carries no data.
+      let data = event.data?;
 
-      Event::read(event.event.as_deref()?, &data)
-        .map(|read| read.map_err(|_| CallError::Unreadable { status: 200, body: data }))
+      Some(serde_json::from_str::<Event>(&data).map_err(|_| CallError::Unreadable {
+        status: 200,
+        body: data,
+      }))
     });
 
     Ok(events)

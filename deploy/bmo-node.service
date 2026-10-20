@@ -1,5 +1,5 @@
 [Unit]
-Description=bmo-node: the node list, the node checks, the hardware monitor and this machine's room
+Description=bmo-node: the node list, the node checks, the hardware monitor and this machine's standing
 After=network-online.target
 # Without its configuration the service has no listen address or token, so the unit does not start where the
 # deployment wrote none (docs/api.md, 「Configuration」).

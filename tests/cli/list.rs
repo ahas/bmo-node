@@ -62,9 +62,14 @@ async fn registers_changes_and_removes_a_node_and_refuses_what_the_table_refuses
   assert_eq!(
     target,
     json!({
-      "kind": "ssh", "host": "192.0.2.82", "port": 2222, "user": "someone", "keyPath": null, "shell": "posix",
-      "options": ["BatchMode=yes", "ConnectTimeout=5", "StrictHostKeyChecking=accept-new", "LogLevel=ERROR"],
-      "role": "voice",
+      "nodeName": "pc-node", "kind": "ssh", "role": "voice",
+      "host": "192.0.2.82", "port": 2222, "user": "someone", "keyPath": null, "shell": "posix",
+      "sshOptions": ["BatchMode=yes", "ConnectTimeout=5", "StrictHostKeyChecking=accept-new", "LogLevel=ERROR"],
+      "sshArgs": [
+        "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", "-o", "StrictHostKeyChecking=accept-new", "-o", "LogLevel=ERROR",
+        "-p", "2222", "someone@192.0.2.82",
+      ],
+      "hubId": null, "hubAddress": null, "hubTokenFile": null, "agentName": null,
     })
   );
   run(&["--set", "pc-node", "--role", "none"]).await.unwrap();
@@ -96,7 +101,7 @@ async fn registers_changes_and_removes_a_node_and_refuses_what_the_table_refuses
 }
 
 #[tokio::test]
-async fn lists_and_removes_a_hub_and_checks_a_jake_node_now_through_it_printing_no_token() {
+async fn lists_and_removes_a_hub_and_checks_a_hub_node_now_through_it_printing_no_token() {
   let (dir, store, machine) = stand();
   let token_file = dir.path().join("hub.env");
   let token = token_file.to_string_lossy().into_owned();
@@ -108,7 +113,7 @@ async fn lists_and_removes_a_hub_and_checks_a_jake_node_now_through_it_printing_
     .await
     .unwrap();
 
-  assert_eq!(listed, [format!("hub http://127.0.0.1:1, token file {token}")]);
+  assert_eq!(listed, [format!("hub 2 http://127.0.0.1:1, token file {token}")]);
   assert!(
     nodes(&store, &machine, args(&["--add-hub", "http://127.0.0.1:1", "--token-file", &token]))
       .await
@@ -122,7 +127,7 @@ async fn lists_and_removes_a_hub_and_checks_a_jake_node_now_through_it_printing_
   assert!(checked[0].contains("unreachable"), "{checked:?}");
   assert!(!checked.concat().contains("do-not-print-me"));
   assert_eq!(store.node("far-box").unwrap().unwrap().state, NodeState::Unreachable);
-  assert!(nodes(&store, &machine, args(&[])).await.unwrap()[0].contains("hub http://127.0.0.1:1"));
+  assert!(nodes(&store, &machine, args(&[])).await.unwrap()[0].contains("hub 2 http://127.0.0.1:1"));
   assert!(
     nodes(&store, &machine, args(&["--remove-hub", "http://127.0.0.1:1"])).await.unwrap()[0]
       .contains("removed the hub http://127.0.0.1:1")
@@ -136,7 +141,7 @@ async fn lists_and_removes_a_hub_and_checks_a_jake_node_now_through_it_printing_
 
 #[tokio::test]
 async fn says_each_node_s_address_where_its_credential_is_kept_its_state_and_when_it_was_last_connected() {
-  let (_dir, store, _machine) = stand();
+  let (_dir, store, machine) = stand();
 
   store.add_agent(store::HUB_SEED.0, "agent_a").unwrap();
   store
@@ -165,11 +170,11 @@ async fn says_each_node_s_address_where_its_credential_is_kept_its_state_and_whe
   let text = format_node_list(&listed);
 
   assert!(text.contains(
-    "agent-a [jake] agent_a — agent_a @ http://127.0.0.1:8791, token file ~/.local/share/jake/hub.env"
+    "agent-a [hub] agent_a — agent_a @ http://127.0.0.1:8791, token file ~/.local/share/jake/hub.env"
   ));
   assert_eq!(
     format_hub_list(&store.hubs().unwrap()),
-    "hub http://127.0.0.1:8791, token file ~/.local/share/jake/hub.env"
+    "hub 1 http://127.0.0.1:8791, token file ~/.local/share/jake/hub.env"
   );
   assert_eq!(format_hub_list(&[]), "(no hubs)");
   assert!(text.contains("pc-node [ssh] home pc — someone@192.0.2.82:2222, key (ssh config)"));
@@ -178,7 +183,12 @@ async fn says_each_node_s_address_where_its_credential_is_kept_its_state_and_whe
   assert!(text.contains("    Permission denied (publickey,password)."));
   assert_eq!(format_node_list(&[]), "(no nodes)");
   assert_eq!(
-    serde_json::to_value(target(&listed[0]).unwrap()).unwrap(),
-    json!({ "kind": "jake", "hubUrl": "http://127.0.0.1:8791", "tokenFile": "~/.local/share/jake/hub.env", "agent": "agent_a", "role": null })
+    serde_json::to_value(target(&listed[0], &machine).unwrap()).unwrap(),
+    json!({
+      "nodeName": "agent-a", "kind": "hub", "role": null,
+      "host": null, "port": null, "user": null, "keyPath": null, "shell": null, "sshOptions": [], "sshArgs": [],
+      "hubId": 1, "hubAddress": "http://127.0.0.1:8791", "hubTokenFile": "~/.local/share/jake/hub.env",
+      "agentName": "agent_a",
+    })
   );
 }

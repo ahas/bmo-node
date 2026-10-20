@@ -1,9 +1,9 @@
 # The machine
 
-Jobs, their browsers and model training share one machine, and nothing about a free checkout says the
-machine has room for another job. So the node service reads the machine every minute, answers whether it
-has room for another launch, and tells a pressure that stands. What a job, an agent or a queue does with
-that is the caller's.
+Work of every kind shares this machine, and how loaded it is cannot be told from outside it. So the node
+service reads this machine every minute, keeps what it read as the machine's standing, and tells when a
+pressure starts or stops standing. Whether a launch may start, and what to do about a pressure, is the
+caller's own policy, read from the machine (`docs/api.md`, 「Machines」).
 
 ## What is read
 
@@ -11,14 +11,15 @@ that is the caller's.
   `/proc/pressure/cpu`, each line's `avg10`, `avg60` and `avg300`), the one-minute load against the
   machine's thread count, `MemAvailable`, and swap total and free.
 - **The disk:** the free space, for a writer that is not the root user, of the disk the data root stands
-  on, where the workbenches, the stores' copies, the checkouts' builds and the snapshots write.
+  on.
 - **The processes worth naming:** every browser main process (a Chrome or Chromium process started
   without a `--type=` argument, which its renderers and helpers all carry), and every process holding
   50 MB or more of memory and swap together.
-- **Whose a process is:** the agent place its environment names, `BMO_AGENT_PLACE`, which every agent's
-  pane carries and every process under it inherits. The service hands the place's name; which job a place
-  stands for is the caller's.
-- **A reading that cannot be had holds nothing.** A machine nobody could read is not judged short, and the
+- **Whose a process is:** its scope, the value of the environment variable the configuration's
+  `scope_variable` names, which every process under the one it was set in inherits. The scope is the
+  caller's opaque string, handed as it stands; the service never reads it. Where no variable is
+  configured, no process has a scope.
+- **A reading that cannot be had holds nothing.** A machine nobody could read raises no alert, and the
   standing says it could not be read.
 - `BMO_PROC_ROOT` names another root for every reading, for a test.
 
@@ -29,42 +30,29 @@ that is the caller's.
 
   | Name | Default | What it is |
   |---|---|---|
-  | `launch_memory_full_pct` | 5 | memory `full` over the last minute, in percent, at or above which a launch is held |
-  | `launch_memory_available_gb` | 4 | `MemAvailable` under which a launch is held |
-  | `launch_load_per_thread` | 2 | the one-minute load per thread at or above which a launch is held |
-  | `launch_disk_free_gb` | 20 | the data root's disk's free space under which a launch is held |
-  | `alert_memory_full_pct` | 10 | memory `full` at or above which pressure is told |
-  | `alert_minutes` | 2 | how long that pressure stands before it is told |
+  | `alert_memory_full_pct` | 10 | memory `full` over the last minute, in percent, at or above which memory pressure stands |
+  | `alert_minutes` | 2 | how long that pressure stands before it is an alert |
+  | `alert_disk_free_gb` | 20 | the data root's disk's free space under which the disk is an alert |
 
-- **The limits on job counts are the caller's,** since only the caller knows which jobs are open.
+## The standing and its alerts
 
-## Room for a launch
-
-- **`GET /machine/room` answers `held`:** every one of the four launch limits this machine meets, each
-  named with its figure and its limit (`docs/api.md`, 「This machine」), read now. Empty is room.
-- **A machine that could not be read holds nothing.**
-- The caller holds a launch while anything is held, beside its own limits.
-
-## Pressure told as an event
-
-- **Every minute the service reads the machine** and keeps the standing, which `GET /machine/standing`
-  answers: the reading, what is held, how many browsers run, what each agent place holds, and the five
-  largest processes with their places.
-- **Memory pressure that stands is told once.** Memory `full` at or above the alert line, standing for the
-  alert minutes, publishes `machine-pressure` with cause `memory`: the pressure, the line, the minutes it
-  stood, the reading, what each place holds and the largest processes. It is told again only after the
-  pressure has fallen below the line and risen again.
-- **The disk under the launch line is told once.** The data root's disk under `launch_disk_free_gb`
-  publishes `machine-pressure` with cause `disk`, the free space and the line, the first minute it is read
-  there, and again only after it has risen to the line and fallen again.
-- **What was told is kept,** as settings of node's store, so a restart neither tells a standing pressure
-  again nor forgets one that recovered.
+- **Every minute the service reads the machine** and keeps the standing, which `GET /machines/local`
+  answers as the machine's `standing`: the reading, the alerts standing now, how many browsers run, what
+  each scope holds, and the five largest processes with their scopes.
+- **Memory pressure that stands is an alert.** Memory `full` at or above the alert line, standing for the
+  alert minutes, is the `memory` alert, with the pressure, the line and the minutes it has stood, for as
+  long as it stays at or above the line.
+- **The disk under its line is an alert.** The data root's disk under `alert_disk_free_gb` is the `disk`
+  alert, with the free space and the line, for as long as it stays there.
+- **An alert that starts or ends is told once,** as `machine.changed` with the machine (`docs/api.md`,
+  「Events」). The minutes counting up under a standing alert move nothing.
+- **What was told is kept,** as the standing and the time memory pressure started standing, settings of
+  node's store, so a restart neither tells a standing alert again nor forgets one that ended.
 - The service tells nobody else: the event is published, and a consumer that tells anyone reads it from
   the event stream.
 
 ## What stays with the caller
 
-The open jobs on this machine and which of them run a browser, the job-count limits, which process
-belongs to which job, herdr's unanswered calls, handing the queue back once the machine has room again,
-the machines work goes round and their rotation, a work node's room read over its link, and the sweep of
-finished items' workbenches.
+Whether a launch may start on the machine and the limits that decide it, which work runs on the machine
+and what each scope stands for, handing work back once the machine has room again, the machines work goes
+round, and the room of another machine read over its own login.

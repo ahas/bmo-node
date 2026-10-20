@@ -1,21 +1,13 @@
-//! The hardware monitor (docs/api.md, 「Hardware」; docs/hardware.md): a machine's latest reading as a screen
-//! draws it, one group per piece of hardware, its live record's readings, a span of its history, and its
-//! tracking switch and CPU limit. Every figure is what the machine answered or none.
+//! The hardware monitor (docs/api.md, 「Machines」; docs/hardware.md): a machine's latest reading as a screen
+//! draws it, one group per piece of hardware, and its past readings, each figure a band over a stretch.
+//! Every figure is what the machine answered or none.
 
 use std::borrow::Cow;
-use std::collections::BTreeMap;
 
 use schemars::{JsonSchema, Schema, SchemaGenerator, json_schema};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-/// How a machine is reached: this machine itself, or a node of either connection type.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "lowercase")]
-pub enum MachineKind {
-  Local,
-  Ssh,
-  Jake,
-}
+use crate::page::page;
 
 /// One temperature input of a chip.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -263,95 +255,106 @@ pub struct HardwareView {
   pub services: ServicesView,
 }
 
-/// A machine's latest reading, or the failure met reading it.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct LatestReading {
-  pub name: String,
-  pub label: String,
-  pub kind: MachineKind,
-  /// Null where the machine was not read.
-  pub hardware: Option<HardwareView>,
-  /// What was met where the machine could not be read.
-  pub failure: Option<String>,
-  /// When the reading was taken, in epoch milliseconds.
-  pub read_at: i64,
-  /// Whether the machine's live tracking is on; a machine not tracked has neither a reading nor a failure.
-  pub tracking: bool,
-  pub cpu_limit: Option<f64>,
+/// One figure over a stretch: its lowest, its highest and its mean.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct Band {
+  pub min: f64,
+  pub max: f64,
+  pub mean: f64,
 }
 
-/// Which live readings to read: those taken after `after`, at most `limit` of them, of the figures
-/// measuring the comma-separated `metrics`.
+/// The CPU's figures over a stretch.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
-pub struct LiveQuery {
-  /// The time of the last reading already read, in epoch milliseconds.
+#[serde(rename_all = "camelCase")]
+pub struct CpuFigures {
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub use_pct: Option<Band>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub celsius: Option<Band>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub watts: Option<Band>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub mhz: Option<Band>,
+}
+
+/// Memory's figures over a stretch.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MemoryFigures {
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub used_gb: Option<Band>,
+}
+
+/// One GPU's figures over a stretch.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct GpuFigures {
+  pub index: i64,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub use_pct: Option<Band>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub celsius: Option<Band>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub watts: Option<Band>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub mhz: Option<Band>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub vram_used_gb: Option<Band>,
+}
+
+/// One storage device's figures over a stretch, by the device's key.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct StorageFigures {
+  pub key: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub used_gb: Option<Band>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub celsius: Option<Band>,
+}
+
+/// One fan's figures over a stretch, by its chip and label.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct FanFigures {
+  pub chip: String,
+  pub label: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub rpm: Option<Band>,
+}
+
+/// One stretch of a machine's recorded figures, one group per piece of hardware.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct Reading {
+  pub machine_name: String,
+  /// The stretch's start, in epoch milliseconds.
+  pub at: i64,
+  /// The stretch's width.
+  pub span_ms: i64,
+  pub cpu: CpuFigures,
+  pub memory: MemoryFigures,
+  pub gpus: Vec<GpuFigures>,
+  pub storage: Vec<StorageFigures>,
+  pub fans: Vec<FanFigures>,
+}
+
+page!(ReadingPage, Reading, "A page of a machine's readings, oldest first.");
+
+/// Which of a machine's readings to read: the stretches of `spanMs` starting after `after` and before
+/// `before`, at most `limit` of them.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ReadingsQuery {
+  /// In epoch milliseconds; the reach of the rows the span is read from where none is given.
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub after: Option<i64>,
-  /// The most readings to answer: the first after `after`, or the last where `after` is not given.
+  /// In epoch milliseconds; now where none is given.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub before: Option<i64>,
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub limit: Option<u32>,
+  /// Each stretch's width: whole seconds under a minute, whole minutes from a minute up; 1000 where none
+  /// is given.
   #[serde(default, skip_serializing_if = "Option::is_none")]
-  pub metrics: Option<String>,
-}
-
-/// Live readings as columns: when each was taken, in epoch milliseconds, and each figure's value at each
-/// of those times, null where that reading did not carry it.
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
-pub struct LiveRange {
-  pub at: Vec<i64>,
-  pub series: BTreeMap<String, Vec<Option<f64>>>,
-}
-
-/// Which span of the history to read: `5m`, `15m`, `1h`, `6h`, `24h`, `7d` or `30d`, `1h` where none is
-/// named.
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
-pub struct HistoryQuery {
-  #[serde(default, skip_serializing_if = "Option::is_none")]
-  pub span: Option<String>,
-}
-
-/// One series across a span: each point's lowest, highest and mean, null where nothing was recorded.
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
-pub struct HistoryBand {
-  pub min: Vec<Option<f64>>,
-  pub max: Vec<Option<f64>>,
-  pub mean: Vec<Option<f64>>,
-}
-
-/// One span of the history: the start of each point's stretch in epoch milliseconds, the width of one,
-/// and each figure's band.
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct HistoryRange {
-  pub at: Vec<i64>,
-  pub point_seconds: i64,
-  pub series: BTreeMap<String, HistoryBand>,
-}
-
-/// The tracking switch to set.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
-pub struct TrackingSet {
-  pub on: bool,
-}
-
-/// A machine's tracking switch as kept.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
-pub struct Tracking {
-  pub machine: String,
-  pub on: bool,
-}
-
-/// The CPU limit to set; null clears it.
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
-pub struct CpuLimitSet {
-  #[serde(default)]
-  pub celsius: Option<f64>,
-}
-
-/// A machine's CPU limit as kept.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
-pub struct CpuLimit {
-  pub machine: String,
-  pub celsius: Option<f64>,
+  pub span_ms: Option<i64>,
 }

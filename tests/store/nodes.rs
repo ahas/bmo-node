@@ -57,7 +57,7 @@ fn what_the_table_does_not_take_is_refused_and_nothing_is_written() {
 
   store.add_node("lab", None, None, login("192.0.2.4")).unwrap();
 
-  assert_eq!(code(store.add_node("lab", None, None, login("192.0.2.5")).unwrap_err()), "name-taken");
+  assert_eq!(code(store.add_node("lab", None, None, login("192.0.2.5")).unwrap_err()), "conflict");
   assert_eq!(code(store.add_node("Lab_1", None, None, login("192.0.2.5")).unwrap_err()), "name-rule");
   assert_eq!(code(store.add_node(&"a".repeat(33), None, None, login("h")).unwrap_err()), "name-rule");
   for refused in [
@@ -151,7 +151,7 @@ fn a_changed_login_forgets_the_last_check_and_a_new_label_does_not() {
     .unwrap();
 
   assert_eq!(cleared.key_path, None);
-  assert_eq!(code(store.update_node("gone", NodeChanges::default()).unwrap_err()), "no-node");
+  assert_eq!(code(store.update_node("gone", NodeChanges::default()).unwrap_err()), "not-found");
   assert_eq!(
     code(
       store
@@ -182,12 +182,13 @@ fn a_node_removed_is_gone_and_a_name_not_listed_is_no_removal() {
 }
 
 #[test]
-fn an_attached_agent_becomes_a_jake_node_read_with_its_hub_once() {
+fn an_attached_agent_becomes_a_hub_node_read_with_its_hub_once() {
   let scratch = scratch();
   let store = &scratch.store;
-  let hub = store.add_hub("http://hub.example:8791/", "~/hub.env").unwrap();
+  let hub = store.add_hub("http://hub.example:8791/", "~/hub.env", Some("Lab hub")).unwrap();
 
   assert_eq!(hub.url, "http://hub.example:8791");
+  assert_eq!(hub.label.as_deref(), Some("Lab hub"));
   assert!(store.add_agent(&hub.url, "Lab Box").unwrap());
   assert!(!store.add_agent(&hub.url, "Lab Box").unwrap());
   assert!(store.add_agent("http://other.example", "lab box").unwrap());
@@ -197,13 +198,18 @@ fn an_attached_agent_becomes_a_jake_node_read_with_its_hub_once() {
 
   assert_eq!(
     (jake.name.as_str(), jake.label.as_str(), jake.kind),
-    ("lab-box", "Lab Box", NodeKind::Jake)
+    ("lab-box", "Lab Box", NodeKind::Hub)
   );
+  assert_eq!(jake.hub_id, Some(hub.id));
   assert_eq!(jake.token_file.as_deref(), Some("~/hub.env"));
   assert_eq!(jake.credential(), Some("~/hub.env"));
   assert_eq!(jake.address(), "Lab Box @ http://hub.example:8791");
   assert_eq!(nodes[1].name, "lab-box-2");
-  assert_eq!(nodes[1].token_file, None, "a hub not listed has no token file");
+  assert_eq!(
+    (nodes[1].hub_id, nodes[1].token_file.as_deref()),
+    (None, None),
+    "a hub not listed has neither"
+  );
   assert_eq!(
     code(
       store
@@ -235,19 +241,27 @@ fn a_hub_is_listed_once_and_removed_with_every_node_reached_through_it() {
   let scratch = scratch();
   let store = &scratch.store;
 
-  store.add_hub("http://hub.example", "~/hub.env").unwrap();
-  assert_eq!(code(store.add_hub("http://hub.example/", "~/other.env").unwrap_err()), "hub-taken");
-  assert_eq!(code(store.add_hub("ftp://hub.example", "~/hub.env").unwrap_err()), "bad-field");
+  let hub = store.add_hub("http://hub.example", "~/hub.env", None).unwrap();
+
+  assert_eq!(code(store.add_hub("http://hub.example/", "~/other.env", None).unwrap_err()), "conflict");
+  assert_eq!(code(store.add_hub("ftp://hub.example", "~/hub.env", None).unwrap_err()), "bad-field");
+  assert_eq!(store.hub_at("http://hub.example/").unwrap().map(|found| found.id), Some(hub.id));
   store.add_agent("http://hub.example", "one").unwrap();
   store.add_agent("http://hub.example", "two").unwrap();
   store.add_node("lab", None, None, login("192.0.2.4")).unwrap();
 
+  let removed = store.remove_hub(hub.id).unwrap().unwrap();
+
   assert_eq!(
-    store.remove_hub("http://hub.example").unwrap(),
-    Some(vec!["one".to_owned(), "two".to_owned()])
+    (removed.url.as_str(), removed.removed),
+    ("http://hub.example", vec!["one".to_owned(), "two".to_owned()])
   );
-  assert_eq!(store.remove_hub("http://hub.example").unwrap(), None);
+  assert_eq!(store.remove_hub(hub.id).unwrap(), None);
   assert_eq!(store.nodes().unwrap().len(), 1);
+
+  let again = store.add_hub("http://hub.example", "~/hub.env", None).unwrap();
+
+  assert!(again.id > hub.id, "an id once used is never given again");
 }
 
 #[test]

@@ -44,22 +44,35 @@ pub fn now_ms() -> i64 {
   SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |since| since.as_millis() as i64)
 }
 
-struct Recorded(Writer);
+/// Who is told of each live reading as the recorder takes it, beside the record it is written to.
+pub trait Listen: Send + Sync {
+  /// One reading of a machine, at its second.
+  fn reading(&self, machine: &str, at: i64, view: &HardwareView);
+}
+
+struct Recorded {
+  writer: Writer,
+  listen: Option<Arc<dyn Listen>>,
+}
 
 impl Sink for Recorded {
   fn reading(&self, machine: &str, at: i64, view: &HardwareView) {
-    self.0.reading(machine, at, view);
+    self.writer.reading(machine, at, view);
+
+    if let Some(listen) = &self.listen {
+      listen.reading(machine, at, view);
+    }
   }
 
   fn failure(&self, machine: &str, at: i64, detail: &str) {
-    self.0.failure(machine, at, detail);
+    self.writer.failure(machine, at, detail);
   }
 }
 
 /// The road a listed node is read by, or none where its row lacks a field its kind needs.
 pub fn source_of(node: &Node) -> Option<Source> {
   match node.kind {
-    NodeKind::Jake => node.hub_url.clone().zip(node.token_file.clone()).zip(node.agent.clone()).map(
+    NodeKind::Hub => node.hub_url.clone().zip(node.token_file.clone()).zip(node.agent.clone()).map(
       |((url, token_file), agent)| Source::Jake {
         hub: Hub { url, token_file },
         agent,
@@ -104,12 +117,26 @@ impl Recorder {
   }
 
   pub fn with_hands(store: Arc<Store>, record: &Path, hands: Hands) -> Result<Self, String> {
+    Self::listened(store, record, hands, None)
+  }
+
+  /// The recorder as `with_hands` makes it, telling `listen` of each reading it takes.
+  pub fn listened(
+    store: Arc<Store>,
+    record: &Path,
+    hands: Hands,
+    listen: Option<Arc<dyn Listen>>,
+  ) -> Result<Self, String> {
     let writer = Writer::open(record)?;
+    let recorded = Recorded {
+      writer: writer.clone(),
+      listen,
+    };
 
     Ok(Self {
       store,
       record: record.to_path_buf(),
-      runs: Mutex::new(live::Reader::new(Arc::new(Recorded(writer.clone())), hands)),
+      runs: Mutex::new(live::Reader::new(Arc::new(recorded), hands)),
       writer,
     })
   }

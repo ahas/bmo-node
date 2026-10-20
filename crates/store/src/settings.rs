@@ -1,6 +1,6 @@
 //! The settings (docs/store.md, 「The tables」): a key and a text value each. A machine's live tracking and
 //! its CPU limit are kept under the machine's name (docs/hardware.md, 「Tracking」 and 「Temperature
-//! limits」), and the six machine limits under their own (docs/machine.md, 「The limits」).
+//! limits」), and the three machine limits under their own (docs/machine.md, 「The limits」).
 
 use rusqlite::{OptionalExtension, params};
 
@@ -24,45 +24,29 @@ const TRACKING_PREFIX: &str = "hardware_tracking:";
 /// One of the machine's limits, with its default (docs/machine.md, 「The limits」).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MachineLimit {
-  LaunchMemoryFullPct,
-  LaunchMemoryAvailableGb,
-  LaunchLoadPerThread,
-  LaunchDiskFreeGb,
   AlertMemoryFullPct,
   AlertMinutes,
+  AlertDiskFreeGb,
 }
 
 impl MachineLimit {
-  pub const ALL: [Self; 6] = [
-    Self::LaunchMemoryFullPct,
-    Self::LaunchMemoryAvailableGb,
-    Self::LaunchLoadPerThread,
-    Self::LaunchDiskFreeGb,
-    Self::AlertMemoryFullPct,
-    Self::AlertMinutes,
-  ];
+  pub const ALL: [Self; 3] = [Self::AlertMemoryFullPct, Self::AlertMinutes, Self::AlertDiskFreeGb];
 
   /// The limit's own name, which its key carries after the prefix.
   pub fn name(self) -> &'static str {
     match self {
-      Self::LaunchMemoryFullPct => "launch_memory_full_pct",
-      Self::LaunchMemoryAvailableGb => "launch_memory_available_gb",
-      Self::LaunchLoadPerThread => "launch_load_per_thread",
-      Self::LaunchDiskFreeGb => "launch_disk_free_gb",
       Self::AlertMemoryFullPct => "alert_memory_full_pct",
       Self::AlertMinutes => "alert_minutes",
+      Self::AlertDiskFreeGb => "alert_disk_free_gb",
     }
   }
 
   /// What the limit reads as where no positive number is set.
   pub fn default_value(self) -> f64 {
     match self {
-      Self::LaunchMemoryFullPct => 5.0,
-      Self::LaunchMemoryAvailableGb => 4.0,
-      Self::LaunchLoadPerThread => 2.0,
-      Self::LaunchDiskFreeGb => 20.0,
       Self::AlertMemoryFullPct => 10.0,
       Self::AlertMinutes => 2.0,
+      Self::AlertDiskFreeGb => 20.0,
     }
   }
 

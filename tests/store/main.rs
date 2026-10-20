@@ -41,7 +41,7 @@ fn a_fresh_store_holds_the_seeded_hub_and_a_hub_removed_stays_removed() {
   assert_eq!((hubs[0].url.as_str(), hubs[0].token_file.as_str()), store::HUB_SEED);
   assert!(scratch.store.nodes().unwrap().is_empty());
 
-  scratch.store.remove_hub(store::HUB_SEED.0).unwrap();
+  scratch.store.remove_hub(hubs[0].id).unwrap();
 
   let reopened = Store::open_in(scratch.dir.path()).unwrap();
 

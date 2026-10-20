@@ -1,34 +1,25 @@
-//! The node pass: every node checked, and the screens told only when a state or the list moved.
-
-use std::time::Duration;
+//! The node pass: every node checked, and a node's event published only where the node moved, its check's
+//! times aside, whatever moved it.
 
 use bmo_node_client::events::EventKind;
 use store::nodes::SshLogin;
-use tokio::sync::broadcast::error::TryRecvError;
 
 use crate::support::Stand;
 
 #[tokio::test]
-async fn the_node_pass_checks_every_node_and_tells_the_screens_only_when_a_state_moved() {
+async fn the_node_pass_checks_every_node_and_publishes_only_what_moved() {
   let stood = Stand::default().up().await;
-  let mut told = stood.service.events.subscribe();
-  let mut count = || {
-    let mut seen = 0;
-
-    loop {
-      match told.try_recv() {
-        Ok(event) if event.kind() == EventKind::NodesChanged => seen += 1,
-        Ok(_) => {}
-        Err(TryRecvError::Empty | TryRecvError::Closed) => return seen,
-        Err(TryRecvError::Lagged(_)) => {}
-      }
-    }
+  let events = &stood.service.events;
+  let kinds = |after: i64| -> Vec<EventKind> {
+    events.after(after).unwrap().into_iter().map(|published| published.event.kind).collect()
   };
+  let start = events.floor();
 
-  // The seeded hub answers nothing, so its pass moves nothing.
+  // The seeded hub answers nothing and no node stands, so the pass moves nothing.
   node_server::node_pass(&stood.service).await.unwrap();
-  assert_eq!(count(), 0);
+  assert_eq!(kinds(start), []);
 
+  // A node the command added outside the service is published by the next pass, with its check.
   stood
     .store()
     .add_node(
@@ -42,14 +33,20 @@ async fn the_node_pass_checks_every_node_and_tells_the_screens_only_when_a_state
       },
     )
     .unwrap();
-  assert!(node_server::node_pass(&stood.service).await.unwrap());
-  assert_eq!(count(), 1);
+  node_server::node_pass(&stood.service).await.unwrap();
+  assert_eq!(kinds(start), [EventKind::NodeCreated]);
   assert_eq!(
     stood.store().node("pc-node").unwrap().unwrap().detail.as_deref(),
     Some("no key at /nowhere/id_home")
   );
 
+  // A pass that finds the same again moves only the check's time, which publishes nothing.
+  let seen = events.after(start).unwrap().last().unwrap().event.id;
+
   node_server::node_pass(&stood.service).await.unwrap();
-  tokio::time::sleep(Duration::from_millis(10)).await;
-  assert_eq!(count(), 0);
+  assert_eq!(kinds(seen), []);
+
+  stood.store().remove_node("pc-node").unwrap();
+  node_server::node_pass(&stood.service).await.unwrap();
+  assert_eq!(kinds(seen), [EventKind::NodeDeleted]);
 }

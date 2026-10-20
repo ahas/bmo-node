@@ -1,10 +1,11 @@
 # The workspace: the crates the node service is built from under `crates/`, and the repository's own package at
 # the root, which publishes nothing and holds every test in `tests/`. The version is the repository's one
-# version, in semver: the major moves on a change to the boundary API or to a table's contract
-# (docs/api.md, 「Versions」).
+# version: 0.1.0 with a revision until the first release, each change to the boundary API or to a table's
+# contract raising the revision alone (docs/api.md, 「Versions」).
 [workspace]
 members = [
   "crates/client",
+  "crates/plugin",
   "crates/policy",
   "crates/store",
   "crates/node-check",
@@ -15,7 +16,7 @@ members = [
 resolver = "3"
 
 [workspace.package]
-version = "1.0.0"
+version = "0.1.0-rev.1"
 edition = "2024"
 
 [workspace.dependencies]
@@ -36,6 +37,7 @@ percent-encoding = "2.3.2"
 regex = "1.11.1"
 roxmltree = "0.21.1"
 reqwest = { version = "0.13.5", features = ["json"] }
+rmcp = { version = "3.5.1", default-features = false, features = ["server", "transport-io"] }
 rusqlite = { version = "0.32.1", features = ["bundled"] }
 schemars = "1.2.3"
 serde ={ version = "1.0.219", features = ["derive"] }
@@ -61,6 +63,7 @@ publish = false
 axum.workspace = true
 base64.workspace = true
 bmo-node-client = { path = "crates/client" }
+bmo-node-plugin = { path = "crates/plugin" }
 clap.workspace = true
 flate2.workspace = true
 futures-util.workspace = true

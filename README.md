@@ -2,15 +2,15 @@
 
 The node service of bmo: the machines reachable from here and what is known of them.
 
-- **The node list:** ssh machines and jake agents, one list every other unit reads, each node checked once
-  a minute for whether it answers (`docs/nodes.md`).
+- **The node list:** ssh machines and the agents of hubs, one list every other unit reads, each node
+  checked once a minute for whether it answers (`docs/nodes.md`).
 - **The hardware monitor:** every machine read live, a reading a second, over its own road, and kept for a
   month as minute and half-hour rows (`docs/hardware.md`).
-- **The machine:** whether this machine has room for another launch, and memory or disk pressure told as
-  an event (`docs/machine.md`).
+- **The machine:** this machine's standing read every minute, with memory or disk pressure that stands told
+  as an event (`docs/machine.md`). Whether a launch may start is the caller's own policy.
 - **The tunnel door:** `llm-bridge`, which a node's tunnel dials in by over HTTPS (`docs/llm-bridge.md`).
 
-Version 0.1.0.
+Version 0.1.0-rev.1.
 
 ## Running it
 
@@ -18,15 +18,21 @@ Version 0.1.0.
   `docs/api.md`, 「Configuration」.
 - `bmo-node --config <file> node` lists and changes the nodes; `bmo-node --config <file> hardware-setup`
   puts the Windows sensor library in place on the nodes that need it.
+- `bmo-node mcp --url <url>` is the harness plugin's MCP server, its token in `BMO_NODE_TOKEN`; the
+  `ahas-node` skill under `crates/plugin/skills` tells a harness when and how to use it.
 - The units in `deploy/` run the service and the door under systemd's user manager.
 
 ## The boundary
 
-`docs/api.md` is the whole contract: the routes the service answers, the events it publishes and its
-configuration. The service calls no other unit. `docs/store.md` says what it keeps and where.
+`docs/api.md` is the whole contract: the routes the service answers, the events it publishes, the clients
+and the harness plugin it publishes, and its configuration. `docs/openapi.json` states it in OpenAPI 3.1,
+generated from the code; the Rust client `bmo-node-client` (`crates/client`) and the TypeScript client
+(`packages/node-client`) stand on it. The service calls no other unit. `docs/store.md` says what it keeps
+and where.
 
 ## Building and testing
 
 - `cargo check --workspace --all-targets`
 - `cargo test --workspace`
 - `cargo fmt --all --check` and `cargo clippy --workspace --all-targets -- -D warnings`
+- `bun run check` in `packages/node-client`, after `bun install`

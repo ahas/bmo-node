@@ -42,13 +42,18 @@ fn crossing(dependency: &Value) -> Option<String> {
     return None;
   }
 
+  let path = dependency["path"].as_str();
+
+  // A crate of this workspace carries the unit's own name, as its published client and plugin do.
+  if path.is_some_and(|path| Path::new(path).starts_with(root())) {
+    return None;
+  }
+
   if name.starts_with("bmo-") || name.starts_with("bmo_") {
     return Some(format!("{name} is another repository's crate"));
   }
 
-  if let Some(path) = dependency["path"].as_str()
-    && !Path::new(path).starts_with(root())
-  {
+  if let Some(path) = path {
     return Some(format!("{name} stands outside the repository, at {path}"));
   }
 
@@ -106,11 +111,14 @@ fn a_crossing_is_named() {
   let fetched =
     serde_json::json!({ "name": "fetched", "source": "git+https://example.com/fetched", "path": null });
   let base = serde_json::json!({ "name": "bmo-chat", "source": null, "path": "/elsewhere/bmo-chat" });
+  let own =
+    serde_json::json!({ "name": "bmo-node-client", "source": null, "path": root().join("crates/client") });
   let registry = serde_json::json!({ "name": "serde", "source": "registry+https://github.com/rust-lang/crates.io-index", "path": null });
 
   assert!(crossing(&outside).is_some());
   assert!(crossing(&other).is_some());
   assert!(crossing(&fetched).is_some());
   assert_eq!(crossing(&base), None);
+  assert_eq!(crossing(&own), None);
   assert_eq!(crossing(&registry), None);
 }

@@ -3,7 +3,8 @@
 //!
 //! A personal literal is read off the machine the test runs on rather than written here, since a list of
 //! them would itself be one: the account's name where its home is a person's, the machine's host name and
-//! the e-mail address git commits under.
+//! the e-mail address git commits under. The harness plugin's name, which bmo-next's conventions fix for
+//! every upstream unit, is the one name exempt, read off the committed OpenAPI document's `x-harness`.
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -12,7 +13,7 @@ use std::process::{Command, Stdio};
 const NOT_WRITTEN: &[&str] = &[".git", "target", "node_modules"];
 
 /// The folders of code, tests, units and documents, which hold no Hangul.
-const ENGLISH: &[&str] = &["crates", "tests", "deploy", "docs"];
+const ENGLISH: &[&str] = &["crates", "packages", "tests", "deploy", "docs"];
 
 fn root() -> PathBuf {
   PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -115,6 +116,14 @@ fn personal() -> Vec<String> {
     .collect()
 }
 
+/// The names the conventions fix that a personal literal may stand inside: the harness plugin's.
+fn fixed_names() -> Vec<String> {
+  let text = std::fs::read_to_string(root().join("docs/openapi.json")).expect("the document reads");
+  let document: serde_json::Value = serde_json::from_str(&text).expect("the document is JSON");
+
+  document["x-harness"]["plugin"].as_str().map(str::to_lowercase).into_iter().collect()
+}
+
 /// Whether `literal` stands in `line` as a word of its own, not inside a longer one.
 fn holds(line: &str, literal: &str) -> bool {
   let line = line.to_lowercase();
@@ -143,12 +152,15 @@ fn no_code_test_or_document_holds_hangul() {
 #[test]
 fn no_file_holds_a_personal_literal() {
   let literals = personal();
+  let fixed = fixed_names();
   let mut found = Vec::new();
 
   for (path, text) in files(ENGLISH) {
     for (index, line) in text.lines().enumerate() {
+      let line = fixed.iter().fold(line.to_lowercase(), |line, name| line.replace(name.as_str(), ""));
+
       for literal in &literals {
-        if holds(line, literal) {
+        if holds(&line, literal) {
           found.push(format!("{}: {literal}", shown(&path, index + 1)));
         }
       }

@@ -13,6 +13,7 @@ test = false
 [dependencies]
 axum.workspace = true
 bmo-node-client = { path = "../client" }
+bmo-node-plugin = { path = "../plugin" }
 chrono.workspace = true
 clap.workspace = true
 futures-util.workspace = true
@@ -20,11 +21,12 @@ hardware = { path = "../hardware" }
 node-check = { path = "../node-check" }
 policy = { path = "../policy" }
 reqwest.workspace = true
+rmcp.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 store = { path = "../store" }
 subtle.workspace = true
 sysinfo.workspace = true
-tokio.workspace = true
+tokio = { workspace = true, features = ["io-std"] }
 tokio-util.workspace = true
 toml.workspace = true

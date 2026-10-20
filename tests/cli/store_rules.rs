@@ -1,8 +1,9 @@
 //! The node list's rules the node registry's own tests held that the store's tests do not already: an
 //! agent whose name is taken gets the next free one, a role on either connection type and refused where it
-//! is not words, a Windows login kept, carried in its target and said beside its address, and a jake node
+//! is not words, a Windows login kept, carried in its target and said beside its address, and a hub node
 //! that takes a label and a role alone.
 
+use node_check::Machine;
 use node_server::views::target;
 use policy::node_states::NodeState;
 use serde_json::json;
@@ -144,11 +145,16 @@ fn a_windows_login_is_kept_carried_in_its_target_said_beside_its_address_and_a_c
     ("powershell", NodeState::Unknown, None)
   );
   assert_eq!(
-    serde_json::to_value(target(&moved).unwrap()).unwrap(),
+    serde_json::to_value(target(&moved, &Machine::new("ssh", "/srv/tester")).unwrap()).unwrap(),
     json!({
-      "kind": "ssh", "host": "192.0.2.82", "port": 2222, "user": "tester", "keyPath": "~/.ssh/id_home",
-      "shell": "powershell", "role": null,
-      "options": ["BatchMode=yes", "ConnectTimeout=5", "StrictHostKeyChecking=accept-new", "LogLevel=ERROR", "IdentitiesOnly=yes"],
+      "nodeName": "pc-node", "kind": "ssh", "role": null,
+      "host": "192.0.2.82", "port": 2222, "user": "tester", "keyPath": "~/.ssh/id_home", "shell": "powershell",
+      "sshOptions": ["BatchMode=yes", "ConnectTimeout=5", "StrictHostKeyChecking=accept-new", "LogLevel=ERROR", "IdentitiesOnly=yes"],
+      "sshArgs": [
+        "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", "-o", "StrictHostKeyChecking=accept-new", "-o", "LogLevel=ERROR",
+        "-o", "IdentitiesOnly=yes", "-i", "/srv/tester/.ssh/id_home", "-p", "2222", "tester@192.0.2.82",
+      ],
+      "hubId": null, "hubAddress": null, "hubTokenFile": null, "agentName": null,
     })
   );
   assert_eq!(moved.address(), "tester@192.0.2.82:2222 (PowerShell)");
@@ -206,7 +212,7 @@ fn a_windows_login_is_kept_carried_in_its_target_said_beside_its_address_and_a_c
         )
         .unwrap_err()
     ),
-    "no-node"
+    "not-found"
   );
   assert_eq!(code(store.add_node("blank", Some("  "), None, home()).unwrap_err()), "bad-field");
   assert_eq!(store.add_node("desk", None, None, home()).unwrap().label, "desk");

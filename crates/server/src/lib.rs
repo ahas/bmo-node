@@ -4,18 +4,21 @@ pub mod cli;
 pub mod config;
 pub mod events;
 mod loops;
+pub mod machines;
 pub mod reply;
 mod routes;
 pub mod this_machine;
 pub mod views;
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, PoisonError};
 
 use axum::Router;
+use bmo_node_client::events::Change;
 use bmo_node_client::hardware::HardwareView;
+use bmo_node_client::nodes::{Node as NodeView, NodeKey};
 use hardware::live::{Hands, Road};
 use store::Store;
 use tokio::sync::OnceCell;
@@ -33,7 +36,7 @@ type Once = Arc<OnceCell<(i64, Result<HardwareView, String>)>>;
 pub struct Service {
   pub store: Arc<Store>,
   pub token: String,
-  /// The shared data root, whose disk the machine's room is read for.
+  /// The shared data root, whose disk the machine look reads.
   pub data_root: PathBuf,
   /// The live record's file.
   pub record: PathBuf,
@@ -41,6 +44,8 @@ pub struct Service {
   pub proc_root: PathBuf,
   /// How this machine is shown.
   pub label: String,
+  /// The environment variable a process's scope is read from, where one is configured.
+  pub scope_variable: Option<String>,
   /// The OpenSSH, the home and the HTTP client a check runs with.
   pub machine: node_check::Machine,
   /// The road a machine is read over.
@@ -49,8 +54,8 @@ pub struct Service {
   pub events: Events,
   ready: AtomicBool,
   once: Mutex<HashMap<String, (i64, Once)>>,
-  /// The list's shape at the last pass, which a pass holds the list to.
-  shape: Mutex<Option<Vec<(String, String, i64)>>>,
+  /// Every node as its events last told it, which the next settling is told against.
+  seen: Mutex<BTreeMap<String, NodeView>>,
 }
 
 impl Service {
@@ -62,6 +67,7 @@ impl Service {
     label: Option<String>,
   ) -> Self {
     let here = ThisMachine::read();
+    let seen = Mutex::new(node_views(&store, &here).unwrap_or_default());
 
     Self {
       record: store::live_record_path(&data_root),
@@ -69,6 +75,7 @@ impl Service {
       label: label
         .or_else(|| here.host_name.clone())
         .unwrap_or_else(|| hardware::LOCAL_MACHINE.to_owned()),
+      scope_variable: None,
       machine: node_check::Machine::local(),
       road: Hands::default().stream,
       store,
@@ -78,18 +85,39 @@ impl Service {
       events: Events::default(),
       ready: AtomicBool::new(false),
       once: Mutex::new(HashMap::new()),
-      shape: Mutex::new(None),
+      seen,
     }
   }
 
-  /// Whether the list's shape moved since the pass before, the first pass reading as no move; the shape
-  /// kept for the next.
-  pub(crate) fn shape_moved(&self, shape: Vec<(String, String, i64)>) -> bool {
-    let mut held = self.shape.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-    let moved = held.as_ref().is_some_and(|before| *before != shape);
+  /// The service reading each process's scope from the variable named.
+  pub fn with_scope_variable(mut self, variable: Option<String>) -> Self {
+    self.scope_variable = variable.filter(|variable| !variable.is_empty());
+    self
+  }
 
-    *held = Some(shape);
-    moved
+  /// The node list told against the one its events last told: each node added, moved or gone since
+  /// published as its own event (docs/api.md, 「Events」).
+  pub fn settle_nodes(&self) -> store::Result<()> {
+    let mut seen = self.seen.lock().unwrap_or_else(PoisonError::into_inner);
+    let now = node_views(&self.store, &self.here)?;
+
+    for (name, view) in &now {
+      match seen.get(name) {
+        None => self.events.publish(Change::NodeCreated(view.clone())),
+        Some(before) if views::moved(before, view) => {
+          self.events.publish(Change::NodeChanged(view.clone()))
+        }
+        Some(_) => {}
+      }
+    }
+
+    for name in seen.keys().filter(|name| !now.contains_key(*name)) {
+      self.events.publish(Change::NodeDeleted(NodeKey { name: name.clone() }));
+    }
+
+    *seen = now;
+
+    Ok(())
   }
 
   /// Whether the store stands and the loops have started.
@@ -103,7 +131,7 @@ impl Service {
 
   /// The reading taken once of a machine under way or taken within the last second, or a new one.
   pub(crate) fn once_for(&self, machine: &str, now_ms: i64) -> Once {
-    let mut held = self.once.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    let mut held = self.once.lock().unwrap_or_else(PoisonError::into_inner);
 
     match held.get(machine) {
       Some((at, cell)) if cell.get().is_none() || now_ms - at < 1_000 => cell.clone(),
@@ -115,6 +143,19 @@ impl Service {
       }
     }
   }
+}
+
+/// Every node as the routes answer it now, by its name.
+fn node_views(store: &Store, here: &ThisMachine) -> store::Result<BTreeMap<String, NodeView>> {
+  let now = store::now_seconds();
+
+  Ok(
+    store
+      .nodes()?
+      .iter()
+      .map(|node| (node.name.clone(), views::view(node, here, now)))
+      .collect(),
+  )
 }
 
 /// The service's routes over its parts.

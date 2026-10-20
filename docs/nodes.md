@@ -9,36 +9,36 @@ service's API (`docs/api.md`); nothing else keeps a list of its own.
   What differs is its connection type, `kind`, a property of the node and nothing more:
   - **`ssh`**: a machine logged into over SSH, with an address, a port, an account and the place of the
     key the login offers;
-  - **`jake`**: a machine running a jake agent, reached through the jake hub the agent is attached to.
-    One jake node is one agent.
+  - **`hub`**: a machine running an agent of a jake hub, an outside program, reached through the hub the
+    agent is attached to. One hub node is one agent.
 - **This machine is a node too where its own card carries a service:** an ssh node on its own loopback,
   so a service's installer reaches its card the way it reaches any other machine's.
-- **A jake hub is not a node.** It is the backend a jake node is reached through, a control address and
-  the file its token is kept in, and it is never listed, counted or monitored as a machine.
+- **A hub is not a node.** It is the backend a hub node is reached through, a control address and the
+  file its token is kept in, and it is never listed, counted or monitored as a machine.
 - **The list and the hubs are two tables of node's store,** `nodes` and `hubs` (`docs/store.md`).
-- **A jake agent joins the list by attaching to a hub.** Every pass asks each hub which agents are
-  attached, and an agent no jake node stands for yet is added as one, last in the list, named after the
-  agent and labelled with the agent's own name. A jake node whose agent its hub says has departed leaves
-  the list on the next pass, since the machine is gone rather than down. One whose agent merely dropped
-  stays as `disconnected` until it attaches again or a person removes it; one removed while its agent is
-  still attached comes back on the next pass.
+- **An agent joins the list by attaching to a hub.** Every pass asks each hub which agents are attached,
+  and an agent no hub node stands for yet is added as one, last in the list, named after the agent and
+  labelled with the agent's own name. A hub node whose agent its hub says has departed leaves the list on
+  the next pass, since the machine is gone rather than down. One whose agent merely dropped stays as
+  `disconnected` until it attaches again or a person removes it; one removed while its agent is still
+  attached comes back on the next pass.
 
 ## What a row holds
 
 - `name`: lowercase letters, digits and hyphens, at most 32 characters. It never changes; the label does.
-  A jake node's name is its agent's name with every other character made a hyphen, with `-2`, `-3`
-  added where the name is already taken.
+  A hub node's name is its agent's name with every other character made a hyphen, with `-2`, `-3` added
+  where the name is already taken.
 - `label`: what a person reads.
-- `kind`: `ssh` or `jake`.
+- `kind`: `ssh` or `hub`.
 - For an ssh node: `host`, `port` (22 when not given), `user`, `key_path`, the private key the login
   offers, and `shell`, the language the login answers a command in: `posix` when not given, or
   `powershell` for a Windows machine whose OpenSSH logs into Windows PowerShell (`docs/hardware.md`, 「A
   Windows machine」). A node with no key path offers whatever the account's own SSH configuration
   offers.
-- For a jake node: `agent`, the agent's name exactly as the hub knows it, and `hub_url`, the hub it is
+- For a hub node: `agent`, the agent's name exactly as the hub knows it, and `hub_url`, the hub it is
   reached through. The token file is the hub's.
-- A hub: `url`, its control address, and `token_file`, the environment file whose `JAKE_CONTROL_TOKEN`
-  line holds the control token.
+- A hub: `id`, its key, `url`, its control address, `token_file`, the environment file whose
+  `JAKE_CONTROL_TOKEN` line holds the control token, and `label`, what a person reads, or none.
 - **A credential is never in either table.** A row names where a key or a token is kept, never the key or
   the token; the token is read out of its file for the one request that needs it and goes nowhere else:
   not into a row, a log line, an event or an answer.
@@ -52,9 +52,8 @@ service's API (`docs/api.md`); nothing else keeps a list of its own.
 - **A node reserved for services carries those services alone.** Its `role` names the service, or several
   joined by `+`; a node with none is shared by whatever the services' own placements put there.
 - **Each service names itself,** a word of lowercase letters, digits and hyphens, and nothing here keeps a
-  list of them. The one word this service reads is `jobs`: a node whose role is none or names `jobs` takes
-  a worker's checkout and heavy runs (`takesJobs`, `docs/api.md`).
-- **The role is written by whatever places services on nodes,** through the registry's set, and read by
+  list of them or reads any one of them: what a role means for a placement is the caller's.
+- **The role is written by whatever places services on nodes,** through the registry's change, and read by
   every installer and placement that must refuse a node reserved for another service.
 
 ## How a node's state is known
@@ -63,14 +62,15 @@ service's API (`docs/api.md`); nothing else keeps a list of its own.
   command's check call it as a library, and each writes what it answers to the node's row.
   - Its binary takes its input as JSON on its standard input and answers JSON: `node-check hubs` asks
     every hub it is handed which agents are attached; `node-check nodes` checks every row it is handed,
-    reading a jake node off the hub answers handed with it.
+    reading a hub node off the hub answers handed with it.
   - How OpenSSH is started for a node and how its end is read are the policy's `ssh.toml`, so the check,
-    the hardware monitor and the login arguments and connection the service hands out log in the same way.
+    the hardware monitor and the target the service hands out log in the same way.
 - **When a check runs:**
   - the service checks every node when it starts and once a minute after, all nodes at once, and writes
     each check to the node's row;
-  - `POST /nodes/check` and `bmo-node node --check` make the same check at once.
-  - A pass publishes `nodes-changed` when a check moved a node's state or the list itself changed.
+  - `POST /node-checks` and `bmo-node node --check` make the same check at once.
+  - Whatever moves the list is published as the node's own event, `node.created`, `node.changed` or
+    `node.deleted` (`docs/api.md`, 「Events」); a check that moves nothing but its times publishes nothing.
 - **An ssh node is checked by one login that runs nothing.** OpenSSH starts in batch mode, asking nobody
   for anything, with a five-second connection limit, the node's key alone where it names one, and a host
   key accepted the first time and held to after. A login that has not ended after twelve seconds is
@@ -82,7 +82,7 @@ service's API (`docs/api.md`); nothing else keeps a list of its own.
     time: `unreachable`;
   - anything else: `error`, with OpenSSH's own last line as the detail.
   - A key the row names that is not there is `error` without a login.
-- **A jake node is checked by asking its hub,** once per hub for every node on it: `GET /status` on the
+- **A hub node is checked by asking its hub,** once per hub for every node on it: `GET /status` on the
   control address with the token, whose `agents` list names every agent attached and whose `departed`
   list every agent uninstalled.
   - the node's agent is in the list: `connected`;
@@ -112,8 +112,8 @@ service's API (`docs/api.md`); nothing else keeps a list of its own.
 ## This machine
 
 - **Whether a node is this machine is decided here:** an ssh node whose host is a loopback address,
-  `localhost`, this machine's host name or one of its own interface addresses. A jake node never is,
-  since its hub's address says nothing of where its agent runs.
+  `localhost`, this machine's host name or one of its own interface addresses. A hub node never is, since
+  its hub's address says nothing of where its agent runs.
 - A loopback address is taken at its word, so a node reached through a tunnel ending on this machine's
   loopback is registered by an address of its own instead.
 
@@ -125,25 +125,25 @@ The command is `bmo-node --config <file> node`, and the registry routes do the s
   them.
 - `--add <name> --ssh <user@host> [--port <n>] [--key <path>] [--shell posix|powershell] [--label
   <label>] [--role <service>]` registers an ssh node.
-- A jake node is never registered by hand: it is added when its agent attaches to a listed hub.
+- A hub node is never registered by hand: it is added when its agent attaches to a listed hub.
 - `--add-hub <control url> --token-file <path>` lists a hub; `--remove-hub <control url>` removes it with
-  every jake node reached through it.
+  every hub node reached through it.
 - `--set <name>` with any of `--label`, `--role`, `--ssh`, `--port`, `--key`, `--shell` changes those
-  fields; `--key none` clears the key path and `--role none` the role. A jake node takes `--label` and
+  fields; `--key none` clears the key path and `--role none` the role. A hub node takes `--label` and
   `--role` alone. A changed address, port, account, key or shell clears the last check, since it was a
   check of something else.
 - `--remove <name>` removes a node.
 - `--check [<name>]` checks every node, or one, now.
-- `--target <name>` prints the one node's connection as JSON, as `GET /nodes/{name}/target` answers it,
-  for a tool outside the service that reaches a node by its registered name: its connection type with the
-  address, port, account, key path, shell and OpenSSH options of an ssh node, or the agent, hub and token
-  file of a jake node, and its role. A credential is never in it; a node missing a field its type needs is
-  refused.
+- `--target <name>` prints the one node's target as JSON, as `GET /nodes/{nodeName}/target` answers it, for
+  a tool outside the service that reaches a node by its registered name: its connection type with the
+  address, port, account, key path, shell, OpenSSH options and login arguments of an ssh node, or the
+  agent, hub and token file of a hub node, and its role. A credential is never in it; a node missing a
+  field its type needs is refused.
 - A name already taken, a name the rule refuses, a port outside 1 to 65535, a field of the other
   connection type or a hub already listed is refused, and nothing is written.
-- A change made through a route publishes `nodes-changed` at once. The command writes the store itself, so
-  it works whether or not the service runs; the service's next pass, which holds the list's shape (each
-  node's name, label and place) to the pass before, publishes it.
+- A change made through a route publishes its event at once. The command writes the store itself, so it
+  works whether or not the service runs; the service's next pass, which holds the list to the one it last
+  published, publishes it.
 - The list prints each node's state by its code and each moment in UTC.
 
 ## Reaching a node
@@ -153,7 +153,7 @@ The command is `bmo-node --config <file> node`, and the registry routes do the s
   hands its output on as it comes (`docs/hardware.md`, 「Which machines」). The Windows sensor setup runs
   over that same road.
 - **A service kept on a node is built, fed and asked over the node's own login by the unit that keeps it,**
-  with the node's connection from `GET /nodes/{name}/target`, or its batch login's arguments from `GET
-  /nodes/{name}/login` (`docs/api.md`). The node service carries no general shell for other units and no file transfer.
+  with the node's target from `GET /nodes/{nodeName}/target` (`docs/api.md`), whose `sshArgs` open its
+  batch login. The node service carries no general shell for other units and no file transfer.
 - **A node that cannot be reached is told apart from a script that failed:** a login that never happens, a
   hub that refuses or an agent that is gone is the node out of reach; a script that ran is its exit code.

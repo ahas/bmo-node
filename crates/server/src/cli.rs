@@ -1,6 +1,6 @@
 //! The `bmo-node node` and `bmo-node hardware-setup` commands (docs/nodes.md, 「Registering and changing a
 //! node」; docs/hardware.md, 「The Windows side」): the node list read and changed against the store, a node
-//! checked now, a node's connection printed for a tool, and the Windows of each node made readable in full.
+//! checked now, a node's target printed for a tool, and the Windows of each node made readable in full.
 //! No line holds a credential, only where one is kept.
 
 use std::time::Duration;
@@ -182,14 +182,14 @@ impl NodesArgs {
 
     if self.token_file.is_some() {
       return Err(
-        "--token-file belongs to --add-hub; a jake node is added when its agent attaches".to_owned(),
+        "--token-file belongs to --add-hub; a hub node is added when its agent attaches".to_owned(),
       );
     }
 
     if verb == "--add" {
       let Some(ssh) = self.ssh else {
         return Err(
-          "--add takes --ssh <user@host>; a jake node is added when its agent attaches to a listed hub"
+          "--add takes --ssh <user@host>; a hub node is added when its agent attaches to a listed hub"
             .to_owned(),
         );
       };
@@ -252,7 +252,11 @@ pub fn format_hub_list(hubs: &[Hub]) -> String {
 
   hubs
     .iter()
-    .map(|hub| format!("hub {}, token file {}", hub.url, hub.token_file))
+    .map(|hub| {
+      let label = hub.label.as_deref().map(|label| format!(" ({label})")).unwrap_or_default();
+
+      format!("hub {} {}{label}, token file {}", hub.id, hub.url, hub.token_file)
+    })
     .collect::<Vec<_>>()
     .join("\n")
 }
@@ -269,7 +273,7 @@ pub fn format_node_list(nodes: &[Node]) -> String {
     .map(|node| {
       let credential = match node.kind {
         NodeKind::Ssh => format!("key {}", node.key_path.as_deref().unwrap_or("(ssh config)")),
-        NodeKind::Jake => {
+        NodeKind::Hub => {
           format!("token file {}", node.token_file.as_deref().unwrap_or("(hub not listed)"))
         }
       };
@@ -315,14 +319,16 @@ pub async fn nodes(store: &Store, machine: &Machine, args: NodesArgs) -> Result<
       format_hub_list(&store.hubs().map_err(store_refusal)?)
     )],
     NodeCommand::AddHub { url, token_file } => {
-      vec![format_hub_list(&[store.add_hub(&url, &token_file).map_err(store_refusal)?])]
+      vec![format_hub_list(&[store.add_hub(&url, &token_file, None).map_err(store_refusal)?])]
     }
     NodeCommand::RemoveHub(url) => {
-      if store.remove_hub(&url).map_err(store_refusal)?.is_none() {
+      let hub = store.hub_at(&url).map_err(store_refusal)?.ok_or_else(|| format!("no hub at {url}"))?;
+
+      if store.remove_hub(hub.id).map_err(store_refusal)?.is_none() {
         return Err(format!("no hub at {url}"));
       }
 
-      vec![format!("removed the hub {url} and every node reached through it")]
+      vec![format!("removed the hub {} and every node reached through it", hub.url)]
     }
     NodeCommand::Add {
       name,
@@ -352,7 +358,8 @@ pub async fn nodes(store: &Store, machine: &Machine, args: NodesArgs) -> Result<
 
       vec![
         serde_json::to_string(
-          &views::target(&node).map_err(|_| format!("{name} lacks a field its connection type needs"))?,
+          &views::target(&node, machine)
+            .map_err(|_| format!("{name} lacks a field its connection type needs"))?,
         )
         .map_err(|why| why.to_string())?,
       ]

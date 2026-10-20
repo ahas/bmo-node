@@ -16,17 +16,17 @@ command runs them too before it reads or writes.
 - **`nodes`**: one row per node: `name` (the key), `label`, `kind`, `host`, `port`, `user`, `key_path`,
   `shell`, `agent`, `hub_url`, `role`, `position`, the last check's `state` (`unknown` by default),
   `detail`, `checked_at` and `connected_at`, and `created_at` and `updated_at` (`docs/nodes.md`, 「What a
-  row holds」). A jake node's token file is its hub's.
-- **`hubs`**: one row per jake hub: `url` (the key), `token_file` and `created_at`. When the table is first
-  made it holds the local hub, `http://127.0.0.1:8791`, whose token file is the hub's environment file; the
+  row holds」). `kind` is `ssh` or `hub`, and a hub node's token file is its hub's.
+- **`hubs`**: one row per hub: `id` (the key, never given again once used), `url` (each listed once),
+  `token_file`, `label` and `created_at`. When the table is first made it holds the local hub, `http://127.0.0.1:8791`, whose token file is the hub's environment file; the
   seed is written once, so a hub removed stays removed.
 - **`hardware_samples`**: one row per machine per minute, `machine`, `at` (the minute's start) and
   `sample`, each figure's lowest, highest, sum and count as JSON; keyed by machine and minute.
 - **`hardware_rollups`**: the same per half hour, `machine`, `at` and `tally`.
 - **`settings`**: `key` and `value`, both text:
   - `hardware_tracking:<machine>` and `hardware_cpu_limit:<machine>` (`docs/hardware.md`);
-  - `machine_limit:<name>` for each of the six machine limits (`docs/machine.md`);
-  - the machine watch's marks of what it has told.
+  - `machine_limit:<name>` for each of the three machine limits (`docs/machine.md`);
+  - the machine look's standing and the time memory pressure started standing.
 
 A node is read with its hub in one query, so its kind, its agent and its hub's token file always come
 together.
@@ -40,7 +40,8 @@ together.
 ## What the store does not hold
 
 - **No credential:** a row names where a key or a token is kept, never the key or the token.
-- **Nothing of another unit's:** the work node tables, a tunnel's state and the agents are other units'.
+- **Nothing of another unit's:** a tunnel's state, and whatever another unit keeps of the nodes, are that
+  unit's.
 
 ## Moving in from the old archive
 

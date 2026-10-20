@@ -13,7 +13,9 @@ use super::chips::chip_view;
 use super::js::{round, round_to};
 use super::probe::{Gpu, Memory, Sensor, ServiceCount, Snapshot, Watts};
 use super::storage::{StorageDevice, is_drive_sensor};
-pub use bmo_node_client::hardware::{BoardView, CpuView, GpuView, HardwareView, MemoryView, ServicesView, StorageView, VolumeView};
+pub use bmo_node_client::hardware::{
+  BoardView, CpuView, GpuView, HardwareView, MemoryView, ServicesView, StorageView, VolumeView,
+};
 
 fn share_of(part: Option<f64>, whole: Option<f64>) -> Option<f64> {
   let (part, whole) = (part?, whole?);

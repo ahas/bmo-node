@@ -61,10 +61,10 @@ fn the_windows_sensor_setup_names_its_place_release_and_driver() {
 }
 
 #[test]
-fn a_node_is_reached_over_ssh_or_through_a_jake_hub_and_nothing_else() {
+fn a_node_is_reached_over_ssh_or_through_a_hub_and_nothing_else() {
   assert_eq!(NodeKind::of_code("ssh"), Some(NodeKind::Ssh));
-  assert_eq!(NodeKind::of_code("jake"), Some(NodeKind::Jake));
-  assert_eq!(NodeKind::of_code("hub"), None);
+  assert_eq!(NodeKind::of_code("hub"), Some(NodeKind::Hub));
+  assert_eq!(NodeKind::of_code("jake"), None);
   for kind in NodeKind::ALL {
     assert_eq!(NodeKind::of_code(kind.name()), Some(kind));
   }

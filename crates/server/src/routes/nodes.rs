@@ -1,94 +1,93 @@
-//! The nodes and the hubs (docs/api.md, 「Nodes」 and 「Hubs」): the list and one node, the check, a node's
-//! connection and login, and the registry's changes, each publishing `nodes-changed`.
+//! The nodes and the node checks (docs/api.md, 「Nodes」 and 「Node checks」): the list and one node, its
+//! target, the registry's changes and the check, each publishing the node's own events.
 
 use axum::Json;
 use axum::body::Bytes;
 use axum::extract::Path;
 use axum::http::{StatusCode, Uri};
-use bmo_node_client::ErrorCode;
 use bmo_node_client::nodes::{
-  CheckNodes, Hub, HubQuery, HubRemoved, Login, NewNode, Node, NodeChanges, NodeList, NodeListQuery,
-  Removed, Target,
+  NewNode, Node, NodeChanges, NodeCheck, NodeCheckAsk, NodePage, NodesQuery, Target,
 };
 use node_check::pass::check_nodes;
 use store::nodes::{DEFAULT_LOGIN_SHELL, DEFAULT_SSH_PORT, NodeChanges as StoreChanges, SshLogin};
 
-use super::{Shared, node, now_seconds};
+use super::{Shared, node, settle};
 use crate::Service;
-use crate::reply::{Answer, Made, Reply, body, query};
+use crate::reply::{Answer, Done, Made, Reply, body, query};
 use crate::views;
 
 /// Every node as the routes answer it, in the list's order.
 fn all(service: &Service) -> Result<Vec<Node>, Reply> {
-  let now = now_seconds();
+  let now = store::now_seconds();
 
-  Ok(service.store.nodes()?.iter().map(|node| views::view(node, &service.here, now)).collect())
+  Ok(
+    service
+      .store
+      .nodes()?
+      .iter()
+      .map(|node| views::view(node, &service.here, now))
+      .collect(),
+  )
 }
 
-/// The nodes after the one `after` names, at most `limit` of them.
-fn page(nodes: Vec<Node>, asked: NodeListQuery) -> Result<Vec<Node>, Reply> {
+fn one_view(service: &Service, name: &str) -> Result<Node, Reply> {
+  Ok(views::view(&node(service, name)?, &service.here, store::now_seconds()))
+}
+
+/// The page of nodes after the one `after` names, at most `limit` of them.
+fn page(nodes: Vec<Node>, asked: NodesQuery) -> Result<NodePage, Reply> {
   let start = match &asked.after {
     None => 0,
-    Some(after) => nodes.iter().position(|node| node.name == *after).ok_or_else(|| Reply::no_node(after))? + 1,
+    Some(after) => {
+      nodes
+        .iter()
+        .position(|node| node.name == *after)
+        .ok_or_else(|| Reply::bad_request(format!("after names no listed node: {after}")))?
+        + 1
+    }
   };
   let limit = asked.limit.map_or(usize::MAX, |limit| limit as usize);
+  let rest = nodes.len().saturating_sub(start);
+  let items: Vec<Node> = nodes.into_iter().skip(start).take(limit).collect();
 
-  Ok(nodes.into_iter().skip(start).take(limit).collect())
+  Ok(NodePage {
+    more: rest > items.len(),
+    items,
+  })
 }
 
-pub async fn list(service: Shared, uri: Uri) -> Answer<NodeList> {
-  let asked: NodeListQuery = query(&uri)?;
+pub async fn list(service: Shared, uri: Uri) -> Answer<NodePage> {
+  let asked: NodesQuery = query(&uri)?;
 
-  Ok(Json(NodeList {
-    nodes: page(all(&service)?, asked)?,
-  }))
+  Ok(Json(page(all(&service)?, asked)?))
 }
 
 pub async fn one(service: Shared, Path(name): Path<String>) -> Answer<Node> {
-  Ok(Json(views::view(&node(&service, &name)?, &service.here, now_seconds())))
+  Ok(Json(one_view(&service, &name)?))
 }
 
 pub async fn target(service: Shared, Path(name): Path<String>) -> Answer<Target> {
-  Ok(Json(views::target(&node(&service, &name)?)?))
+  Ok(Json(views::target(&node(&service, &name)?, &service.machine)?))
 }
 
-pub async fn login(service: Shared, Path(name): Path<String>) -> Answer<Login> {
-  Ok(Json(views::login(&node(&service, &name)?, &service.machine)?))
-}
-
-/// The one node named, or every node, checked now and written to its row; then the whole list.
-pub async fn check(service: Shared, bytes: Bytes) -> Answer<NodeList> {
-  let asked: CheckNodes = body(&bytes)?;
-
-  if let Some(name) = &asked.name {
-    node(&service, name)?;
-  }
-
-  let checked = check_nodes(&*service.store, &service.machine, asked.name.as_deref()).await?;
-
-  if checked.changed {
-    service.events.nodes_changed();
-  }
-
-  Ok(Json(NodeList { nodes: all(&service)? }))
-}
-
-pub async fn add(service: Shared, bytes: Bytes) -> Made<Node> {
+pub async fn create(service: Shared, bytes: Bytes) -> Made<Node> {
   let asked: NewNode = body(&bytes)?;
   let login = SshLogin {
     host: asked.host,
     port: asked.port.unwrap_or(DEFAULT_SSH_PORT),
     user: asked.user,
     key_path: asked.key_path,
-    shell: asked.shell.map_or_else(|| DEFAULT_LOGIN_SHELL.to_owned(), |shell| shell.name().to_owned()),
+    shell: asked
+      .shell
+      .map_or_else(|| DEFAULT_LOGIN_SHELL.to_owned(), |shell| shell.name().to_owned()),
   };
   let node = service.store.add_node(&asked.name, asked.label.as_deref(), asked.role, login)?;
 
-  service.events.nodes_changed();
-  Ok((StatusCode::CREATED, Json(views::view(&node, &service.here, now_seconds()))))
+  settle(&service)?;
+  Ok((StatusCode::CREATED, Json(views::view(&node, &service.here, store::now_seconds()))))
 }
 
-pub async fn set(service: Shared, Path(name): Path<String>, bytes: Bytes) -> Answer<Node> {
+pub async fn change(service: Shared, Path(name): Path<String>, bytes: Bytes) -> Answer<Node> {
   let asked: NodeChanges = body(&bytes)?;
   let changes = StoreChanges {
     label: asked.label,
@@ -101,42 +100,43 @@ pub async fn set(service: Shared, Path(name): Path<String>, bytes: Bytes) -> Ans
   };
   let node = service.store.update_node(&name, changes)?;
 
-  service.events.nodes_changed();
-  Ok(Json(views::view(&node, &service.here, now_seconds())))
+  settle(&service)?;
+  Ok(Json(views::view(&node, &service.here, store::now_seconds())))
 }
 
-pub async fn remove(service: Shared, Path(name): Path<String>) -> Answer<Removed> {
+pub async fn remove(service: Shared, Path(name): Path<String>) -> Done {
   if !service.store.remove_node(&name)? {
     return Err(Reply::no_node(&name));
   }
 
-  service.events.nodes_changed();
-  Ok(Json(Removed { removed: name }))
+  settle(&service)?;
+  Ok(StatusCode::NO_CONTENT)
 }
 
-pub async fn add_hub(service: Shared, bytes: Bytes) -> Made<Hub> {
-  let asked: Hub = body(&bytes)?;
-  let hub = service.store.add_hub(&asked.url, &asked.token_file)?;
+/// The nodes named, or every node, checked now and written to their rows; then each as it stands.
+pub async fn check(service: Shared, bytes: Bytes) -> Made<NodeCheck> {
+  let asked: NodeCheckAsk = body(&bytes)?;
 
-  service.events.nodes_changed();
-  Ok((
-    StatusCode::CREATED,
-    Json(Hub {
-      url: hub.url,
-      token_file: hub.token_file,
-    }),
-  ))
-}
+  for name in &asked.node_names {
+    if !service.store.node_exists(name)? {
+      return Err(Reply::bad_field(format!("nodeNames names no listed node: {name}")));
+    }
+  }
 
-pub async fn remove_hub(service: Shared, uri: Uri) -> Answer<HubRemoved> {
-  let asked: HubQuery = query(&uri)?;
-  let Some(removed) = service.store.remove_hub(&asked.url)? else {
-    return Err(Reply::new(ErrorCode::NoHub, format!("no hub is listed at {}", asked.url)));
+  if asked.node_names.is_empty() {
+    check_nodes(&*service.store, &service.machine, None).await?;
+  } else {
+    for name in &asked.node_names {
+      check_nodes(&*service.store, &service.machine, Some(name)).await?;
+    }
+  }
+
+  settle(&service)?;
+
+  let items = match asked.node_names.as_slice() {
+    [] => all(&service)?,
+    names => names.iter().filter_map(|name| one_view(&service, name).ok()).collect(),
   };
 
-  service.events.nodes_changed();
-  Ok(Json(HubRemoved {
-    url: store::nodes::checked_hub_url(&asked.url)?,
-    removed,
-  }))
+  Ok((StatusCode::CREATED, Json(NodeCheck { items })))
 }

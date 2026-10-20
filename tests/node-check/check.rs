@@ -145,7 +145,7 @@ fn ssh_row(name: &str, key: Option<&str>) -> NodeRow {
 fn jake_row(name: &str, hub: &str, agent: &str) -> NodeRow {
   NodeRow {
     name: name.into(),
-    kind: "jake".into(),
+    kind: "hub".into(),
     host: None,
     port: None,
     user: None,
@@ -494,8 +494,8 @@ async fn a_pass_over_node_s_own_store_adds_the_hub_s_agents_and_writes_every_che
   let hub = StoodHub::new(&["agent_a"]).await;
   let store = store::Store::in_memory().unwrap();
 
-  store.remove_hub(store::HUB_SEED.0).unwrap();
-  store.add_hub(&hub.url, "~/.local/share/jake/hub.env").unwrap();
+  store.remove_hub(store.hubs().unwrap()[0].id).unwrap();
+  store.add_hub(&hub.url, "~/.local/share/jake/hub.env", None).unwrap();
   store
     .add_node("pc-node", None, None, store::nodes::SshLogin::new("192.0.2.82", "someone"))
     .unwrap();

@@ -1,14 +1,16 @@
-//! The node service's routes asked over HTTP as their callers ask them: agency's four calls in the shapes
-//! agency reads, job's node reads, the console's node list, check and hardware reads, the registry's
-//! changes, the machine's standing, the event stream and the health; and the pass, the names and the
-//! reading taken once that stand behind them.
+//! The node service's routes asked over HTTP, each answer held to the committed OpenAPI document: the
+//! nodes, the node checks and the targets, the hubs, the machines and their readings, the event stream and
+//! the health; the harness plugin's MCP server over them; and the pass, the names and the reading taken
+//! once that stand behind them.
 
-mod agency;
-mod hardware;
+#[path = "../support/binary.rs"]
+mod binary;
+mod hubs;
+mod machines;
+mod mcp;
 mod names;
 mod nodes;
 mod once;
 mod pass;
-mod registry;
 mod stream;
 mod support;

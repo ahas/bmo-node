@@ -27,8 +27,16 @@ impl Reply {
     Self::new(ErrorCode::Failed, error)
   }
 
+  pub fn not_found(error: impl Into<String>) -> Self {
+    Self::new(ErrorCode::NotFound, error)
+  }
+
   pub fn no_node(name: &str) -> Self {
-    Self::new(ErrorCode::NoNode, format!("no node named {name}"))
+    Self::not_found(format!("no node named {name}"))
+  }
+
+  pub fn bad_field(error: impl Into<String>) -> Self {
+    Self::new(ErrorCode::BadField, error)
   }
 }
 
@@ -54,6 +62,9 @@ pub type Answer<T> = Result<Json<T>, Reply>;
 
 /// A route's answer for a thing it made: 201 and the thing, or a reply in the error shape.
 pub type Made<T> = Result<(StatusCode, Json<T>), Reply>;
+
+/// A route's answer where nothing is left to answer: 204, or a reply in the error shape.
+pub type Done = Result<StatusCode, Reply>;
 
 /// A body read as the route's own type; an empty body reads as an empty object.
 pub fn body<T: DeserializeOwned>(bytes: &Bytes) -> Result<T, Reply> {

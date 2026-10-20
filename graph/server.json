@@ -2,28 +2,28 @@
   {
     "id": "server/routes",
     "title": "Node service API",
-    "what": "The bmo-node HTTP service: the bearer-guarded routes by resource (nodes, hubs, hardware, this machine, the event stream and health) answering in the client crate's types, and its configuration, in crates/server.",
+    "what": "The bmo-node HTTP service: the bearer-guarded routes by resource (nodes, node checks, hubs, machines and their readings, the event stream with its window, health) answering in the client crate's types, and its configuration, in crates/server.",
     "files": [
       "crates/server/src/lib.rs",
       "crates/server/src/config.rs",
       "crates/server/src/reply.rs",
       "crates/server/src/events.rs",
       "crates/server/src/views.rs",
+      "crates/server/src/machines.rs",
       "crates/server/src/this_machine.rs",
       "crates/server/src/main.rs",
       "crates/server/src/routes/mod.rs",
       "crates/server/src/routes/nodes.rs",
-      "crates/server/src/routes/machine.rs",
-      "crates/server/src/routes/hardware.rs",
+      "crates/server/src/routes/hubs.rs",
+      "crates/server/src/routes/machines.rs",
       "crates/server/src/routes/stream.rs",
       "docs/api.md",
       "tests/server/main.rs",
       "tests/server/support.rs",
-      "tests/server/agency.rs",
       "tests/server/nodes.rs",
+      "tests/server/hubs.rs",
+      "tests/server/machines.rs",
       "tests/server/names.rs",
-      "tests/server/registry.rs",
-      "tests/server/hardware.rs",
       "tests/server/once.rs",
       "tests/server/stream.rs"
     ],
@@ -35,9 +35,33 @@
       "nodes/node-check",
       "hardware/monitor",
       "hardware/machine-standing",
-      "hardware/roads-and-probe"
+      "hardware/roads-and-probe",
+      "server/plugin"
     ],
-    "base": "aa3b58e6543e54dcd310c1213e9b1eb2438e2a31"
+    "base": "29665993bf94e7e1b577a1abad8e23150579cee2"
+  },
+  {
+    "id": "server/plugin",
+    "title": "Node harness plugin",
+    "what": "The ahas-node harness plugin in crates/plugin: the MCP server bmo-node mcp starts, its seven tools each calling one route through the client, the ahas-node skill, and the generator of docs/openapi.json.",
+    "files": [
+      "crates/plugin/Cargo.toml",
+      "crates/plugin/src/lib.rs",
+      "crates/plugin/src/tools.rs",
+      "crates/plugin/src/server.rs",
+      "crates/plugin/src/openapi.rs",
+      "crates/plugin/examples/openapi.rs",
+      "crates/plugin/skills/ahas-node/SKILL.md",
+      "docs/openapi.json",
+      "tests/openapi.rs",
+      "tests/server/mcp.rs"
+    ],
+    "symbols": [],
+    "aliases": [],
+    "needs": [
+      "core/client"
+    ],
+    "base": "29665993bf94e7e1b577a1abad8e23150579cee2"
   },
   {
     "id": "server/loops",
@@ -56,7 +80,7 @@
       "hardware/monitor",
       "hardware/machine-standing"
     ],
-    "base": "92607dac8f5df5fae94a23d5288b0897704af64d"
+    "base": "29665993bf94e7e1b577a1abad8e23150579cee2"
   },
   {
     "id": "server/llm-bridge",

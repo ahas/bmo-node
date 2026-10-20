@@ -17,6 +17,9 @@ pub struct Config {
   /// How this machine is shown, where none is set the system's host name.
   #[serde(default)]
   pub machine_label: Option<String>,
+  /// The environment variable a process's scope is read from; where none is set, no process has a scope.
+  #[serde(default)]
+  pub scope_variable: Option<String>,
 }
 
 impl Config {

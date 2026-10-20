@@ -7,7 +7,7 @@ pub use bmo_node_client::nodes::NodeKind;
 pub const NAME_MAX: usize = 32;
 
 /// Whether a name is a node's: lowercase letters, digits and hyphens, at most 32, starting with a letter or
-/// a digit. A name is a herdr token value and a path segment of the console alike, so it holds to what both
+/// a digit. A name is a path segment and a token in callers' own commands alike, so it holds to what both
 /// accept.
 pub fn is_node_name(name: &str) -> bool {
   let mut chars = name.chars();

@@ -25,6 +25,11 @@ lane = "wide"
 id = "fmt"
 command = "cargo fmt --all --check"
 
+# The TypeScript client: its types as docs/openapi.json generates them now, and its typecheck.
+[[check.step]]
+id = "node-client"
+command = "bun install --cwd packages/node-client --frozen-lockfile && bun run --cwd packages/node-client check"
+
 [build]
 # The service and its command, the node check's own binary, and the tunnel door.
 binaries = ["bmo-node", "node-check", "llm-bridge"]

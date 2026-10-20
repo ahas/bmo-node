@@ -42,17 +42,15 @@ fn a_limit_set_to_anything_but_a_positive_number_reads_as_the_default() {
   for limit in MachineLimit::ALL {
     assert_eq!(store.machine_limit(limit).unwrap(), limit.default_value(), "{}", limit.name());
   }
-  assert_eq!(MachineLimit::ALL.map(MachineLimit::default_value), [5.0, 4.0, 2.0, 20.0, 10.0, 2.0]);
+  assert_eq!(MachineLimit::ALL.map(MachineLimit::default_value), [10.0, 2.0, 20.0]);
 
-  store.set_setting("machine_limit:launch_disk_free_gb", "40 GB").unwrap();
-  store.set_setting("machine_limit:launch_memory_full_pct", "-3").unwrap();
+  store.set_setting("machine_limit:alert_disk_free_gb", "40 GB").unwrap();
+  store.set_setting("machine_limit:alert_memory_full_pct", "-3").unwrap();
   store.set_setting("machine_limit:alert_minutes", "soon").unwrap();
-  store.set_setting("machine_limit:launch_load_per_thread", "0").unwrap();
 
-  assert_eq!(store.machine_limit(MachineLimit::LaunchDiskFreeGb).unwrap(), 40.0);
-  assert_eq!(store.machine_limit(MachineLimit::LaunchMemoryFullPct).unwrap(), 5.0);
+  assert_eq!(store.machine_limit(MachineLimit::AlertDiskFreeGb).unwrap(), 40.0);
+  assert_eq!(store.machine_limit(MachineLimit::AlertMemoryFullPct).unwrap(), 10.0);
   assert_eq!(store.machine_limit(MachineLimit::AlertMinutes).unwrap(), 2.0);
-  assert_eq!(store.machine_limit(MachineLimit::LaunchLoadPerThread).unwrap(), 2.0);
 }
 
 #[test]

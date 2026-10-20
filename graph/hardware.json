@@ -37,7 +37,7 @@
   {
     "id": "hardware/monitor",
     "title": "Hardware monitor",
-    "what": "The hardware monitor's live readings and history: the recorder following tracked machines, the live record files, the history series and rollups, and the view a screen draws, in the hardware crate.",
+    "what": "The hardware monitor's live readings and history: the recorder following tracked machines and telling a listener of each reading, the live record, the minute and half-hour rows, readings read at a span, and the view a screen draws, in the hardware crate.",
     "files": [
       "crates/hardware/src/lib.rs",
       "crates/hardware/src/live.rs",
@@ -58,12 +58,12 @@
       "core/store",
       "hardware/roads-and-probe"
     ],
-    "base": "92607dac8f5df5fae94a23d5288b0897704af64d"
+    "base": "29665993bf94e7e1b577a1abad8e23150579cee2"
   },
   {
     "id": "hardware/machine-standing",
     "title": "Machine standing",
-    "what": "This machine's room for another launch: memory, swap, CPU and disk read against the hardware limits, the held reasons, the largest processes, and the machine-pressure events, in the hardware crate's machine module.",
+    "what": "This machine's minute look: memory, swap, CPU and disk read from the kernel, each process's scope and the largest processes, and the memory and disk alerts whose start and end are told, in the hardware crate's machine module.",
     "files": [
       "crates/hardware/src/machine.rs",
       "docs/machine.md",
@@ -74,6 +74,6 @@
     "needs": [
       "core/store"
     ],
-    "base": "92607dac8f5df5fae94a23d5288b0897704af64d"
+    "base": "29665993bf94e7e1b577a1abad8e23150579cee2"
   }
 ]

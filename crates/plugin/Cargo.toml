@@ -1,0 +1,12 @@
+[package]
+name = "bmo-node-plugin"
+description = "The node service's harness plugin: the MCP server bmo-node mcp starts, its tools calling the node client, the ahas-node skill, and the service's OpenAPI document."
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+bmo-node-client = { path = "../client" }
+rmcp.workspace = true
+schemars.workspace = true
+serde.workspace = true
+serde_json.workspace = true

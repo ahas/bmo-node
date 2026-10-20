@@ -1,5 +1,6 @@
 //! A node row as a check reads it, and the target it describes.
 
+use policy::nodes::NodeKind;
 use serde::{Deserialize, Serialize};
 
 use crate::NodeState;
@@ -60,7 +61,7 @@ pub enum Target {
 impl NodeRow {
   /// The target the row describes, or none where it lacks a field its kind needs.
   pub fn target(&self) -> Option<Target> {
-    if self.kind == "jake" {
+    if self.is_hub() {
       return Some(Target::Jake {
         hub: Hub {
           url: self.hub_url.clone()?,
@@ -78,9 +79,14 @@ impl NodeRow {
     }))
   }
 
-  /// The hub and agent of a jake row, where it names both.
+  /// Whether the row is a hub node's, reached through its hub.
+  fn is_hub(&self) -> bool {
+    self.kind == NodeKind::Hub.name()
+  }
+
+  /// The hub and agent of a hub node's row, where it names both.
   pub fn jake(&self) -> Option<(&str, &str)> {
-    (self.kind == "jake").then_some(())?;
+    self.is_hub().then_some(())?;
 
     Some((self.hub_url.as_deref()?, self.agent.as_deref()?))
   }

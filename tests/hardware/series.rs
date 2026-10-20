@@ -1,10 +1,12 @@
-//! What a screen is handed of the recorded figures: a reading's figures named by their piece of hardware,
-//! a span cut into its own points, a short span out of the live record, a store that never recorded, and
-//! the live record's readings as columns with only the metrics asked for.
+//! What a caller is handed of the recorded figures: a reading's figures named by their piece of hardware,
+//! each span drawn out of the rows that hold it, the live record's seconds paged after an instant, a store
+//! that never recorded, and the figures laid out per piece of hardware.
+
+use std::collections::BTreeMap;
 
 use hardware::probe::{Fan, Gpu, Memory, Sensor, Snapshot, Watts};
 use hardware::record::{Reader, Writer};
-use hardware::series::{HISTORY_SPANS, LiveRange, gather_live, read_history, read_span, span};
+use hardware::series::{Asked, Band, Rows, live_reading, read_readings, reading_of};
 use hardware::storage::{StorageDevice, StorageVolume};
 use hardware::view::{hardware_view, history_sample};
 use serde_json::Value;
@@ -106,46 +108,102 @@ fn names_each_figure_by_its_piece_of_hardware_keeps_it_in_its_unit_and_leaves_ou
 }
 
 #[test]
-fn a_span_ends_now_and_is_cut_into_its_own_points() {
-  let store = Store::in_memory().unwrap();
-  let now = 40 * 86_400;
-  let points: Vec<(usize, i64)> = HISTORY_SPANS
+fn each_span_is_drawn_out_of_the_rows_that_hold_it_whole() {
+  assert_eq!(Rows::of_span(1_000), Some(Rows::Live));
+  assert_eq!(Rows::of_span(15_000), Some(Rows::Live));
+  assert_eq!(Rows::of_span(60_000), Some(Rows::Minutes));
+  assert_eq!(Rows::of_span(300_000), Some(Rows::Minutes));
+  assert_eq!(Rows::of_span(1_800_000), Some(Rows::HalfHours));
+  assert_eq!(Rows::of_span(7_200_000), Some(Rows::HalfHours));
+
+  for refused in [0, -1_000, 1_500, 90_000] {
+    assert_eq!(Rows::of_span(refused), None, "{refused}");
+  }
+
+  assert_eq!(
+    read_readings(&Store::in_memory().unwrap(), None, "box", asked(1_500, None, None, None), 0)
+      .unwrap_err()
+      .to_string(),
+    "a span is whole seconds under a minute or whole minutes from a minute up, not 1500 ms"
+  );
+}
+
+fn asked(span_ms: i64, after_ms: Option<i64>, before_ms: Option<i64>, limit: Option<usize>) -> Asked {
+  Asked {
+    span_ms,
+    after_ms,
+    before_ms,
+    limit,
+  }
+}
+
+fn uses(page: &hardware::series::ReadingPage) -> Vec<(i64, f64, f64, f64)> {
+  page
+    .items
     .iter()
-    .map(|(_, seconds, point)| {
-      let range = read_span(&store, None, "box", *seconds, *point, now).unwrap();
+    .map(|reading| {
+      let band = reading.cpu.use_pct.unwrap();
 
-      (range.at.len(), range.point_seconds)
+      (reading.at, band.min, band.max, band.mean)
     })
-    .collect();
-
-  assert_eq!(points, [(60, 5), (60, 15), (60, 60), (72, 300), (288, 300), (336, 1_800), (360, 7_200)]);
-  assert_eq!(span("1h"), Some((3_600, 60)));
-  assert_eq!(span("2h"), None);
+    .collect()
 }
 
 #[test]
-fn a_short_span_is_drawn_out_of_the_live_record_s_readings() {
-  let now = 1_000;
-  let since = now - 300;
-  let range = LiveRange {
-    at: vec![since, since + 1, since + 6, now],
-    series: [("cpu|use".to_owned(), vec![Some(10.0), Some(30.0), Some(50.0), None])]
-      .into_iter()
-      .collect(),
-  };
-  let history = gather_live(&range, since, now, 5);
-  let band = &history.series["cpu|use"];
+fn the_live_record_s_seconds_are_paged_after_an_instant_and_gathered_into_wider_stretches() {
+  let dir = tempfile::tempdir().unwrap();
+  let path = dir.path().join("hardware-live.db");
+  let writer = Writer::open(&path).unwrap();
+  let store = Store::in_memory().unwrap();
 
-  assert_eq!(history.at[0], 700);
-  assert_eq!(band.mean[..3], [Some(20.0), Some(50.0), None]);
-  assert_eq!(band.max[0], Some(30.0));
+  for (at, usage) in [(100, 0.1), (101, 0.3), (102, 0.5), (106, 0.9)] {
+    writer.reading("box", at, &view(usage));
+  }
+
+  writer.reading("other", 101, &view(0.9));
+  writer.written();
+
+  let reader = Reader::open(&path).unwrap();
+  let read = |asked: Asked| read_readings(&store, Some(&reader), "box", asked, 200).unwrap();
+  let seconds = read(asked(1_000, None, None, None));
+
+  assert_eq!(
+    uses(&seconds),
+    [
+      (100_000, 10.0, 10.0, 10.0),
+      (101_000, 30.0, 30.0, 30.0),
+      (102_000, 50.0, 50.0, 50.0),
+      (106_000, 90.0, 90.0, 90.0)
+    ]
+  );
+  assert!(
+    seconds
+      .items
+      .iter()
+      .all(|reading| reading.span_ms == 1_000 && reading.machine_name == "box")
+  );
+  assert!(!seconds.more);
+
+  // The next page starts after the last item's time, and a limit says whether more stand past it.
+  let first = read(asked(1_000, Some(100_000), None, Some(2)));
+
+  assert_eq!(uses(&first).iter().map(|one| one.0).collect::<Vec<_>>(), [101_000, 102_000]);
+  assert!(first.more);
+  assert_eq!(uses(&read(asked(1_000, Some(102_000), Some(106_000), None))), []);
+
+  // Five seconds a stretch: a stretch nothing was recorded in is left out.
+  assert_eq!(
+    uses(&read(asked(5_000, None, None, None))),
+    [(100_000, 10.0, 50.0, 30.0), (105_000, 90.0, 90.0, 90.0)]
+  );
 }
 
 #[test]
-fn a_store_that_never_recorded_reads_as_an_empty_range() {
-  let range = read_history(&Store::in_memory().unwrap(), "box", 0, 3_600, 1_800).unwrap();
+fn a_store_that_never_recorded_reads_as_an_empty_page() {
+  let store = Store::in_memory().unwrap();
+  let page = read_readings(&store, None, "box", asked(1_800_000, None, None, None), 3_600).unwrap();
 
-  assert_eq!((range.at, range.point_seconds, range.series.len()), (vec![0, 1_800], 1_800, 0));
+  assert!(page.items.is_empty() && !page.more);
 }
 
 #[test]
@@ -164,42 +222,81 @@ fn a_rolled_up_half_hour_and_the_minutes_not_rolled_up_yet_both_stand_in_a_wide_
     .put_samples("box", &[(60, r#"{"cpu|use":99}"#.into()), (1_860, r#"{"cpu|use":50}"#.into())])
     .unwrap();
 
-  let band = &read_history(&store, "box", 0, 3_600, 1_800).unwrap().series["cpu|use"];
+  let page =
+    read_readings(&store, None, "box", asked(1_800_000, None, Some(3_600_000), None), 3_600).unwrap();
+
+  assert_eq!(uses(&page), [(0, 10.0, 30.0, 20.0), (1_800_000, 50.0, 50.0, 50.0)]);
+
+  // The minutes' rows hold every minute, the rolled-up one among them.
+  let minutes =
+    read_readings(&store, None, "box", asked(60_000, None, Some(3_600_000), None), 3_600).unwrap();
+
+  assert_eq!(uses(&minutes).iter().map(|one| one.0).collect::<Vec<_>>(), [60_000, 1_860_000]);
+}
+
+#[test]
+fn a_reading_lays_its_figures_out_per_piece_of_hardware() {
+  let band = |value: f64| Band {
+    min: value,
+    max: value,
+    mean: value,
+  };
+  let figures: BTreeMap<String, Band> = [
+    ("cpu|use", 12.0),
+    ("cpu|temp", 61.3),
+    ("memory|gb", 8.5),
+    ("gpu1|use", 40.0),
+    ("gpu0|watts", 120.0),
+    ("gpu0:vram|gb", 3.25),
+    ("storage:nvme0n1|gb", 400.0),
+    ("storage:net:host:/share|gb", 10.0),
+    ("storage:nvme0n1|temp", 41.0),
+    ("fan:nct6798:fan2|rpm", 900.0),
+    ("unknown|figure", 1.0),
+  ]
+  .into_iter()
+  .map(|(key, value)| (key.to_owned(), band(value)))
+  .collect();
+  let reading = reading_of("box", 5_000, 1_000, &figures);
 
   assert_eq!(
-    (band.min.clone(), band.max.clone(), band.mean.clone()),
-    (vec![Some(10.0), Some(50.0)], vec![Some(30.0), Some(50.0)], vec![Some(20.0), Some(50.0)])
+    (reading.cpu.use_pct, reading.cpu.celsius, reading.cpu.watts),
+    (Some(band(12.0)), Some(band(61.3)), None)
   );
+  assert_eq!(reading.memory.used_gb, Some(band(8.5)));
+  assert_eq!(reading.gpus.iter().map(|gpu| gpu.index).collect::<Vec<_>>(), [0, 1]);
+  assert_eq!(
+    (reading.gpus[0].watts, reading.gpus[0].vram_used_gb),
+    (Some(band(120.0)), Some(band(3.25)))
+  );
+  assert_eq!(reading.gpus[1].use_pct, Some(band(40.0)));
+  assert_eq!(
+    reading
+      .storage
+      .iter()
+      .map(|one| (one.key.as_str(), one.used_gb, one.celsius))
+      .collect::<Vec<_>>(),
+    [
+      ("net:host:/share", Some(band(10.0)), None),
+      ("nvme0n1", Some(band(400.0)), Some(band(41.0)))
+    ]
+  );
+  assert_eq!(
+    reading
+      .fans
+      .iter()
+      .map(|fan| (fan.chip.as_str(), fan.label.as_str()))
+      .collect::<Vec<_>>(),
+    [("nct6798", "fan2")]
+  );
+
+  let live = live_reading("box", 7, &history_sample(&view(0.25)));
+
+  assert_eq!((live.at, live.span_ms, live.cpu.use_pct), (7_000, 1_000, Some(band(25.0))));
 }
 
 fn view(usage: f64) -> hardware::view::HardwareView {
   hardware_view(&snapshot(usage))
-}
-
-#[test]
-fn gives_a_machine_s_readings_after_an_instant_as_columns_and_only_the_metrics_asked_for() {
-  let dir = tempfile::tempdir().unwrap();
-  let path = dir.path().join("hardware-live.db");
-  let writer = Writer::open(&path).unwrap();
-  let mut no_temperature = snapshot(0.2);
-
-  no_temperature.sensors = vec![];
-  writer.reading("box", 100, &view(0.1));
-  writer.reading("box", 101, &hardware_view(&no_temperature));
-  writer.reading("box", 102, &view(0.3));
-  writer.reading("other", 101, &view(0.9));
-  writer.written();
-
-  let reader = Reader::open(&path).unwrap();
-  let temps = reader.range("box", 100, &["temp".to_owned()]).unwrap();
-
-  assert_eq!(temps.at, [101, 102]);
-  assert_eq!(temps.series["cpu|temp"], [None, Some(61.3)]);
-  assert!(temps.series.keys().all(|key| key.ends_with("|temp")));
-  assert_eq!(
-    reader.range("box", 0, &[]).unwrap().series["cpu|use"],
-    [Some(10.0), Some(20.0), Some(30.0)]
-  );
 }
 
 #[test]

@@ -1,61 +1,82 @@
 # The node service's boundary
 
-This document states the fixed API of the node service, version **1.0.0**: every route and event it
-answers, the client it publishes, its configuration and its command. A caller pins 1.0.0 or a later 1.x
-for every route and field below. A change to anything here changes this document in the same commit and
-follows the version rule (「Versions」).
+This document states the API of the node service, version **0.1.0-rev.1**: every route and event it
+answers, the clients and the harness plugin it publishes, its configuration and its command. A change to
+anything here changes this document in the same commit and follows the version rule (「Versions」).
 
-Routes are grouped by the resource they act on. The service names no caller and keeps no list of callers:
-any unit holding the token calls any route.
+The service is an upstream unit (bmo-chat's `docs/conventions.md`, 「Upstream and downstream」): a harness
+can take it as its first entry point through its MCP server, with no other unit running. Routes are
+grouped by the resource they act on. The service names no caller and keeps no list of callers: any caller
+holding the token calls any route, and whether a launch may start on a machine is the caller's own policy,
+read from the fields below.
 
 ## Wire format
 
 The service answers in the common wire format of bmo-next (bmo-chat's `docs/conventions.md`, 「The common
-wire format」): camelCase keys, times as one integer of epoch milliseconds, every failure and refusal a
-non-2xx status with a body of `code` and `error`, and lists read by one cursor and `limit`. What the
-service adds to it:
+wire format」 and 「API design」): camelCase keys, times as one integer of epoch milliseconds, every failure
+and refusal a non-2xx status with a body of `code` and `error`, and lists as a page of `items` and `more`.
+What the service adds to it:
 
-- **Every route needs `Authorization: Bearer <token>`,** the configured token.
+- **Every route needs `Authorization: Bearer <token>`,** the configured token, `GET /health` among them.
 - **A field written with a question mark** may be null or left out of an answer, and may be left out of a
   request.
-- **A figure is a number in the unit its name says,** so a duration is named by its unit (`pointSeconds`,
-  `uptimeSeconds`, `minutes`), and only a time is in milliseconds.
-- **A node is named by its name,** which is its key: lowercase letters, digits and hyphens, at most 32.
+- **A figure is a number in the unit its name says** (`celsius`, `watts`, `mhz`, `usedGb`, `megabytes`,
+  `usePct`), and a span is in milliseconds (`spanMs`).
+- **A node is keyed by its name:** lowercase letters, digits and hyphens, at most 32. A hub is keyed by its
+  id, a signed 64-bit integer.
 - **A machine** is named as the hardware monitor knows it: `local` for this machine, a node's own name for
   a node.
-- **A list** takes `after`, the key of the last item already read, and `limit`, the most items to answer;
-  with neither it answers whole.
+- **A page** is `{"items": [...], "more": boolean}`; `more` says whether anything stands past the last item,
+  and the next page is asked with that item's key or time as `after`.
 
 | Status | Code | When |
 |---|---|---|
-| 400 | `bad-request` | the body or a query is not the shape the route takes |
+| 400 | `bad-request` | the body or the query is not the shape the route takes; the error names what is wrong |
 | 401 | `unauthorized` | the token is missing or wrong |
 | 404 | `no-route` | no route answers this method and path |
-| 404 | `no-node` | no node of that name is listed; for a machine, no machine of that name |
-| 404 | `no-hub` | no hub of that address is listed |
-| 409 | `name-taken` | a node of that name is already listed |
-| 409 | `hub-taken` | the hub is already listed |
-| 409 | `not-ssh` | the node is reached through a hub and has no SSH route |
-| 409 | `incomplete` | the node lacks a field its connection type needs |
-| 422 | `name-rule` | the name is not lowercase letters, digits and hyphens of at most 32 characters |
-| 422 | `bad-field` | a field is out of range or of the other connection type; the error names it |
+| 404 | `not-found` | nothing stands at the key the path names: no node, hub or machine of that name or id |
+| 409 | `conflict` | the key is taken: a node of that name, or a hub at that address, is already listed |
+| 410 | `gone` | an event stream resumed from before the window the service keeps |
+| 422 | `name-rule` | a node's name is not lowercase letters, digits and hyphens of at most 32 characters |
+| 422 | `bad-field` | a field is out of range, of the other connection type, or names nothing listed; the error names it |
+| 422 | `incomplete` | the node's row lacks a field its connection type needs |
 | 500 | `failed` | the service failed; the error is the failure as a sentence |
 
-## The client
+## The clients and the harness plugin
 
-The service publishes its own client, and a caller uses it rather than writing one by hand.
+The service publishes its own clients and its harness plugin, and a caller uses them rather than writing
+its own.
 
-- **`docs/openapi.json`** states every route below in OpenAPI 3.1: each route's method and path, its
-  query and body, its answer and the error answers it can give, with every body as a JSON Schema, and
-  the events' bodies among the schemas. A body is described as its sender writes it, so a field the
-  sender may leave out is not required, and a nullable field is required and may be null.
-- **`bmo-node-client`** (`crates/client`), the Rust crate, holds every body of this document as a type,
-  generates the OpenAPI document from those types, and calls every route and reads the event stream. Its
-  tests fail where the committed document differs from what it generates; `cargo run -p bmo-node-client
-  --example openapi > docs/openapi.json` writes it again.
+- **`docs/openapi.json`** is the contract in OpenAPI 3.1: every route below with its parameters, its body,
+  its answer and the codes it can answer, every body a JSON Schema, the events under `x-events`, the
+  harness plugin under `x-harness` and its tools under `x-tools`. A body is described as its sender writes
+  it, so a field the sender may leave out is not required, and a nullable field is required and may be
+  null. It is generated from the service's own types, and a test fails where the committed document
+  differs from what the code generates; `cargo run -p bmo-node-plugin --example openapi >
+  docs/openapi.json` writes it again.
+- **`bmo-node-client`** (`crates/client`), the Rust crate, holds every body of this document as a type and
+  calls every route and reads the event stream.
 - **`bmo-node-client`** (`packages/node-client`), the TypeScript package, is generated from the same
   document: its types by `openapi-typescript`, its calls by `openapi-fetch`. `bun run generate` writes the
-  types again, and its check fails where they differ from the document.
+  types again, and `bun run check` fails where they differ from the document.
+- **The harness plugin, `ahas-node`** (`crates/plugin`): the MCP server `bmo-node mcp` starts on standard
+  input and output (「The command」), and the `ahas-node` skill beside it that tells a harness when and how
+  to use it. Each tool is one call of one route through the Rust client:
+
+  | Tool | Route |
+  |---|---|
+  | `node_nodes` | `GET /nodes` |
+  | `node_node` | `GET /nodes/{nodeName}` |
+  | `node_target` | `GET /nodes/{nodeName}/target` |
+  | `node_check` | `POST /node-checks` |
+  | `node_machines` | `GET /machines` |
+  | `node_machine` | `GET /machines/{machineName}` |
+  | `node_readings` | `GET /machines/{machineName}/readings` |
+
+  A harness asks `node_target` how to reach a node before it logs in, and `node_machine` how loaded a
+  machine is before it starts heavy work there. A tool's input is the route's path and query parameters by
+  name, and `body` for a route that takes one; a refusal comes back as a tool error whose text is the
+  status, `code` and `error`.
 - This document is the canonical statement: where the document, the code and the clients disagree, the
   code is repaired and both clients generated again.
 
@@ -63,120 +84,156 @@ The service publishes its own client, and a caller uses it rather than writing o
 
 | Method and path | Sends | Answers |
 |---|---|---|
-| `GET /nodes` | query `after?`, `limit?` | `nodes`, in the list's order, each a node |
-| `GET /nodes/{name}` | | the node |
-| `POST /nodes/check` | `name?` | the one node named, or every node, checked now (`docs/nodes.md`); then `nodes` as `GET /nodes` answers them whole |
-| `GET /nodes/{name}/target` | | the node's connection (below) |
-| `GET /nodes/{name}/login` | | `args`: the arguments that open a batch SSH login to the node, ahead of the command; refused `not-ssh` for a node reached through a hub |
+| `GET /nodes` | query `after?`, the name of the last node read, and `limit?` | a page of nodes in the list's order; an `after` naming no listed node is `bad-request` |
 | `POST /nodes` | `name`, `host`, `user`, `port?`, `keyPath?`, `shell?`, `label?`, `role?` | 201 and the new ssh node; it goes last |
-| `PATCH /nodes/{name}` | any of `label`, `role`, `host`, `user`, `port`, `keyPath`, `shell`; null clears `keyPath` and `role` | the node; a changed address, port, account, key or shell clears the last check |
-| `DELETE /nodes/{name}` | | `removed`, the name |
+| `GET /nodes/{nodeName}` | | the node |
+| `PATCH /nodes/{nodeName}` | any of `label`, `role`, `host`, `user`, `port`, `keyPath`, `shell`; null clears `keyPath` and `role` | the node; a changed address, port, account, key or shell clears the last check |
+| `DELETE /nodes/{nodeName}` | | 204 |
+| `GET /nodes/{nodeName}/target` | | how to reach the node (below) |
 
 A node holds no credential, only where one is kept:
 
 | Field | What it is |
 |---|---|
 | `name`, `label` | the node's name and label |
-| `kind` | `ssh` or `jake` |
-| `agent?` | a jake node's agent, by the name its hub knows it by |
-| `address` | where it is reached: `user@host`, `:port` after it where the port is not 22 and ` (PowerShell)` where the login answers in PowerShell; `agent @ hub` for a jake node |
-| `credential?` | where the credential is kept: an ssh node's key path, or the token file of a jake node's hub |
-| `role?` | the services the node is reserved for, joined by `+` |
+| `kind` | `ssh` or `hub` (`docs/nodes.md`, 「What a node is」) |
+| `hubId?`, `agentName?` | a hub node's hub, and the name the hub knows the node's agent by |
+| `address` | where it is reached: `user@host`, `:port` after it where the port is not 22 and ` (PowerShell)` where the login answers in PowerShell; `agent @ hub address` for a hub node |
+| `credential?` | where the credential is kept: an ssh node's key path, or the token file of a hub node's hub |
+| `role?` | the services the node is reserved for, joined by `+` (`docs/nodes.md`, 「A node's role」) |
 | `state` | the last check's state: `connected`, `disconnected`, `auth`, `hostkey`, `unreachable`, `error` or `unknown` (`docs/nodes.md`, 「The states」) |
 | `tone` | `good`, `bad` or `unknown`, as the policy's node states give it |
 | `detail?`, `checkedAt?`, `connectedAt?` | the last check's line, when it was made, and when the node was last found connected |
 | `up` | the last check found the node connected and was made within the link window (`docs/nodes.md`, 「A node's link」) |
 | `thisMachine` | an ssh node whose host names this machine (`docs/nodes.md`, 「This machine」) |
-| `takesJobs` | an ssh node other than this machine, whose login is not PowerShell's and whose role is none or names `jobs` |
 
 A caller words each state and tone itself; the service hands the codes.
 
-The connection is the one form a node is reached by, whatever reaches it: `kind`, and `role?`, then
+**The target** is the one form a node is reached by, whatever reaches it: `nodeName`, `kind` and `role?`,
+then
 
-- for an ssh node: `host`, `port`, `user`, `keyPath?`, `shell` (`posix` or `powershell`), and `options`:
-  the OpenSSH options of a batch login, each given after `-o`, the options a key brings among them where
-  the node names a key. The same options serve `ssh`, `sftp` and `scp` alike; `keyPath` is as the row
-  holds it, a leading `~/` meaning the home of the account that reads it;
-- for a jake node: `hubUrl`, `tokenFile` and `agent`.
+- for an ssh node: `host`, `port`, `user`, `keyPath?` and `shell` (`posix` or `powershell`), with
+  `sshOptions`, the OpenSSH options of a batch login, each given after `-o`, the options a key brings among
+  them where the node names a key, the same for `ssh`, `sftp` and `scp` alike; and `sshArgs`, the same
+  login laid out for `ssh` ahead of the command: each option after `-o`, `-i` and the key with its home
+  expanded where the node names one, `-p` and the port, and `user@host` last. `keyPath` is as the row holds
+  it, a leading `~/` meaning the home of the account that reads it;
+- for a hub node: `hubId`, `hubAddress`, `hubTokenFile`, the file the hub's control token is kept in, and
+  `agentName`; `sshOptions` and `sshArgs` are empty.
 
-A connection missing a field its kind needs is refused `incomplete`.
+The target names where the credential is kept and never the credential. A node whose row lacks a field its
+connection type needs is refused `incomplete`.
 
-The login's arguments are the connection laid out for `ssh`: each option after `-o`, `-i` and the key
-with its home expanded where the node names one, `-p` and the port, and `user@host` last.
+A hub node is never registered by a route: it is added when its agent attaches to a listed hub
+(`docs/nodes.md`). A hub node takes `label` and `role` alone.
 
-A jake node is never registered by a route: it is added when its agent attaches to a listed hub
-(`docs/nodes.md`). A jake node takes `label` and `role` alone. Every change that moves the list publishes
-`nodes-changed`.
+## Node checks
+
+| Method and path | Sends | Answers |
+|---|---|---|
+| `POST /node-checks` | `nodeNames?`, the nodes to check; every node where it is empty or left out | 201 and `items`, each node checked now as `GET /nodes/{nodeName}` answers it after its check (`docs/nodes.md`, 「How a node's state is known」); a name no node holds is `bad-field` |
+
+A check keeps nothing of its own: each node's `state`, `detail` and `checkedAt` carry what it came to.
 
 ## Hubs
 
 | Method and path | Sends | Answers |
 |---|---|---|
-| `POST /hubs` | `url`, `tokenFile` | 201 and `url` and `tokenFile` as kept |
-| `DELETE /hubs` | query `url` | `url` and `removed`, the names of the jake nodes reached through it, removed with it |
+| `GET /hubs` | | a page of every hub, in the order they were listed |
+| `POST /hubs` | `address`, `tokenFile`, `label?` | 201 and the hub |
+| `DELETE /hubs/{hubId}` | | 204; every hub node reached through it is removed with it |
 
-## Hardware
+A hub is `id`, `address`, its control address, `tokenFile`, the file its control token is kept in,
+`label?` and `createdAt`.
+
+## Machines
 
 | Method and path | Sends | Answers |
 |---|---|---|
-| `GET /hardware/{machine}` | | the machine's latest reading (below) |
-| `GET /hardware/{machine}/live` | query `after?`, `limit?`, `metrics?` | the live record's readings of the machine taken after `after`, no further back than the record reaches: the first `limit` after `after`, or the last `limit` where `after` is not given; only the figures measuring the comma-separated `metrics` where it names any. `at`, each reading's time, and `series`, each figure's values at those times, null where a reading did not carry it |
-| `GET /hardware/{machine}/history` | query `span?` | one span of the machine's history ending now (`docs/hardware.md`, 「History」): `at`, each point's start, `pointSeconds`, and `series`, each figure's `min`, `max` and `mean` per point, null where nothing was recorded; `span` is `5m`, `15m`, `1h`, `6h`, `24h`, `7d` or `30d`, `1h` where none is named, and any other is `bad-request` |
-| `PUT /hardware/{machine}/tracking` | `on` | `machine` and `on` as kept; the recorder starts or stops the machine's live run at once |
-| `PUT /hardware/{machine}/cpu-limit` | `celsius` | `machine` and `celsius` as kept; null clears the limit, and a limit is above 0 °C and below 127 °C |
+| `GET /machines` | | a page of every machine the hardware monitor knows: this machine, then every node in the list's order, each with the recorder's latest reading |
+| `GET /machines/{machineName}` | | the machine, with its latest reading |
+| `PATCH /machines/{machineName}` | any of `tracking` and `cpuLimit`; null clears `cpuLimit` | the machine; the recorder follows a tracking switch at once, and a limit is above 0 °C and below 127 °C |
+| `GET /machines/{machineName}/readings` | query `after?`, `before?`, `limit?`, `spanMs?` | a page of the machine's past readings (below) |
 
-A machine other than `local` that is not a listed node is refused `no-node`.
-
-The latest reading:
+A machine:
 
 | Field | What it is |
 |---|---|
 | `name`, `label` | the machine's name and how it is shown |
-| `kind` | `local`, `ssh` or `jake` |
+| `kind` | `local`, `ssh` or `hub` |
+| `tracking` | whether the machine's live tracking is on; a machine not tracked has neither a reading nor a failure |
+| `cpuLimit?` | the CPU limit set for the machine, in °C |
+| `readAt?` | when the reading or the failure came; null where the machine is not tracked |
 | `hardware?` | the reading as the monitor draws it: `host?`, `kernel?`, `os?`, `hostOs?`, `wsl`, `sensorLibrary?`, `uptimeSeconds?`, `load?`, and one group per piece of hardware, `cpu`, `memory`, `gpus`, `storage`, `board` and `services` (`docs/hardware.md`); null where the machine was not read |
 | `failure?` | what was met where the machine could not be read |
-| `readAt` | when the reading was taken |
-| `tracking` | whether the machine's live tracking is on; a machine not tracked has neither a reading nor a failure |
-| `cpuLimit?` | the CPU limit set for the machine |
+| `standing?` | this machine as the minute look last read it (below); null for any other machine |
+
+`GET /machines/{machineName}` reads a tracked machine itself where the recorder has nothing fresh of it
+(`docs/hardware.md`, 「How often」); `GET /machines` answers what the recorder holds and reads no machine.
 
 A figure that could not be read is null, and a CPU power the account may not read is the code `denied`; a
 caller words both.
 
-## This machine
+**The standing** (`docs/machine.md`):
 
-| Method and path | Answers |
-|---|---|
-| `GET /machine/room` | `held`: what this machine is short of for another launch, read now, each an English reason with its figure; empty where it has room (`docs/machine.md`) |
-| `GET /machine/standing` | this machine as the minute watch last read it (`docs/machine.md`): `reading?`, `held`, `browsers`, `places` and `largest` |
-
-- **The held reasons** are `memory pressure <full>% >= <limit>%`, `available memory <available>GB <
-  <limit>GB`, `load <load> >= <threads> threads x <limit>` and `disk free <free>GB < <limit>GB`, each
-  figure to a tenth and a whole one without a point.
 - `reading?`: `at`, `load1`, `threads`, `memTotalGb`, `memAvailableGb`, `swapTotalGb`, `swapFreeGb`,
   `diskFreeGb?`, and `memory?` and `cpu?`, each pressure's `some` and `full?` lines with their `avg10`,
   `avg60` and `avg300` in percent; null where the machine could not be read.
-- `held`: as `GET /machine/room` answers, from that reading.
+- `alerts`: each pressure that stands now, by `cause`: `memory` with `fullPct`, the memory `full` over the
+  last minute, `alertPct`, the alert line, and `minutes` it has stood; `disk` with `freeGb`, the data
+  root's disk's free space, and `limitGb`, the line.
 - `browsers`: how many browser main processes run.
-- `places`: what each agent place holds, largest first: `place`, `megabytes` and `browsers`.
-- `largest`: the five largest processes: `pid`, `name`, `megabytes` and `place?`.
+- `scopes`: what each scope holds, largest first: `scope`, `megabytes` and `browsers`.
+- `largest`: the five largest processes: `pid`, `name`, `megabytes` and `scope?`.
+
+**A reading** is one stretch of a machine's recorded figures: `machineName`, `at`, the stretch's start,
+`spanMs`, its width, and one group per piece of hardware, each figure a band of its `min`, `max` and `mean`
+over the stretch, left out where nothing was recorded:
+
+- `cpu`: `usePct?`, `celsius?`, `watts?` and `mhz?`;
+- `memory`: `usedGb?`;
+- `gpus`: per GPU, `index` with `usePct?`, `celsius?`, `watts?`, `mhz?` and `vramUsedGb?`;
+- `storage`: per device, `key` with `usedGb?` and `celsius?`;
+- `fans`: per fan, `chip` and `label` with `rpm?`.
+
+The readings route answers the stretches of `spanMs` that start after `after` and before `before`, oldest
+first, at most `limit` of them; a stretch nothing was recorded in is left out. `spanMs` is 1000 where none
+is given. A span under a minute is a whole number of seconds and is read out of the live record, which
+reaches fifteen minutes back; a span of a minute or more is a whole number of minutes, read out of the
+minutes' rows, which reach two days back, and one of a whole number of half hours out of the half hours'
+rows, which reach thirty-one days back (`docs/hardware.md`, 「History」). `after` defaults to the reach and
+is held to it; `before` defaults to now. Any other span is `bad-request`.
 
 ## Events
 
-- **`GET /events?kinds=<name>,<name>`** answers a stream of server-sent events of the kinds named, every
-  kind where none is, from the moment it is opened: each event named by its kind and its data the event's
-  JSON. An event published while no stream reads its kind is written out for nobody.
-- **`nodes-changed`** carries an empty object: a pass moved a node's state, or the list changed (a node
-  added, renamed, relabelled, moved or removed). A consumer showing the nodes reads them again.
-- **`machine-pressure`** is a pressure on this machine told once (`docs/machine.md`):
-  - cause `memory`: `fullPct`, the memory `full` over the last minute, `alertPct`, the alert line, and
-    `minutes` it has stood; with `reading`, `places` and `largest` as the standing holds them;
-  - cause `disk`: `freeGb`, the data root's disk's free space, and `limitGb`, the launch line; with
-    `reading`.
+- **`GET /events`** is the one stream, as server-sent events. Each event's SSE `event` is its kind, its
+  `id` the service's event number, a signed 64-bit integer that only grows, and its data `{"id", "kind",
+  "at", "data"}`, the inner `data` being the member as a GET answers it, or its key alone for `deleted`.
+- **A reader resumes** with `Last-Event-ID` or `after`, the number of the last event it read, and narrows
+  with `kinds`, a comma-separated list, and `machineName`, which keeps the `machine.changed` and
+  `reading.created` events of that machine alone. A stream opened with neither starts at the moment it is
+  opened.
+- **The window** is the last 4096 events, held in the service's memory. A resume from before it, or from a
+  number an earlier run of the service gave, is answered 410 `gone`, and the reader reads the collections
+  again.
+- **A reader asking `Accept: application/json`** is answered the same events as a page, by `after` and
+  `limit`, for a caller that polls.
+- **A comment line every fifteen seconds** keeps the stream open.
+
+| Kind | Data | Published when |
+|---|---|---|
+| `node.created` | the node | a node is registered, or a hub's agent joins the list |
+| `node.changed` | the node | a node's fields or its check's state, tone, detail or link move; a check that moves nothing but its times publishes nothing |
+| `node.deleted` | `name` | a node is removed, by a route, with its hub, or as an agent its hub names departed |
+| `machine.changed` | the machine | its tracking or CPU limit is changed, or this machine's alerts move (`docs/machine.md`) |
+| `reading.created` | a reading, `spanMs` 1000 | the recorder takes a reading of a tracked machine, once a second |
+
+A change made by the command, which writes the store itself, is published by the service's next pass.
 
 ## Health
 
-- **`GET /health`** answers `pid`, `version` and `ready`: the store is open and migrated and the loops
-  have started.
+- **`GET /health`** answers `ready`, `reason`, null when ready and otherwise why not, and `version`: ready
+  once the store is open and migrated and the loops have started.
 - **`bmo-node --config <file> health`** asks the service the configuration names, waiting at most five
   seconds, and ends 0 where it answers ready. The deployment waits on it.
 
@@ -192,28 +249,34 @@ each release links to it as `node.toml`; the unit does not start where the data 
 | token | `token` | the bearer token every caller presents |
 | data root | `data_root` | the shared data root; node's own files stand in its `node/` folder (`docs/store.md`) |
 | this machine's name | `machine_label` | how this machine is shown, where none is set the system's host name |
+| scope variable | `scope_variable` | the environment variable a process's scope is read from (`docs/machine.md`, 「What is read」); where none is set, no process has a scope |
 
 ## Calls the node service makes
 
 The node service calls no other unit. It reaches the machines themselves:
 
 - **an ssh node** through OpenSSH, with the policy's options (`docs/nodes.md`);
-- **a jake hub,** an outside program a jake agent attaches to, over its HTTP control address with the
-  token read from the hub's token file for each request: `GET /status` for the agents attached and
-  departed, and `POST /exec?agent=<agent>` to run a command on an agent's machine.
+- **a hub,** an outside program an agent attaches to, over its HTTP control address with the token read
+  from the hub's token file for each request: `GET /status` for the agents attached and departed, and
+  `POST /exec?agent=<agent>` to run a command on an agent's machine.
 
 ## The command
 
-`bmo-node --config <file>` followed by:
+`bmo-node` followed by:
 
-- `serve`: runs the migrations, then the routes, the check pass, the recorder and the machine watch;
-- `health`: as above;
-- `node` with the verbs of `docs/nodes.md`, 「Registering and changing a node」, against the same store;
-  `--target <name>` prints the node's connection as `GET /nodes/{name}/target` answers it;
-- `hardware-setup [<node>…]`: the Windows sensor setup (`docs/hardware.md`, 「The Windows side」).
+- `--config <file> serve`: runs the migrations, then the routes, the check pass, the recorder and the
+  machine look;
+- `--config <file> health`: as above;
+- `--config <file> node` with the verbs of `docs/nodes.md`, 「Registering and changing a node」, against the
+  same store; `--target <name>` prints the node's target as `GET /nodes/{nodeName}/target` answers it;
+- `--config <file> hardware-setup [<node>…]`: the Windows sensor setup (`docs/hardware.md`, 「The Windows
+  side」);
+- `mcp`: the harness plugin's MCP server on standard input and output, calling the service at `--url`
+  with the token `--token` or the `BMO_NODE_TOKEN` environment variable gives; with `--config <file>` and
+  neither, the address and the token that configuration names.
 
 ## Versions
 
-The repository's version is the workspace's, in semver, and both clients carry it. The major moves on a
-change to this document's routes, fields or events, or to a table's contract; the minor on an addition to
-either; the patch on anything else.
+The repository's version is the workspace's, and both clients and the plugin carry it. Until the first
+release it is `0.1.0` with a revision, `0.1.0-rev.<n>`: each change to this document's routes, fields or
+events, or to a table's contract, raises the revision alone.

@@ -1,145 +1,245 @@
-//! Job's node reads and the console's node list: the rows in job's shape, an ssh node's reach, the views
-//! with whether a node is this machine and takes jobs, and the check made now.
+//! The nodes and the node checks: the token every route needs, the list paged in its order, an ssh node
+//! added, changed and removed, the target a node is reached by, and the check made now.
 
-use std::time::Duration;
-
-use futures_util::StreamExt;
-use reqwest::Method;
+use policy::node_states::NodeState;
+use reqwest::{Method, StatusCode};
 use serde_json::json;
-use store::nodes::SshLogin;
+use store::nodes::{Checked, SshLogin};
 
-use crate::support::{Stand, TOKEN, refused};
+use crate::support::Stand;
 
 #[tokio::test]
-async fn the_node_rows_and_an_ssh_node_s_reach_come_in_job_s_fields() {
+async fn every_route_needs_the_token_and_a_path_none_answers_is_no_route() {
   let stood = Stand::default().up().await;
-  let store = stood.store();
 
-  store
-    .add_node(
-      "lab",
-      Some("Lab"),
-      Some("jobs".into()),
-      SshLogin {
-        port: 2222,
-        key_path: Some("~/.ssh/lab".into()),
-        shell: "powershell".into(),
-        ..SshLogin::new("192.0.2.4", "someone")
-      },
-    )
-    .unwrap();
-  store.add_agent("http://hub.example", "box").unwrap();
+  for token in [None, Some("wrong")] {
+    let (status, answer) = stood.ask_with(token, Method::GET, "/nodes", None).await;
 
-  let rows = stood.get("/nodes").await;
+    assert_eq!((status, answer["code"].clone()), (StatusCode::UNAUTHORIZED, json!("unauthorized")));
+  }
 
-  assert_eq!(
-    rows["nodes"][0],
-    json!({ "name": "lab", "label": "Lab", "kind": "ssh", "role": "jobs", "state": "unknown", "checkedAt": null })
-  );
-  assert_eq!(rows["nodes"][1]["kind"], "jake");
-  assert_eq!(
-    stood.get("/nodes/lab/reach").await,
-    json!({ "host": "192.0.2.4", "port": 2222, "user": "someone", "keyPath": "~/.ssh/lab", "shell": "powershell" })
-  );
-  assert_eq!(refused(&stood.get("/nodes/box/reach").await), "not-ssh");
-  assert_eq!(refused(&stood.get("/nodes/gone/reach").await), "no-node");
+  assert_eq!(stood.refused(Method::GET, "/nowhere", None).await, "no-route");
+  assert_eq!(stood.refused(Method::POST, "/nodes/check", Some(json!({}))).await, "no-route");
 }
 
 #[tokio::test]
-async fn the_console_s_views_say_where_each_node_is_reached_whether_it_is_this_machine_and_takes_jobs() {
+async fn the_list_comes_in_its_order_paged_after_a_name_and_each_node_says_how_it_is_reached() {
   let stood = Stand::default().up().await;
   let store = stood.store();
+  let now = store::now_seconds();
 
   store.add_node("here", None, None, SshLogin::new("127.0.0.1", "someone")).unwrap();
   store
-    .add_node("lab", None, Some("voice".into()), SshLogin::new("192.0.2.4", "someone"))
-    .unwrap();
-  store
     .add_node(
       "work",
-      None,
-      None,
+      Some("Work"),
+      Some("voice".into()),
       SshLogin {
         port: 2200,
         ..SshLogin::new("192.0.2.5", "someone")
       },
     )
     .unwrap();
-  store.add_hub("http://127.0.0.1:9999", "~/hub.env").unwrap();
+  store.add_hub("http://127.0.0.1:9999", "~/hub.env", None).unwrap();
   store.add_agent("http://127.0.0.1:9999", "box").unwrap();
+  store
+    .record_check(
+      "work",
+      &Checked {
+        state: NodeState::Connected,
+        detail: None,
+        at: now - 30,
+      },
+    )
+    .unwrap();
 
-  let views = stood.get("/nodes/view").await;
-  let view = |at: usize| views["nodes"][at].clone();
+  let whole = stood.get("/nodes").await;
 
+  assert_eq!(whole["more"], false);
   assert_eq!(
-    (view(0)["thisMachine"].clone(), view(0)["takesJobs"].clone()),
-    (json!(true), json!(false))
-  );
-  assert_eq!(
-    (view(1)["thisMachine"].clone(), view(1)["takesJobs"].clone()),
-    (json!(false), json!(false))
-  );
-  assert_eq!(
-    view(2),
+    whole["items"][1],
     json!({
-      "name": "work", "label": "work", "kind": "ssh", "agent": null, "address": "someone@192.0.2.5:2200",
-      "credential": null, "role": null, "state": "unknown", "tone": "unknown", "detail": null, "checkedAt": null,
-      "connectedAt": null, "thisMachine": false, "takesJobs": true,
+      "name": "work", "label": "Work", "kind": "ssh", "hubId": null, "agentName": null,
+      "address": "someone@192.0.2.5:2200", "credential": null, "role": "voice", "state": "connected",
+      "tone": "good", "detail": null, "checkedAt": (now - 30) * 1000, "connectedAt": (now - 30) * 1000,
+      "up": true, "thisMachine": false,
     })
   );
+  assert_eq!(whole["items"][0]["thisMachine"], true);
   assert_eq!(
     (
-      view(3)["address"].clone(),
-      view(3)["credential"].clone(),
-      view(3)["thisMachine"].clone()
+      whole["items"][2]["kind"].clone(),
+      whole["items"][2]["address"].clone(),
+      whole["items"][2]["credential"].clone()
     ),
-    (json!("box @ http://127.0.0.1:9999"), json!("~/hub.env"), json!(false))
+    (json!("hub"), json!("box @ http://127.0.0.1:9999"), json!("~/hub.env"))
   );
+  assert_eq!(whole["items"][2]["hubId"], 2);
+
+  let first = stood.get("/nodes?limit=1").await;
+  let next = stood.get("/nodes?after=here&limit=1").await;
+
+  assert_eq!((first["items"][0]["name"].clone(), first["more"].clone()), (json!("here"), json!(true)));
+  assert_eq!((next["items"][0]["name"].clone(), next["more"].clone()), (json!("work"), json!(true)));
+  assert_eq!(stood.get("/nodes?after=box").await, json!({ "items": [], "more": false }));
+  assert_eq!(stood.refused(Method::GET, "/nodes?after=gone", None).await, "bad-request");
+  assert_eq!(stood.get("/nodes/work").await, whole["items"][1]);
+  assert_eq!(stood.refused(Method::GET, "/nodes/gone", None).await, "not-found");
 }
 
 #[tokio::test]
-async fn a_check_made_now_writes_each_node_s_state_and_tells_the_screens() {
+async fn an_ssh_node_is_added_changed_and_removed_and_what_the_list_does_not_take_is_refused() {
   let stood = Stand::default().up().await;
-  let events = stood
-    .client
-    .get(format!("{}/events?kinds=nodes-changed", stood.base))
-    .bearer_auth(TOKEN)
-    .send()
-    .await
-    .unwrap();
-  let mut events = events.bytes_stream();
-
-  stood
-    .store()
-    .add_node("lab", None, None, SshLogin::new("192.0.2.4", "someone"))
-    .unwrap();
-
-  let checked = stood.post("/nodes/check", json!({ "name": "lab" })).await;
+  let added = stood
+    .create(
+      "/nodes",
+      json!({ "name": "lab", "host": "192.0.2.4", "user": "someone", "port": 2222, "keyPath": "~/.ssh/lab", "role": "voice" }),
+    )
+    .await;
 
   assert_eq!(
-    (checked["nodes"][0]["state"].clone(), checked["nodes"][0]["tone"].clone()),
-    (json!("connected"), json!("good"))
+    (
+      added["name"].clone(),
+      added["address"].clone(),
+      added["credential"].clone(),
+      added["role"].clone()
+    ),
+    (json!("lab"), json!("someone@192.0.2.4:2222"), json!("~/.ssh/lab"), json!("voice"))
   );
 
-  let told = tokio::time::timeout(Duration::from_secs(10), async {
-    let mut text = String::new();
+  let taken = json!({ "name": "lab", "host": "h", "user": "u" });
 
-    while let Some(chunk) = events.next().await {
-      text.push_str(&String::from_utf8_lossy(&chunk.unwrap()));
+  assert_eq!(stood.refused(Method::POST, "/nodes", Some(taken)).await, "conflict");
+  assert_eq!(
+    stood
+      .refused(Method::POST, "/nodes", Some(json!({ "name": "Lab_1", "host": "h", "user": "u" })))
+      .await,
+    "name-rule"
+  );
+  assert_eq!(
+    stood
+      .refused(
+        Method::POST,
+        "/nodes",
+        Some(json!({ "name": "other", "host": "h", "user": "u", "port": 0 }))
+      )
+      .await,
+    "bad-field"
+  );
+  assert_eq!(
+    stood.refused(Method::POST, "/nodes", Some(json!({ "name": "other" }))).await,
+    "bad-request"
+  );
 
-      if text.contains("event: nodes-changed") {
-        return text;
-      }
-    }
+  let changed = stood
+    .patch("/nodes/lab", json!({ "label": "Lab", "keyPath": null, "role": null }))
+    .await;
 
-    text
-  })
-  .await
-  .unwrap();
+  assert_eq!(
+    (changed["label"].clone(), changed["credential"].clone(), changed["role"].clone()),
+    (json!("Lab"), json!(null), json!(null))
+  );
+  assert_eq!(
+    stood.refused(Method::PATCH, "/nodes/lab", Some(json!({ "port": "many" }))).await,
+    "bad-request"
+  );
+  assert_eq!(
+    stood.refused(Method::PATCH, "/nodes/gone", Some(json!({ "label": "x" }))).await,
+    "not-found"
+  );
 
-  assert!(told.contains("event: nodes-changed"));
+  stood.delete("/nodes/lab").await;
+  assert_eq!(stood.refused(Method::DELETE, "/nodes/lab", None).await, "not-found");
+}
 
-  let (status, answer) = stood.ask(Method::POST, "/nodes/check", Some(json!({ "name": 3 }))).await;
+#[tokio::test]
+async fn a_node_s_target_is_how_it_is_reached_without_a_credential_and_a_row_missing_a_field_has_none() {
+  let stood = Stand::default().up().await;
 
-  assert_eq!((status.as_u16(), answer["code"].clone()), (400, json!("bad-request")));
+  stood
+    .create(
+      "/nodes",
+      json!({ "name": "lab", "host": "192.0.2.4", "user": "someone", "port": 2222, "keyPath": "~/.ssh/lab", "role": "voice" }),
+    )
+    .await;
+
+  let hub = stood
+    .create("/hubs", json!({ "address": "http://hub.example", "tokenFile": "~/hub.env" }))
+    .await;
+
+  stood.store().add_agent("http://hub.example", "box").unwrap();
+  stood.store().add_agent("http://unlisted.example", "far").unwrap();
+
+  let lab = stood.get("/nodes/lab/target").await;
+  let line = lab["sshArgs"]
+    .as_array()
+    .unwrap()
+    .iter()
+    .map(|one| one.as_str().unwrap())
+    .collect::<Vec<_>>()
+    .join(" ");
+
+  assert_eq!(
+    (
+      lab["kind"].clone(),
+      lab["host"].clone(),
+      lab["port"].clone(),
+      lab["shell"].clone(),
+      lab["role"].clone()
+    ),
+    (json!("ssh"), json!("192.0.2.4"), json!(2222), json!("posix"), json!("voice"))
+  );
+  assert!(lab["sshOptions"].as_array().unwrap().contains(&json!("BatchMode=yes")));
+  assert!(line.starts_with("-o BatchMode=yes"));
+  assert!(line.contains(&format!("-o IdentitiesOnly=yes -i {}/.ssh/lab", stood.home().display())));
+  assert!(line.ends_with("-p 2222 someone@192.0.2.4"));
+  assert_eq!(
+    stood.get("/nodes/box/target").await,
+    json!({
+      "nodeName": "box", "kind": "hub", "role": null, "host": null, "port": null, "user": null, "keyPath": null,
+      "shell": null, "sshOptions": [], "sshArgs": [], "hubId": hub["id"], "hubAddress": "http://hub.example",
+      "hubTokenFile": "~/hub.env", "agentName": "box",
+    })
+  );
+  assert_eq!(stood.refused(Method::GET, "/nodes/far/target", None).await, "incomplete");
+  assert_eq!(stood.refused(Method::GET, "/nodes/gone/target", None).await, "not-found");
+}
+
+#[tokio::test]
+async fn a_check_made_now_writes_each_named_node_s_state_and_answers_them_as_they_stand() {
+  let stood = Stand::default().up().await;
+  let store = stood.store();
+
+  store.add_node("lab", None, None, SshLogin::new("192.0.2.4", "someone")).unwrap();
+  store.add_node("work", None, None, SshLogin::new("192.0.2.5", "someone")).unwrap();
+
+  let checked = stood.create("/node-checks", json!({ "nodeNames": ["lab"] })).await;
+  let items = checked["items"].as_array().unwrap();
+
+  assert_eq!(items.len(), 1);
+  assert_eq!(
+    (
+      items[0]["name"].clone(),
+      items[0]["state"].clone(),
+      items[0]["tone"].clone(),
+      items[0]["up"].clone()
+    ),
+    (json!("lab"), json!("connected"), json!("good"), json!(true))
+  );
+  assert_eq!(store.node("work").unwrap().unwrap().state, NodeState::Unknown);
+
+  let every = stood.create("/node-checks", json!({})).await;
+
+  assert_eq!(every["items"].as_array().unwrap().len(), 2);
+  assert_eq!(store.node("work").unwrap().unwrap().state, NodeState::Connected);
+  assert_eq!(
+    stood
+      .refused(Method::POST, "/node-checks", Some(json!({ "nodeNames": ["gone"] })))
+      .await,
+    "bad-field"
+  );
+  assert_eq!(
+    stood.refused(Method::POST, "/node-checks", Some(json!({ "nodeNames": "lab" }))).await,
+    "bad-request"
+  );
 }

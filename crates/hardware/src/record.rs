@@ -4,18 +4,16 @@
 //! own, since a commit waits for the disk and a reading lands every second; it is read over a connection
 //! that only reads.
 
-use std::collections::BTreeMap;
 use std::path::Path;
 use std::sync::mpsc;
 
 use rusqlite::{Connection, OpenFlags, params};
 use serde_json::{Map, Value};
 
-use super::series::{LiveRange, MS_PER_SECOND, measures};
 use super::view::{HardwareView, history_sample};
 
-/// How far back the record reaches, which holds the two shortest spans of the history whole
-/// (docs/hardware.md, 「Live」); the live chart is the last minute of it.
+/// How far back the record reaches (docs/hardware.md, 「Live」): the readings of a span under a minute are
+/// drawn out of it.
 pub const KEEP_SECONDS: i64 = 15 * 60;
 
 /// The most the record's rows of figures may hold, as the text they are kept in, in step with its
@@ -253,33 +251,6 @@ impl Reader {
         })
       })?
       .collect()
-  }
-
-  /// A machine's readings after the second `since` as columns: when each was taken, in milliseconds, and
-  /// each figure's value at each, none where a reading did not carry it; only the figures measuring what
-  /// `metrics` names where it names any (docs/api.md, 「Hardware」).
-  pub fn range(&self, machine: &str, since: i64, metrics: &[String]) -> rusqlite::Result<LiveRange> {
-    let rows = self.samples(machine, since + 1, i64::MAX)?;
-    let mut series: BTreeMap<String, Vec<Option<f64>>> = BTreeMap::new();
-
-    for (index, row) in rows.iter().enumerate() {
-      for (key, value) in &row.sample {
-        let Some(value) = value.as_f64() else {
-          continue;
-        };
-
-        if !metrics.is_empty() && !measures(key, metrics) {
-          continue;
-        }
-
-        series.entry(key.clone()).or_insert_with(|| vec![None; rows.len()])[index] = Some(value);
-      }
-    }
-
-    Ok(LiveRange {
-      at: rows.iter().map(|row| row.at * MS_PER_SECOND).collect(),
-      series,
-    })
   }
 
   /// The latest reading of a machine as the record holds it.

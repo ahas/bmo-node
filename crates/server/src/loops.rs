@@ -4,42 +4,52 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use hardware::Recorder;
+use bmo_node_client::events::Change;
+use bmo_node_client::hardware::HardwareView;
 use hardware::live::Hands;
+use hardware::series::live_reading;
+use hardware::view::history_sample;
+use hardware::{LOCAL_MACHINE, Listen, Recorder};
 use node_check::pass::check_nodes;
 use tokio::task::JoinHandle;
 
 use crate::Service;
+use crate::events::Events;
+use crate::machines::publish_changed;
 
 /// How often each loop runs.
 const MINUTE: Duration = Duration::from_secs(60);
 
-/// Every node checked, and `nodes-changed` published where a state moved or the list's shape moved since
-/// the pass before: a node added, removed, renamed, relabelled or moved, by a route, the command or a hub.
-pub async fn node_pass(service: &Service) -> Result<bool, store::StoreError> {
-  let checked = check_nodes(&*service.store, &service.machine, None).await?;
-  let shape: Vec<(String, String, i64)> = service
-    .store
-    .nodes()?
-    .into_iter()
-    .map(|node| (node.name, node.label, node.position))
-    .collect();
-  let moved = service.shape_moved(shape);
-  let changed = checked.changed || moved;
+/// Every node checked, and whatever moved the list since its events last told it published: a check's
+/// state, or a node added, changed or removed by a route, the command or a hub.
+pub async fn node_pass(service: &Service) -> Result<(), store::StoreError> {
+  check_nodes(&*service.store, &service.machine, None).await?;
 
-  if changed {
-    service.events.nodes_changed();
-  }
-
-  Ok(changed)
+  service.settle_nodes()
 }
 
-/// One look at this machine: read, judged, kept and its pressures told.
-pub fn machine_look(service: &Service) -> Result<(), store::StoreError> {
+/// One look at this machine: read, its alerts told and kept, and `machine.changed` published where an
+/// alert started or ended.
+pub async fn machine_look(service: &Service) -> Result<(), String> {
   let now = hardware::now_ms();
-  let standing = hardware::machine::here(&service.store, &service.proc_root, &service.data_root, now)?;
+  let standing =
+    hardware::machine::here(&service.proc_root, &service.data_root, service.scope_variable.as_deref(), now);
+  let looked = hardware::machine::look(&service.store, standing, now).map_err(|why| why.to_string())?;
 
-  hardware::machine::look(&service.store, &standing, now, &service.events)
+  if looked.alerts_moved {
+    publish_changed(service, LOCAL_MACHINE).await.map_err(|reply| reply.0.error)?;
+  }
+
+  Ok(())
+}
+
+/// Each live reading published as `reading.created` as the recorder takes it.
+struct Readings(Events);
+
+impl Listen for Readings {
+  fn reading(&self, machine: &str, at: i64, view: &HardwareView) {
+    self.0.publish(Change::ReadingCreated(live_reading(machine, at, &history_sample(view))));
+  }
 }
 
 /// The loops started, each on a task of its own, and the service marked ready.
@@ -48,7 +58,8 @@ pub fn start(service: Arc<Service>) -> Result<Vec<JoinHandle<()>>, String> {
     stream: service.road.clone(),
     now_ms: Arc::new(hardware::now_ms),
   };
-  let recorder = Arc::new(Recorder::with_hands(service.store.clone(), &service.record, hands)?);
+  let listen: Arc<dyn Listen> = Arc::new(Readings(service.events.clone()));
+  let recorder = Arc::new(Recorder::listened(service.store.clone(), &service.record, hands, Some(listen))?);
   let mut tasks = Vec::new();
 
   recorder.follow();
@@ -79,7 +90,7 @@ pub fn start(service: Arc<Service>) -> Result<Vec<JoinHandle<()>>, String> {
 
   tasks.push(tokio::spawn(async move {
     loop {
-      if let Err(why) = machine_look(&looking) {
+      if let Err(why) = machine_look(&looking).await {
         eprintln!("bmo-node: the machine look failed: {why}");
       }
 

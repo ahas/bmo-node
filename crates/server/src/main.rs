@@ -6,22 +6,26 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use bmo_node_client::NodeClient;
+use bmo_node_plugin::NodeServer;
 use clap::{Parser, Subcommand};
 use node_check::Machine;
 use node_server::cli::{NodesArgs, hardware_setup, nodes};
 use node_server::config::Config;
 use node_server::{Service, app, start};
+use rmcp::ServiceExt;
+use rmcp::transport::stdio;
 use store::Store;
 
 #[derive(Parser)]
 #[command(
   name = "bmo-node",
-  about = "The node service: the node list, the node checks, the hardware monitor and this machine's room"
+  version,
+  about = "The node service: the node list, the node checks, the hardware monitor and this machine's standing"
 )]
 struct Cli {
-  /// The configuration file.
+  /// The configuration file; every step but `mcp` needs one.
   #[arg(long)]
-  config: PathBuf,
+  config: Option<PathBuf>,
   #[command(subcommand)]
   step: Step,
 }
@@ -39,17 +43,35 @@ enum Step {
     /// The nodes to set up; every node where none is named.
     nodes: Vec<String>,
   },
+  /// Serves the harness plugin's tools over MCP on standard input and output, calling the service.
+  Mcp {
+    /// The service's base address; the configuration's listen address where none is given.
+    #[arg(long, value_name = "url")]
+    url: Option<String>,
+    /// The service's bearer token; the configuration's where none is given.
+    #[arg(long, env = "BMO_NODE_TOKEN", hide_env_values = true)]
+    token: Option<String>,
+  },
 }
 
 #[tokio::main]
 async fn main() -> ExitCode {
   let cli = Cli::parse();
-  let config = match Config::read(&cli.config) {
+  let config = match cli.config.as_deref().map(Config::read).transpose() {
     Ok(config) => config,
     Err(why) => {
       eprintln!("bmo-node: {why}");
       return ExitCode::from(2);
     }
+  };
+
+  if let Step::Mcp { url, token } = cli.step {
+    return mcp(config.as_ref(), url, token).await;
+  }
+
+  let Some(config) = config else {
+    eprintln!("bmo-node: this step needs --config <file>");
+    return ExitCode::from(2);
   };
 
   let ended = match cli.step {
@@ -64,6 +86,7 @@ async fn main() -> ExitCode {
     Step::HardwareSetup { nodes } => {
       return command(&config, |store| async move { hardware_setup(&store, &nodes).await }).await;
     }
+    Step::Mcp { .. } => unreachable!("the MCP server is served above"),
   };
 
   match ended {
@@ -108,8 +131,10 @@ where
 async fn serve(config: Config) -> Result<(), String> {
   let data_root = config.data_root();
   let store = Arc::new(Store::open_in(&data_root).map_err(|why| why.to_string())?);
-  let service =
-    Arc::new(Service::new(store, config.token.clone(), data_root, config.machine_label.clone()));
+  let service = Arc::new(
+    Service::new(store, config.token.clone(), data_root, config.machine_label.clone())
+      .with_scope_variable(config.scope_variable.clone()),
+  );
   let listener = tokio::net::TcpListener::bind(&config.listen)
     .await
     .map_err(|why| format!("could not listen on {}: {why}", config.listen))?;
@@ -133,4 +158,39 @@ async fn health(config: Config) -> Result<(), String> {
   let health = client.health().await.map_err(|why| why.to_string())?;
 
   if health.ready { Ok(()) } else { Err("the service is not ready".into()) }
+}
+
+/// The harness plugin's MCP server on standard input and output, calling the service at the address and
+/// with the token given, or those the configuration names.
+async fn mcp(config: Option<&Config>, url: Option<String>, token: Option<String>) -> ExitCode {
+  let Some(url) = url.or_else(|| config.map(Config::local_address)) else {
+    eprintln!("bmo-node: mcp needs --url <url> or --config <file>");
+    return ExitCode::from(2);
+  };
+  let Some(token) = token.or_else(|| config.map(|config| config.token.clone())) else {
+    eprintln!("bmo-node: mcp needs --token, BMO_NODE_TOKEN or --config <file>");
+    return ExitCode::from(2);
+  };
+  let client = match NodeClient::new(&url, token) {
+    Ok(client) => client,
+    Err(why) => {
+      eprintln!("bmo-node: {why}");
+      return ExitCode::from(2);
+    }
+  };
+  let served = match NodeServer::new(client).serve(stdio()).await {
+    Ok(served) => served,
+    Err(why) => {
+      eprintln!("bmo-node: the MCP session did not start: {why}");
+      return ExitCode::FAILURE;
+    }
+  };
+
+  match served.waiting().await {
+    Ok(_) => ExitCode::SUCCESS,
+    Err(why) => {
+      eprintln!("bmo-node: the MCP session ended in a failure: {why}");
+      ExitCode::FAILURE
+    }
+  }
 }

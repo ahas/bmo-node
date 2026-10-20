@@ -1,6 +1,6 @@
 [package]
 name = "bmo-node-client"
-description = "The node service's client: every body of its API as a type, the OpenAPI document generated from them, and a call for every route."
+description = "The node service's client: every body of its API as a type and a call for every route."
 version.workspace = true
 edition.workspace = true
 

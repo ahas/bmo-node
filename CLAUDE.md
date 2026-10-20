@@ -42,6 +42,9 @@ which job a process serves, whether a launch goes ahead and what the chat agent 
 ## Layout
 
 - `crates/`: the Rust crates.
+  - `client`: `bmo-node-client`, every body of the API as a type and a call for every route (`docs/api.md`).
+  - `plugin`: `bmo-node-plugin`, the harness plugin: the MCP server `bmo-node mcp` starts, its tools, the
+    `ahas-node` skill under `skills/`, and the generator of `docs/openapi.json`.
   - `policy`: the policy files, `node-states.toml`, `ssh.toml` and `windows-sensors.toml`, and their readers.
   - `store`: node's own database and the live record's path (`docs/store.md`).
   - `node-check`: whether each node answers, the SSH login's arguments and a hub's token (`docs/nodes.md`).
@@ -49,7 +52,8 @@ which job a process serves, whether a launch goes ahead and what the chat agent 
     (`docs/hardware.md`, `docs/machine.md`).
   - `llm-bridge`: the tunnel door (`docs/llm-bridge.md`).
   - `server`: the `bmo-node` binary: the routes, the loops and the command (`docs/api.md`).
-- `docs/`: the canonical documents.
+- `packages/node-client`: the TypeScript client, generated from `docs/openapi.json`.
+- `docs/`: the canonical documents, and `openapi.json`, the contract the clients are generated from.
 - `deploy/`: the service units, `bmo-node.service` and `bmo-llm-bridge.service`.
 - `graph/`: the code dependency graph, one node per feature in four areas (`core`, `nodes`, `hardware`,
   `server`), each with its files and the features it needs. A commit that changes the files a node names,
@@ -62,6 +66,7 @@ which job a process serves, whether a launch goes ahead and what the chat agent 
 - Static: `cargo check --workspace --all-targets`.
 - Review: `cargo fmt --all --check` (108 columns, 2-space indentation, as `rustfmt.toml` sets) and
   `cargo clippy --workspace --all-targets -- -D warnings`.
+- The TypeScript client: `bun run check` in `packages/node-client`.
 - Tests: `cargo test --workspace`.
-- The version is the workspace's, in semver. The major moves on a change to the boundary API or to a
-  table's contract, the minor on an addition to either, the patch on anything else.
+- The version is the workspace's: `0.1.0` with a revision, `0.1.0-rev.<n>`, until the first release. A change
+  to the boundary API or to a table's contract raises the revision alone; the major, minor and patch stay.

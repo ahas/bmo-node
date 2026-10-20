@@ -5,7 +5,7 @@ the same probe over its own road, and every reading is described the same way: o
 hardware (the CPU with its chip laid out as it physically stands, each GPU, memory, every storage device,
 the board), each carrying its own use, capacity, temperature and power, so the piece at fault is the one
 that shows it. Every tracked machine is read live, once a second, and kept for a month. A screen draws
-what this service answers (`docs/api.md`, 「Hardware」).
+what this service answers (`docs/api.md`, 「Machines」).
 
 ## Which machines
 
@@ -13,9 +13,9 @@ what this service answers (`docs/api.md`, 「Hardware」).
 - **Every node of the list,** in the list's order, and nothing else. The monitor keeps no list of its own.
   - An ssh node is read by logging in the way its check does (batch mode, the node's key alone, the host
     key held to) and running the probe there, in the language the node's login answers in.
-  - A jake node is read by handing the probe to its hub's `POST /exec?agent=<agent>` as a `linux` shell
-    command, with the control token read out of the hub's token file for that one request. Each jake agent
-    is a machine of its own; the hub is never read or shown as one.
+  - A hub node is read by handing the probe to its hub's `POST /exec?agent=<agent>` as a `linux` shell
+    command, with the control token read out of the hub's token file for that one request. Each agent is a
+    machine of its own; the hub is never read or shown as one.
 - The same road runs any other shell script the monitor hands a machine; the Windows setup below is one.
 - **A machine is shown once.** A node that is this machine (`docs/nodes.md`, 「This machine」) carries
   `thisMachine`, and a screen folds it into this machine's tile, since the local reading is the same
@@ -137,7 +137,7 @@ what this service answers (`docs/api.md`, 「Hardware」).
 - **The recorder is the one reader.** It keeps every tracked machine's live run open whether a screen is
   open or not, so a machine is read once a second however many screens show it, and a machine whose
   tracking is off is not read at all (「Tracking」).
-- **`GET /hardware/{machine}` answers the recorder's latest reading** of the machine. Where the recorder
+- **`GET /machines/{machineName}` answers the recorder's latest reading** of the machine. Where the recorder
   has nothing fresh of a tracked machine, no reading or failure within ten seconds, the service reads it
   itself with the probe run once, keeps that reading for one period and joins a read already under way, so
   several askers at once cost the machine one probe.
@@ -165,22 +165,21 @@ what this service answers (`docs/api.md`, 「Hardware」).
   so a month of passes with no rollups is taken in over the passes that follow.
 - **How long a row is kept:** a minute's row for two days, and only once its half hour has been rolled up;
   a half hour's row for thirty-one days. Each pass removes what has grown older.
-- **A span is asked by name,** each cut into points of a fixed width:
+- **A reading is asked by its span,** `spanMs`, and each stretch of that width is drawn out of the finest
+  rows that hold it (`docs/api.md`, 「Machines」):
 
-  | Span | Point | Drawn out of |
+  | Span | Drawn out of | Reaching back |
   |---|---|---|
-  | `5m` | 5 seconds | the live record |
-  | `15m` | 15 seconds | the live record |
-  | `1h` | 1 minute | the minutes' rows |
-  | `6h` | 5 minutes | the minutes' rows |
-  | `24h` | 5 minutes | the minutes' rows |
-  | `7d` | 30 minutes | the half hours' rows |
-  | `30d` | 2 hours | the half hours' rows |
+  | whole seconds under a minute | the live record | fifteen minutes |
+  | whole minutes | the minutes' rows | two days |
+  | whole half hours | the half hours' rows, with the minutes' rows of the half hour not rolled up yet | thirty-one days |
 
-  - The half hour not yet rolled up is read from the minutes' rows, so a week's or a month's last point is
-    as fresh as the day's.
-  - Each point carries the figure's lowest, highest and mean over it; a point nothing was recorded in
-    carries none.
+  - The half hour not yet rolled up is read from the minutes' rows, so a week's or a month's last stretch
+    is as fresh as the day's.
+  - Each stretch carries each figure's lowest, highest and mean over it; a stretch nothing was recorded in
+    is left out.
+- **Every live reading is published as it is taken,** as `reading.created`, a stretch of one second
+  (`docs/api.md`, 「Events」).
 
 ## Live
 
@@ -188,7 +187,7 @@ what this service answers (`docs/api.md`, 「Hardware」).
 flowchart TD
   M[each machine: the live run, a reading a second] --> B[the recorder]
   B --> R[live record: the latest reading, one row a second]
-  R --> A[the hardware routes]
+  R --> A[the machine routes and reading.created]
   R --> H[store: one row a minute, folded out of the record]
 ```
 
@@ -203,7 +202,7 @@ flowchart TD
     run's first reading at. A count that strays more than five seconds from this machine's clock starts
     again from now.
   - **A run lasts a set time and is relieved before it ends:** the next run starts twenty seconds ahead
-    and takes over at its first reading. Its length is the road's: four minutes through a jake hub, which
+    and takes over at its first reading. Its length is the road's: four minutes through a hub, which
     stops an exec at five; an hour on a local shell or an ssh login.
   - A run that ends early, fails or stays silent for thirty seconds is stopped, the machine's latest
     becomes the failure with what was met, and a run starts again after a wait that grows from a second to
@@ -223,9 +222,10 @@ flowchart TD
   setting `hardware_tracking:<machine>`. A machine with no setting is tracked, and a setting left by a node
   since removed reads nothing.
 - **Off means the machine is not read at all:** the recorder stops its live run, nothing is added to the
-  live record, and `GET /hardware/{machine}` answers it as not tracked instead of reading it.
+  live record, and `GET /machines/{machineName}` answers it as not tracked instead of reading it.
 - **The minute rows stop with it,** so a machine whose tracking is off leaves a gap in its history.
-- **`PUT /hardware/{machine}/tracking` moves the switch;** the recorder follows it at once, and every minute's pass
+- **`PATCH /machines/{machineName}` with `tracking` moves the switch;** the recorder follows it at once, and
+  every minute's pass
   reads the settings again as well.
 
 ## The chip
@@ -257,7 +257,7 @@ flowchart TD
     critical one;
   - a CPU whose chip names none (AMD's `k10temp`, a Windows machine's sensor library): the limit set for
     that machine.
-- **A machine's CPU limit is the setting `hardware_cpu_limit:<machine>`,** moved by `PUT
-  /hardware/{machine}/cpu-limit`. A limit set stands over the one the chip names, and the reading says which of the
+- **A machine's CPU limit is the setting `hardware_cpu_limit:<machine>`,** moved by `PATCH
+  /machines/{machineName}` with `cpuLimit`. A limit set stands over the one the chip names, and the reading says which of the
   two it is. With neither, the CPU's temperature has no limit.
 - **No limit of any part stands in the code.**

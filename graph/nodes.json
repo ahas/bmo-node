@@ -23,7 +23,7 @@
       "core/policy",
       "core/store"
     ],
-    "base": "92607dac8f5df5fae94a23d5288b0897704af64d"
+    "base": "29665993bf94e7e1b577a1abad8e23150579cee2"
   },
   {
     "id": "nodes/node-command",
@@ -47,6 +47,6 @@
       "hardware/roads-and-probe",
       "server/routes"
     ],
-    "base": "92607dac8f5df5fae94a23d5288b0897704af64d"
+    "base": "29665993bf94e7e1b577a1abad8e23150579cee2"
   }
 ]

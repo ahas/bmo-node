@@ -1,7 +1,7 @@
-//! Every route of docs/api.md, each behind the bearer token.
+//! Every route of docs/api.md, grouped by the resource it acts on, each behind the bearer token.
 
-mod hardware;
-mod machine;
+mod hubs;
+mod machines;
 mod nodes;
 mod stream;
 
@@ -12,7 +12,7 @@ use axum::extract::{Request, State};
 use axum::http::header;
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
-use axum::routing::{get, post, put};
+use axum::routing::{delete, get, post};
 use bmo_node_client::ErrorCode;
 use store::nodes::Node;
 use subtle::ConstantTimeEq;
@@ -24,22 +24,19 @@ pub type Shared = State<Arc<Service>>;
 
 pub fn router(service: Arc<Service>) -> Router {
   Router::new()
-    .route("/nodes", get(nodes::list).post(nodes::add))
-    .route("/nodes/check", post(nodes::check))
-    .route("/nodes/{name}", get(nodes::one).patch(nodes::set).delete(nodes::remove))
-    .route("/nodes/{name}/target", get(nodes::target))
-    .route("/nodes/{name}/login", get(nodes::login))
-    .route("/hubs", post(nodes::add_hub).delete(nodes::remove_hub))
-    .route("/hardware/{machine}", get(hardware::latest))
-    .route("/hardware/{machine}/live", get(hardware::live))
-    .route("/hardware/{machine}/history", get(hardware::history))
-    .route("/hardware/{machine}/tracking", put(hardware::tracking))
-    .route("/hardware/{machine}/cpu-limit", put(hardware::cpu_limit))
-    .route("/machine/room", get(machine::room))
-    .route("/machine/standing", get(machine::standing))
-    .route("/events", get(stream::events))
     .route("/health", get(stream::health))
+    .route("/events", get(stream::events))
+    .route("/nodes", get(nodes::list).post(nodes::create))
+    .route("/nodes/{nodeName}", get(nodes::one).patch(nodes::change).delete(nodes::remove))
+    .route("/nodes/{nodeName}/target", get(nodes::target))
+    .route("/node-checks", post(nodes::check))
+    .route("/hubs", get(hubs::list).post(hubs::create))
+    .route("/hubs/{hubId}", delete(hubs::remove))
+    .route("/machines", get(machines::list))
+    .route("/machines/{machineName}", get(machines::one).patch(machines::change))
+    .route("/machines/{machineName}/readings", get(machines::readings))
     .fallback(no_route)
+    .method_not_allowed_fallback(no_route)
     .layer(middleware::from_fn_with_state(service.clone(), bearer))
     .with_state(service)
 }
@@ -68,13 +65,9 @@ fn node(service: &Service, name: &str) -> Result<Node, Reply> {
   service.store.node(name)?.ok_or_else(|| Reply::no_node(name))
 }
 
-/// Now, in seconds and in milliseconds since the epoch.
-fn now_seconds() -> i64 {
-  store::now_seconds()
-}
-
-fn now_ms() -> i64 {
-  ::hardware::now_ms()
+/// The node list's events published once a route has moved it.
+fn settle(service: &Service) -> Result<(), Reply> {
+  Ok(service.settle_nodes()?)
 }
 
 /// The token compared whole in constant time, so how long a refusal takes says nothing of how much of

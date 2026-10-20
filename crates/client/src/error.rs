@@ -13,31 +13,27 @@ pub enum ErrorCode {
   BadRequest,
   Unauthorized,
   NoRoute,
-  NoNode,
-  NoHub,
-  NameTaken,
-  HubTaken,
-  NotSsh,
-  Incomplete,
+  NotFound,
+  Conflict,
+  Gone,
   NameRule,
   BadField,
+  Incomplete,
   Failed,
 }
 
 impl ErrorCode {
   /// Every code, in the order the document lists them.
-  pub const ALL: [Self; 12] = [
+  pub const ALL: [Self; 10] = [
     Self::BadRequest,
     Self::Unauthorized,
     Self::NoRoute,
-    Self::NoNode,
-    Self::NoHub,
-    Self::NameTaken,
-    Self::HubTaken,
-    Self::NotSsh,
-    Self::Incomplete,
+    Self::NotFound,
+    Self::Conflict,
+    Self::Gone,
     Self::NameRule,
     Self::BadField,
+    Self::Incomplete,
     Self::Failed,
   ];
 
@@ -47,14 +43,12 @@ impl ErrorCode {
       Self::BadRequest => "bad-request",
       Self::Unauthorized => "unauthorized",
       Self::NoRoute => "no-route",
-      Self::NoNode => "no-node",
-      Self::NoHub => "no-hub",
-      Self::NameTaken => "name-taken",
-      Self::HubTaken => "hub-taken",
-      Self::NotSsh => "not-ssh",
-      Self::Incomplete => "incomplete",
+      Self::NotFound => "not-found",
+      Self::Conflict => "conflict",
+      Self::Gone => "gone",
       Self::NameRule => "name-rule",
       Self::BadField => "bad-field",
+      Self::Incomplete => "incomplete",
       Self::Failed => "failed",
     }
   }
@@ -64,9 +58,10 @@ impl ErrorCode {
     match self {
       Self::BadRequest => 400,
       Self::Unauthorized => 401,
-      Self::NoRoute | Self::NoNode | Self::NoHub => 404,
-      Self::NameTaken | Self::HubTaken | Self::NotSsh | Self::Incomplete => 409,
-      Self::NameRule | Self::BadField => 422,
+      Self::NoRoute | Self::NotFound => 404,
+      Self::Conflict => 409,
+      Self::Gone => 410,
+      Self::NameRule | Self::BadField | Self::Incomplete => 422,
       Self::Failed => 500,
     }
   }
@@ -74,17 +69,25 @@ impl ErrorCode {
   /// When the code is answered, as the OpenAPI document describes the answer.
   pub fn meaning(self) -> &'static str {
     match self {
-      Self::BadRequest => "the body or a query is not the shape the route takes",
+      Self::BadRequest => {
+        "the body or the query is not the shape the route takes; the error names what is wrong"
+      }
       Self::Unauthorized => "the token is missing or wrong",
       Self::NoRoute => "no route answers this method and path",
-      Self::NoNode => "no node of that name is listed; for a machine, no machine of that name",
-      Self::NoHub => "no hub of that address is listed",
-      Self::NameTaken => "a node of that name is already listed",
-      Self::HubTaken => "the hub is already listed",
-      Self::NotSsh => "the node is reached through a hub and has no SSH route",
-      Self::Incomplete => "the node lacks a field its connection type needs",
-      Self::NameRule => "the name is not lowercase letters, digits and hyphens of at most 32 characters",
-      Self::BadField => "a field is out of range or of the other connection type; the error names it",
+      Self::NotFound => {
+        "nothing stands at the key the path names: no node, hub or machine of that name or id"
+      }
+      Self::Conflict => {
+        "the key is taken: a node of that name, or a hub at that address, is already listed"
+      }
+      Self::Gone => "an event stream resumed from before the window the service keeps",
+      Self::NameRule => {
+        "a node's name is not lowercase letters, digits and hyphens of at most 32 characters"
+      }
+      Self::BadField => {
+        "a field is out of range, of the other connection type, or names nothing listed; the error names it"
+      }
+      Self::Incomplete => "the node's row lacks a field its connection type needs",
       Self::Failed => "the service failed; the error is the failure as a sentence",
     }
   }
@@ -98,6 +101,7 @@ impl fmt::Display for ErrorCode {
 
 /// The body of every answer that is not the route's own: its code and an English sentence.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[schemars(rename = "Error")]
 pub struct WireError {
   pub code: ErrorCode,
   pub error: String,

@@ -5,117 +5,97 @@
         "content": {
           "application/json": {
             "schema": {
-              "$ref": "#/components/schemas/WireError"
+              "$ref": "#/components/schemas/Error"
             }
           }
         },
-        "description": "`bad-field`: a field is out of range or of the other connection type; the error names it"
+        "description": "`bad-field`: a field is out of range, of the other connection type, or names nothing listed; the error names it"
       },
       "BadRequest": {
         "content": {
           "application/json": {
             "schema": {
-              "$ref": "#/components/schemas/WireError"
+              "$ref": "#/components/schemas/Error"
             }
           }
         },
-        "description": "`bad-request`: the body or a query is not the shape the route takes"
+        "description": "`bad-request`: the body or the query is not the shape the route takes; the error names what is wrong"
+      },
+      "Conflict": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        },
+        "description": "`conflict`: the key is taken: a node of that name, or a hub at that address, is already listed"
       },
       "Failed": {
         "content": {
           "application/json": {
             "schema": {
-              "$ref": "#/components/schemas/WireError"
+              "$ref": "#/components/schemas/Error"
             }
           }
         },
         "description": "`failed`: the service failed; the error is the failure as a sentence"
       },
-      "HubTaken": {
+      "Gone": {
         "content": {
           "application/json": {
             "schema": {
-              "$ref": "#/components/schemas/WireError"
+              "$ref": "#/components/schemas/Error"
             }
           }
         },
-        "description": "`hub-taken`: the hub is already listed"
+        "description": "`gone`: an event stream resumed from before the window the service keeps"
       },
       "Incomplete": {
         "content": {
           "application/json": {
             "schema": {
-              "$ref": "#/components/schemas/WireError"
+              "$ref": "#/components/schemas/Error"
             }
           }
         },
-        "description": "`incomplete`: the node lacks a field its connection type needs"
+        "description": "`incomplete`: the node's row lacks a field its connection type needs"
       },
       "NameRule": {
         "content": {
           "application/json": {
             "schema": {
-              "$ref": "#/components/schemas/WireError"
+              "$ref": "#/components/schemas/Error"
             }
           }
         },
-        "description": "`name-rule`: the name is not lowercase letters, digits and hyphens of at most 32 characters"
-      },
-      "NameTaken": {
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/WireError"
-            }
-          }
-        },
-        "description": "`name-taken`: a node of that name is already listed"
-      },
-      "NoHub": {
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/WireError"
-            }
-          }
-        },
-        "description": "`no-hub`: no hub of that address is listed"
-      },
-      "NoNode": {
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/WireError"
-            }
-          }
-        },
-        "description": "`no-node`: no node of that name is listed; for a machine, no machine of that name"
+        "description": "`name-rule`: a node's name is not lowercase letters, digits and hyphens of at most 32 characters"
       },
       "NoRoute": {
         "content": {
           "application/json": {
             "schema": {
-              "$ref": "#/components/schemas/WireError"
+              "$ref": "#/components/schemas/Error"
             }
           }
         },
         "description": "`no-route`: no route answers this method and path"
       },
-      "NotSsh": {
+      "NotFound": {
         "content": {
           "application/json": {
             "schema": {
-              "$ref": "#/components/schemas/WireError"
+              "$ref": "#/components/schemas/Error"
             }
           }
         },
-        "description": "`not-ssh`: the node is reached through a hub and has no SSH route"
+        "description": "`not-found`: nothing stands at the key the path names: no node, hub or machine of that name or id"
       },
       "Unauthorized": {
         "content": {
           "application/json": {
             "schema": {
-              "$ref": "#/components/schemas/WireError"
+              "$ref": "#/components/schemas/Error"
             }
           }
         },
@@ -123,6 +103,88 @@
       }
     },
     "schemas": {
+      "Alert": {
+        "description": "A pressure standing on the machine now (docs/machine.md, 「The standing and its alerts」).",
+        "oneOf": [
+          {
+            "description": "Memory `full` at or above the alert line, standing for the alert minutes.",
+            "properties": {
+              "alertPct": {
+                "description": "The alert line, in percent.",
+                "format": "double",
+                "type": "number"
+              },
+              "cause": {
+                "const": "memory",
+                "type": "string"
+              },
+              "fullPct": {
+                "description": "The memory `full` over the last minute, in percent.",
+                "format": "double",
+                "type": "number"
+              },
+              "minutes": {
+                "description": "How long it has stood.",
+                "format": "int64",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "cause",
+              "fullPct",
+              "alertPct",
+              "minutes"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "The data root's disk under its line.",
+            "properties": {
+              "cause": {
+                "const": "disk",
+                "type": "string"
+              },
+              "freeGb": {
+                "format": "double",
+                "type": "number"
+              },
+              "limitGb": {
+                "format": "double",
+                "type": "number"
+              }
+            },
+            "required": [
+              "cause",
+              "freeGb",
+              "limitGb"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "Band": {
+        "description": "One figure over a stretch: its lowest, its highest and its mean.",
+        "properties": {
+          "max": {
+            "format": "double",
+            "type": "number"
+          },
+          "mean": {
+            "format": "double",
+            "type": "number"
+          },
+          "min": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "min",
+          "max",
+          "mean"
+        ],
+        "type": "object"
+      },
       "BoardView": {
         "description": "Everything the board reports that belongs to no other piece: its own temperatures and its fans.",
         "properties": {
@@ -143,18 +205,6 @@
           "sensors",
           "fans"
         ],
-        "type": "object"
-      },
-      "CheckNodes": {
-        "description": "Which nodes to check now: the one named, or every node.",
-        "properties": {
-          "name": {
-            "type": [
-              "string",
-              "null"
-            ]
-          }
-        },
         "type": "object"
       },
       "ChipView": {
@@ -238,41 +288,50 @@
         ],
         "type": "object"
       },
-      "CpuLimit": {
-        "description": "A machine's CPU limit as kept.",
+      "CpuFigures": {
+        "description": "The CPU's figures over a stretch.",
         "properties": {
           "celsius": {
-            "format": "double",
-            "type": [
-              "number",
-              "null"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Band"
+              },
+              {
+                "type": "null"
+              }
             ]
           },
-          "machine": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "machine",
-          "celsius"
-        ],
-        "type": "object"
-      },
-      "CpuLimitSet": {
-        "description": "The CPU limit to set; null clears it.",
-        "properties": {
-          "celsius": {
-            "default": null,
-            "format": "double",
-            "type": [
-              "number",
-              "null"
+          "mhz": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Band"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "usePct": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Band"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "watts": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Band"
+              },
+              {
+                "type": "null"
+              }
             ]
           }
         },
-        "required": [
-          "celsius"
-        ],
         "type": "object"
       },
       "CpuView": {
@@ -403,23 +462,98 @@
         ],
         "type": "object"
       },
+      "Error": {
+        "description": "The body of every answer that is not the route's own: its code and an English sentence.",
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/ErrorCode"
+          },
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "error"
+        ],
+        "type": "object"
+      },
       "ErrorCode": {
         "description": "Why a request was not answered with its route's own answer.",
         "enum": [
           "bad-request",
           "unauthorized",
           "no-route",
-          "no-node",
-          "no-hub",
-          "name-taken",
-          "hub-taken",
-          "not-ssh",
-          "incomplete",
+          "not-found",
+          "conflict",
+          "gone",
           "name-rule",
           "bad-field",
+          "incomplete",
           "failed"
         ],
         "type": "string"
+      },
+      "Event": {
+        "description": "One event as the stream carries it.",
+        "properties": {
+          "at": {
+            "description": "When it was published, in epoch milliseconds.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "data": {
+            "additionalProperties": true,
+            "description": "The member as a GET answers it, or its key alone for a deletion; the document's `x-events` gives the\nschema of each kind's.",
+            "type": "object"
+          },
+          "id": {
+            "description": "The service's event number, which only grows.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/EventKind"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "at",
+          "data"
+        ],
+        "type": "object"
+      },
+      "EventKind": {
+        "description": "A kind of event: a resource and its change.",
+        "enum": [
+          "node.created",
+          "node.changed",
+          "node.deleted",
+          "machine.changed",
+          "reading.created"
+        ],
+        "type": "string"
+      },
+      "EventPage": {
+        "description": "A page of events, in the order they were published.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Event"
+            },
+            "type": "array"
+          },
+          "more": {
+            "description": "Whether anything stands past the last item.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "more"
+        ],
+        "type": "object"
       },
       "Fan": {
         "properties": {
@@ -438,6 +572,95 @@
           "chip",
           "label",
           "rpm"
+        ],
+        "type": "object"
+      },
+      "FanFigures": {
+        "description": "One fan's figures over a stretch, by its chip and label.",
+        "properties": {
+          "chip": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "rpm": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Band"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "chip",
+          "label"
+        ],
+        "type": "object"
+      },
+      "GpuFigures": {
+        "description": "One GPU's figures over a stretch.",
+        "properties": {
+          "celsius": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Band"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "index": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "mhz": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Band"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "usePct": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Band"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "vramUsedGb": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Band"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "watts": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Band"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "index"
         ],
         "type": "object"
       },
@@ -668,128 +891,82 @@
         "type": "object"
       },
       "Health": {
-        "description": "Whether the service stands: its process, its version, and whether its store is open and its loops\nhave started.",
+        "description": "Whether the service stands: ready once its store is open and migrated and its loops have started.",
         "properties": {
-          "pid": {
-            "format": "uint32",
-            "minimum": 0,
-            "type": "integer"
-          },
           "ready": {
             "type": "boolean"
+          },
+          "reason": {
+            "description": "Why it is not ready; null when it is.",
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "version": {
             "type": "string"
           }
         },
         "required": [
-          "pid",
-          "version",
-          "ready"
-        ],
-        "type": "object"
-      },
-      "HistoryBand": {
-        "description": "One series across a span: each point's lowest, highest and mean, null where nothing was recorded.",
-        "properties": {
-          "max": {
-            "items": {
-              "format": "double",
-              "type": [
-                "number",
-                "null"
-              ]
-            },
-            "type": "array"
-          },
-          "mean": {
-            "items": {
-              "format": "double",
-              "type": [
-                "number",
-                "null"
-              ]
-            },
-            "type": "array"
-          },
-          "min": {
-            "items": {
-              "format": "double",
-              "type": [
-                "number",
-                "null"
-              ]
-            },
-            "type": "array"
-          }
-        },
-        "required": [
-          "min",
-          "max",
-          "mean"
-        ],
-        "type": "object"
-      },
-      "HistoryRange": {
-        "description": "One span of the history: the start of each point's stretch in epoch milliseconds, the width of one,\nand each figure's band.",
-        "properties": {
-          "at": {
-            "items": {
-              "format": "int64",
-              "type": "integer"
-            },
-            "type": "array"
-          },
-          "pointSeconds": {
-            "format": "int64",
-            "type": "integer"
-          },
-          "series": {
-            "additionalProperties": {
-              "$ref": "#/components/schemas/HistoryBand"
-            },
-            "type": "object"
-          }
-        },
-        "required": [
-          "at",
-          "pointSeconds",
-          "series"
+          "ready",
+          "reason",
+          "version"
         ],
         "type": "object"
       },
       "Hub": {
-        "description": "A jake hub: its control address and the file its token is kept in.",
+        "description": "A hub: its control address and the file its token is kept in.",
         "properties": {
-          "tokenFile": {
+          "address": {
+            "description": "The hub's control address.",
             "type": "string"
           },
-          "url": {
+          "createdAt": {
+            "description": "When it was listed, in epoch milliseconds.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tokenFile": {
+            "description": "The file whose `JAKE_CONTROL_TOKEN` line holds the control token.",
             "type": "string"
           }
         },
         "required": [
-          "url",
-          "tokenFile"
+          "id",
+          "address",
+          "tokenFile",
+          "label",
+          "createdAt"
         ],
         "type": "object"
       },
-      "HubRemoved": {
-        "description": "A hub removed, and the jake nodes reached through it, removed with it.",
+      "HubPage": {
+        "description": "A page of hubs, in the order they were listed.",
         "properties": {
-          "removed": {
+          "items": {
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/Hub"
             },
             "type": "array"
           },
-          "url": {
-            "type": "string"
+          "more": {
+            "description": "Whether anything stands past the last item.",
+            "type": "boolean"
           }
         },
         "required": [
-          "url",
-          "removed"
+          "items",
+          "more"
         ],
         "type": "object"
       },
@@ -852,632 +1029,7 @@
           }
         ]
       },
-      "JakeTarget": {
-        "description": "A jake node's connection: its agent and the hub it is reached through.",
-        "properties": {
-          "agent": {
-            "type": "string"
-          },
-          "hubUrl": {
-            "type": "string"
-          },
-          "role": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "tokenFile": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "hubUrl",
-          "tokenFile",
-          "agent",
-          "role"
-        ],
-        "type": "object"
-      },
-      "Largest": {
-        "description": "One of the largest processes.",
-        "properties": {
-          "megabytes": {
-            "format": "int64",
-            "type": "integer"
-          },
-          "name": {
-            "type": "string"
-          },
-          "pid": {
-            "format": "int64",
-            "type": "integer"
-          },
-          "place": {
-            "type": [
-              "string",
-              "null"
-            ]
-          }
-        },
-        "required": [
-          "pid",
-          "name",
-          "megabytes",
-          "place"
-        ],
-        "type": "object"
-      },
-      "LatestReading": {
-        "description": "A machine's latest reading, or the failure met reading it.",
-        "properties": {
-          "cpuLimit": {
-            "format": "double",
-            "type": [
-              "number",
-              "null"
-            ]
-          },
-          "failure": {
-            "description": "What was met where the machine could not be read.",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "hardware": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/HardwareView"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Null where the machine was not read."
-          },
-          "kind": {
-            "$ref": "#/components/schemas/MachineKind"
-          },
-          "label": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "readAt": {
-            "description": "When the reading was taken, in epoch milliseconds.",
-            "format": "int64",
-            "type": "integer"
-          },
-          "tracking": {
-            "description": "Whether the machine's live tracking is on; a machine not tracked has neither a reading nor a failure.",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "name",
-          "label",
-          "kind",
-          "hardware",
-          "failure",
-          "readAt",
-          "tracking",
-          "cpuLimit"
-        ],
-        "type": "object"
-      },
-      "LiveRange": {
-        "description": "Live readings as columns: when each was taken, in epoch milliseconds, and each figure's value at each\nof those times, null where that reading did not carry it.",
-        "properties": {
-          "at": {
-            "items": {
-              "format": "int64",
-              "type": "integer"
-            },
-            "type": "array"
-          },
-          "series": {
-            "additionalProperties": {
-              "items": {
-                "format": "double",
-                "type": [
-                  "number",
-                  "null"
-                ]
-              },
-              "type": "array"
-            },
-            "type": "object"
-          }
-        },
-        "required": [
-          "at",
-          "series"
-        ],
-        "type": "object"
-      },
-      "Login": {
-        "description": "The arguments that open a batch SSH login to a node, ahead of the command.",
-        "properties": {
-          "args": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array"
-          }
-        },
-        "required": [
-          "args"
-        ],
-        "type": "object"
-      },
-      "LoginShell": {
-        "description": "The language an ssh node's login answers a command in.",
-        "enum": [
-          "posix",
-          "powershell"
-        ],
-        "type": "string"
-      },
-      "MachineKind": {
-        "description": "How a machine is reached: this machine itself, or a node of either connection type.",
-        "enum": [
-          "local",
-          "ssh",
-          "jake"
-        ],
-        "type": "string"
-      },
-      "MachinePressure": {
-        "description": "A pressure on the service's machine, told once (docs/machine.md).",
-        "oneOf": [
-          {
-            "description": "Memory `full` at or above the alert line, standing for the alert minutes.",
-            "properties": {
-              "alertPct": {
-                "description": "The alert line, in percent.",
-                "format": "double",
-                "type": "number"
-              },
-              "cause": {
-                "const": "memory",
-                "type": "string"
-              },
-              "fullPct": {
-                "description": "The memory `full` over the last minute, in percent.",
-                "format": "double",
-                "type": "number"
-              },
-              "largest": {
-                "items": {
-                  "$ref": "#/components/schemas/Largest"
-                },
-                "type": "array"
-              },
-              "minutes": {
-                "description": "How long it has stood.",
-                "format": "int64",
-                "type": "integer"
-              },
-              "places": {
-                "items": {
-                  "$ref": "#/components/schemas/Place"
-                },
-                "type": "array"
-              },
-              "reading": {
-                "anyOf": [
-                  {
-                    "$ref": "#/components/schemas/Reading"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              }
-            },
-            "required": [
-              "cause",
-              "fullPct",
-              "alertPct",
-              "minutes",
-              "reading",
-              "places",
-              "largest"
-            ],
-            "type": "object"
-          },
-          {
-            "description": "The data root's disk under the launch line.",
-            "properties": {
-              "cause": {
-                "const": "disk",
-                "type": "string"
-              },
-              "freeGb": {
-                "format": "double",
-                "type": "number"
-              },
-              "limitGb": {
-                "format": "double",
-                "type": "number"
-              },
-              "reading": {
-                "anyOf": [
-                  {
-                    "$ref": "#/components/schemas/Reading"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              }
-            },
-            "required": [
-              "cause",
-              "freeGb",
-              "limitGb",
-              "reading"
-            ],
-            "type": "object"
-          }
-        ]
-      },
-      "MemoryView": {
-        "properties": {
-          "share": {
-            "format": "double",
-            "type": [
-              "number",
-              "null"
-            ]
-          },
-          "swapShare": {
-            "format": "double",
-            "type": [
-              "number",
-              "null"
-            ]
-          },
-          "swapTotalKb": {
-            "format": "double",
-            "type": [
-              "number",
-              "null"
-            ]
-          },
-          "swapUsedKb": {
-            "format": "double",
-            "type": [
-              "number",
-              "null"
-            ]
-          },
-          "totalKb": {
-            "format": "double",
-            "type": [
-              "number",
-              "null"
-            ]
-          },
-          "usedKb": {
-            "format": "double",
-            "type": [
-              "number",
-              "null"
-            ]
-          }
-        },
-        "required": [
-          "usedKb",
-          "totalKb",
-          "share",
-          "swapUsedKb",
-          "swapTotalKb",
-          "swapShare"
-        ],
-        "type": "object"
-      },
-      "NewNode": {
-        "description": "A new ssh node.",
-        "properties": {
-          "host": {
-            "type": "string"
-          },
-          "keyPath": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "label": {
-            "description": "The name where none is given.",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "name": {
-            "type": "string"
-          },
-          "port": {
-            "description": "22 where none is given.",
-            "format": "int64",
-            "type": [
-              "integer",
-              "null"
-            ]
-          },
-          "role": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "shell": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/LoginShell"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "`posix` where none is given."
-          },
-          "user": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "name",
-          "host",
-          "user"
-        ],
-        "type": "object"
-      },
-      "Node": {
-        "description": "A node as every route answers it. It holds no credential, only where one is kept.",
-        "properties": {
-          "address": {
-            "description": "Where it is reached: `user@host`, `:port` after it where the port is not 22 and ` (PowerShell)` where\nthe login answers in PowerShell; `agent @ hub` for a jake node.",
-            "type": "string"
-          },
-          "agent": {
-            "description": "A jake node's agent, by the name its hub knows it by.",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "checkedAt": {
-            "description": "When the last check was made, in epoch milliseconds.",
-            "format": "int64",
-            "type": [
-              "integer",
-              "null"
-            ]
-          },
-          "connectedAt": {
-            "description": "When the node was last found connected, in epoch milliseconds.",
-            "format": "int64",
-            "type": [
-              "integer",
-              "null"
-            ]
-          },
-          "credential": {
-            "description": "Where the credential is kept: an ssh node's key path, or the token file of a jake node's hub.",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "detail": {
-            "description": "The last check's line.",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "kind": {
-            "$ref": "#/components/schemas/NodeKind"
-          },
-          "label": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "role": {
-            "description": "The services the node is reserved for, joined by `+`.",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "state": {
-            "$ref": "#/components/schemas/NodeState"
-          },
-          "takesJobs": {
-            "description": "An ssh node other than the service's own machine, whose login is not PowerShell's and whose role is\nnone or names `jobs`.",
-            "type": "boolean"
-          },
-          "thisMachine": {
-            "description": "An ssh node whose host names the service's own machine.",
-            "type": "boolean"
-          },
-          "tone": {
-            "$ref": "#/components/schemas/Tone"
-          },
-          "up": {
-            "description": "The last check found the node connected and was made within the link window.",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "name",
-          "label",
-          "kind",
-          "agent",
-          "address",
-          "credential",
-          "role",
-          "state",
-          "tone",
-          "detail",
-          "checkedAt",
-          "connectedAt",
-          "up",
-          "thisMachine",
-          "takesJobs"
-        ],
-        "type": "object"
-      },
-      "NodeChanges": {
-        "description": "A change to a node: only the fields sent change, and null clears `keyPath` and `role`.",
-        "properties": {
-          "host": {
-            "type": "string"
-          },
-          "keyPath": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "label": {
-            "type": "string"
-          },
-          "port": {
-            "format": "int64",
-            "type": "integer"
-          },
-          "role": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "shell": {
-            "$ref": "#/components/schemas/LoginShell"
-          },
-          "user": {
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "NodeKind": {
-        "description": "A node's connection type: logged into over SSH, or a jake agent reached through its hub.",
-        "enum": [
-          "ssh",
-          "jake"
-        ],
-        "type": "string"
-      },
-      "NodeList": {
-        "description": "Nodes in the list's order.",
-        "properties": {
-          "nodes": {
-            "items": {
-              "$ref": "#/components/schemas/Node"
-            },
-            "type": "array"
-          }
-        },
-        "required": [
-          "nodes"
-        ],
-        "type": "object"
-      },
-      "NodeState": {
-        "description": "One state a node's check comes to (docs/nodes.md, 「The states」).",
-        "enum": [
-          "connected",
-          "disconnected",
-          "auth",
-          "hostkey",
-          "unreachable",
-          "error",
-          "unknown"
-        ],
-        "type": "string"
-      },
-      "NodesChanged": {
-        "description": "A pass moved a node's state, or the list changed; a consumer showing the nodes reads them again.",
-        "type": "object"
-      },
-      "Place": {
-        "description": "What one agent place holds of the machine.",
-        "properties": {
-          "browsers": {
-            "format": "int64",
-            "type": "integer"
-          },
-          "megabytes": {
-            "format": "int64",
-            "type": "integer"
-          },
-          "place": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "place",
-          "megabytes",
-          "browsers"
-        ],
-        "type": "object"
-      },
-      "Pressure": {
-        "properties": {
-          "full": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/PressureLine"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Null for a resource the kernel keeps no `full` line for."
-          },
-          "some": {
-            "$ref": "#/components/schemas/PressureLine"
-          }
-        },
-        "required": [
-          "some",
-          "full"
-        ],
-        "type": "object"
-      },
-      "PressureLine": {
-        "description": "The share of a stretch some or all tasks stood stalled, in percent, over 10, 60 and 300 seconds.",
-        "properties": {
-          "avg10": {
-            "format": "double",
-            "type": "number"
-          },
-          "avg300": {
-            "format": "double",
-            "type": "number"
-          },
-          "avg60": {
-            "format": "double",
-            "type": "number"
-          }
-        },
-        "required": [
-          "avg10",
-          "avg60",
-          "avg300"
-        ],
-        "type": "object"
-      },
-      "Reading": {
+      "KernelReading": {
         "description": "The machine as its kernel reads, every reading that cannot be had null rather than a nought.",
         "properties": {
           "at": {
@@ -1552,30 +1104,671 @@
         ],
         "type": "object"
       },
-      "Removed": {
-        "description": "The node a removal took away, by its name.",
+      "Largest": {
+        "description": "One of the largest processes.",
         "properties": {
-          "removed": {
+          "megabytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "pid": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "scope": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "pid",
+          "name",
+          "megabytes",
+          "scope"
+        ],
+        "type": "object"
+      },
+      "LoginShell": {
+        "description": "The language an ssh node's login answers a command in.",
+        "enum": [
+          "posix",
+          "powershell"
+        ],
+        "type": "string"
+      },
+      "Machine": {
+        "description": "A machine as every route and event answers it.",
+        "properties": {
+          "cpuLimit": {
+            "description": "The CPU limit set for the machine, in °C.",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "failure": {
+            "description": "What was met where the machine could not be read.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "hardware": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HardwareView"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The latest reading; null where the machine was not read."
+          },
+          "kind": {
+            "$ref": "#/components/schemas/MachineKind"
+          },
+          "label": {
+            "type": "string"
+          },
+          "name": {
+            "description": "`local` for the service's own machine, a node's name for a node.",
+            "type": "string"
+          },
+          "readAt": {
+            "description": "When the reading or the failure came, in epoch milliseconds; null where the machine is not tracked.",
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "standing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Standing"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The service's own machine as the minute look last read it; null for any other machine."
+          },
+          "tracking": {
+            "description": "Whether the machine's live tracking is on; a machine not tracked has neither a reading nor a failure.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "label",
+          "kind",
+          "tracking",
+          "cpuLimit",
+          "readAt",
+          "hardware",
+          "failure",
+          "standing"
+        ],
+        "type": "object"
+      },
+      "MachineChanges": {
+        "description": "A change to a machine, as a JSON merge patch: only the fields sent change, and null clears `cpuLimit`.",
+        "properties": {
+          "cpuLimit": {
+            "description": "Above 0 °C and below 127 °C.",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "tracking": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "MachineKind": {
+        "description": "How a machine is reached: this machine itself, or a node of either connection type.",
+        "enum": [
+          "local",
+          "ssh",
+          "hub"
+        ],
+        "type": "string"
+      },
+      "MachinePage": {
+        "description": "A page of machines: this machine, then every node in the list's order.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Machine"
+            },
+            "type": "array"
+          },
+          "more": {
+            "description": "Whether anything stands past the last item.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "more"
+        ],
+        "type": "object"
+      },
+      "MemoryFigures": {
+        "description": "Memory's figures over a stretch.",
+        "properties": {
+          "usedGb": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Band"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "MemoryView": {
+        "properties": {
+          "share": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "swapShare": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "swapTotalKb": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "swapUsedKb": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "totalKb": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "usedKb": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "usedKb",
+          "totalKb",
+          "share",
+          "swapUsedKb",
+          "swapTotalKb",
+          "swapShare"
+        ],
+        "type": "object"
+      },
+      "NewHub": {
+        "description": "A hub to list.",
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tokenFile": {
             "type": "string"
           }
         },
         "required": [
-          "removed"
+          "address",
+          "tokenFile"
         ],
         "type": "object"
       },
-      "Room": {
-        "description": "What the machine is short of for another launch, read now; empty where it has room.",
+      "NewNode": {
+        "description": "A new ssh node.",
         "properties": {
-          "held": {
+          "host": {
+            "type": "string"
+          },
+          "keyPath": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "label": {
+            "description": "The name where none is given.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "port": {
+            "description": "22 where none is given.",
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "role": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "shell": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LoginShell"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`posix` where none is given."
+          },
+          "user": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "host",
+          "user"
+        ],
+        "type": "object"
+      },
+      "Node": {
+        "description": "A node as every route and event answers it. It holds no credential, only where one is kept.",
+        "properties": {
+          "address": {
+            "description": "Where it is reached: `user@host`, `:port` after it where the port is not 22 and ` (PowerShell)` where\nthe login answers in PowerShell; `agent @ hub address` for a hub node.",
+            "type": "string"
+          },
+          "agentName": {
+            "description": "The name a hub node's hub knows its agent by.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "checkedAt": {
+            "description": "When the last check was made, in epoch milliseconds.",
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "connectedAt": {
+            "description": "When the node was last found connected, in epoch milliseconds.",
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "credential": {
+            "description": "Where the credential is kept: an ssh node's key path, or the token file of a hub node's hub.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "detail": {
+            "description": "The last check's line.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "hubId": {
+            "description": "A hub node's hub.",
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "kind": {
+            "$ref": "#/components/schemas/NodeKind"
+          },
+          "label": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "description": "The services the node is reserved for, joined by `+`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "state": {
+            "$ref": "#/components/schemas/NodeState"
+          },
+          "thisMachine": {
+            "description": "An ssh node whose host names the service's own machine.",
+            "type": "boolean"
+          },
+          "tone": {
+            "$ref": "#/components/schemas/Tone"
+          },
+          "up": {
+            "description": "The last check found the node connected and was made within the link window.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "label",
+          "kind",
+          "hubId",
+          "agentName",
+          "address",
+          "credential",
+          "role",
+          "state",
+          "tone",
+          "detail",
+          "checkedAt",
+          "connectedAt",
+          "up",
+          "thisMachine"
+        ],
+        "type": "object"
+      },
+      "NodeChanges": {
+        "description": "A change to a node, as a JSON merge patch: only the fields sent change, and null clears `keyPath` and\n`role`.",
+        "properties": {
+          "host": {
+            "type": "string"
+          },
+          "keyPath": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "port": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "role": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "shell": {
+            "$ref": "#/components/schemas/LoginShell"
+          },
+          "user": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "NodeCheck": {
+        "description": "The nodes a check reached, each as it stands after its check.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Node"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
+      "NodeCheckAsk": {
+        "description": "Which nodes to check now: those named, or every node where none is.",
+        "properties": {
+          "nodeNames": {
             "items": {
               "type": "string"
             },
             "type": "array"
           }
         },
+        "type": "object"
+      },
+      "NodeKey": {
+        "description": "A removed node, by its key.",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
         "required": [
-          "held"
+          "name"
+        ],
+        "type": "object"
+      },
+      "NodeKind": {
+        "description": "A node's connection type: logged into over SSH, or an agent reached through its hub.",
+        "enum": [
+          "ssh",
+          "hub"
+        ],
+        "type": "string"
+      },
+      "NodePage": {
+        "description": "A page of nodes, in the list's order.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Node"
+            },
+            "type": "array"
+          },
+          "more": {
+            "description": "Whether anything stands past the last item.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "more"
+        ],
+        "type": "object"
+      },
+      "NodeState": {
+        "description": "One state a node's check comes to (docs/nodes.md, 「The states」).",
+        "enum": [
+          "connected",
+          "disconnected",
+          "auth",
+          "hostkey",
+          "unreachable",
+          "error",
+          "unknown"
+        ],
+        "type": "string"
+      },
+      "Pressure": {
+        "properties": {
+          "full": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PressureLine"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null for a resource the kernel keeps no `full` line for."
+          },
+          "some": {
+            "$ref": "#/components/schemas/PressureLine"
+          }
+        },
+        "required": [
+          "some",
+          "full"
+        ],
+        "type": "object"
+      },
+      "PressureLine": {
+        "description": "The share of a stretch some or all tasks stood stalled, in percent, over 10, 60 and 300 seconds.",
+        "properties": {
+          "avg10": {
+            "format": "double",
+            "type": "number"
+          },
+          "avg300": {
+            "format": "double",
+            "type": "number"
+          },
+          "avg60": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "avg10",
+          "avg60",
+          "avg300"
+        ],
+        "type": "object"
+      },
+      "Reading": {
+        "description": "One stretch of a machine's recorded figures, one group per piece of hardware.",
+        "properties": {
+          "at": {
+            "description": "The stretch's start, in epoch milliseconds.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "cpu": {
+            "$ref": "#/components/schemas/CpuFigures"
+          },
+          "fans": {
+            "items": {
+              "$ref": "#/components/schemas/FanFigures"
+            },
+            "type": "array"
+          },
+          "gpus": {
+            "items": {
+              "$ref": "#/components/schemas/GpuFigures"
+            },
+            "type": "array"
+          },
+          "machineName": {
+            "type": "string"
+          },
+          "memory": {
+            "$ref": "#/components/schemas/MemoryFigures"
+          },
+          "spanMs": {
+            "description": "The stretch's width.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "storage": {
+            "items": {
+              "$ref": "#/components/schemas/StorageFigures"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "machineName",
+          "at",
+          "spanMs",
+          "cpu",
+          "memory",
+          "gpus",
+          "storage",
+          "fans"
+        ],
+        "type": "object"
+      },
+      "ReadingPage": {
+        "description": "A page of a machine's readings, oldest first.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Reading"
+            },
+            "type": "array"
+          },
+          "more": {
+            "description": "Whether anything stands past the last item.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "more"
+        ],
+        "type": "object"
+      },
+      "ScopeUse": {
+        "description": "What the processes of one scope hold of the machine.",
+        "properties": {
+          "browsers": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "megabytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "scope": {
+            "description": "The caller's own scope, as the process's environment names it.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope",
+          "megabytes",
+          "browsers"
         ],
         "type": "object"
       },
@@ -1642,70 +1835,20 @@
         ],
         "type": "object"
       },
-      "SshTarget": {
-        "description": "An ssh node's connection.",
+      "Standing": {
+        "description": "The service's own machine as the minute look read it.",
         "properties": {
-          "host": {
-            "type": "string"
-          },
-          "keyPath": {
-            "description": "The private key the login offers, as the row holds it; a leading `~/` is the home of the account that\nreads it.",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "options": {
-            "description": "The OpenSSH options of a batch login, each given after `-o`, the options a key brings among them where\nthe node names a key; the same for `ssh`, `sftp` and `scp`.",
+          "alerts": {
+            "description": "Each pressure that stands now.",
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/Alert"
             },
             "type": "array"
           },
-          "port": {
-            "format": "uint16",
-            "maximum": 65535,
-            "minimum": 0,
-            "type": "integer"
-          },
-          "role": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "shell": {
-            "$ref": "#/components/schemas/LoginShell"
-          },
-          "user": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "host",
-          "port",
-          "user",
-          "keyPath",
-          "shell",
-          "options",
-          "role"
-        ],
-        "type": "object"
-      },
-      "Standing": {
-        "description": "The machine as the minute watch read it.",
-        "properties": {
           "browsers": {
             "description": "How many browser main processes run.",
             "format": "int64",
             "type": "integer"
-          },
-          "held": {
-            "description": "What the machine is short of for another launch, each an English reason with its figure.",
-            "items": {
-              "type": "string"
-            },
-            "type": "array"
           },
           "largest": {
             "description": "The five largest processes.",
@@ -1714,31 +1857,63 @@
             },
             "type": "array"
           },
-          "places": {
-            "description": "What each agent place holds, largest first.",
-            "items": {
-              "$ref": "#/components/schemas/Place"
-            },
-            "type": "array"
-          },
           "reading": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Reading"
+                "$ref": "#/components/schemas/KernelReading"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Null where the machine could not be read, which holds nothing."
+            "description": "Null where the machine could not be read, which raises no alert."
+          },
+          "scopes": {
+            "description": "What each scope holds, largest first.",
+            "items": {
+              "$ref": "#/components/schemas/ScopeUse"
+            },
+            "type": "array"
           }
         },
         "required": [
           "reading",
-          "held",
+          "alerts",
           "browsers",
-          "places",
+          "scopes",
           "largest"
+        ],
+        "type": "object"
+      },
+      "StorageFigures": {
+        "description": "One storage device's figures over a stretch, by the device's key.",
+        "properties": {
+          "celsius": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Band"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "key": {
+            "type": "string"
+          },
+          "usedGb": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Band"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "key"
         ],
         "type": "object"
       },
@@ -1823,35 +1998,118 @@
         "type": "object"
       },
       "Target": {
-        "description": "The one form a node is reached by, whatever reaches it.",
-        "oneOf": [
-          {
-            "$ref": "#/components/schemas/SshTarget",
-            "properties": {
-              "kind": {
-                "const": "ssh",
-                "type": "string"
-              }
-            },
-            "required": [
-              "kind"
-            ],
-            "type": "object"
+        "description": "How to reach a node, whatever reaches it; the fields of the other connection type are null.",
+        "properties": {
+          "agentName": {
+            "description": "The name the hub knows the node's agent by.",
+            "type": [
+              "string",
+              "null"
+            ]
           },
-          {
-            "$ref": "#/components/schemas/JakeTarget",
-            "properties": {
-              "kind": {
-                "const": "jake",
-                "type": "string"
+          "host": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "hubAddress": {
+            "description": "The hub's control address.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "hubId": {
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "hubTokenFile": {
+            "description": "The file the hub's control token is kept in.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "keyPath": {
+            "description": "The private key the login offers, as the row holds it; a leading `~/` is the home of the account that\nreads it.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "kind": {
+            "$ref": "#/components/schemas/NodeKind"
+          },
+          "nodeName": {
+            "type": "string"
+          },
+          "port": {
+            "format": "uint16",
+            "maximum": 65535,
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "role": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "shell": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LoginShell"
+              },
+              {
+                "type": "null"
               }
+            ]
+          },
+          "sshArgs": {
+            "description": "The same login laid out as `ssh` arguments ahead of the command. Empty for a hub node.",
+            "items": {
+              "type": "string"
             },
-            "required": [
-              "kind"
-            ],
-            "type": "object"
+            "type": "array"
+          },
+          "sshOptions": {
+            "description": "The OpenSSH options of a batch login, each given after `-o`, the options a key brings among them where\nthe node names a key; the same for `ssh`, `sftp` and `scp`. Empty for a hub node.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "user": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
-        ]
+        },
+        "required": [
+          "nodeName",
+          "kind",
+          "role",
+          "host",
+          "port",
+          "user",
+          "keyPath",
+          "shell",
+          "sshOptions",
+          "sshArgs",
+          "hubId",
+          "hubAddress",
+          "hubTokenFile",
+          "agentName"
+        ],
+        "type": "object"
       },
       "ThreadUse": {
         "description": "One thread's share busy, 0 to 1.",
@@ -1882,34 +2140,6 @@
           "unknown"
         ],
         "type": "string"
-      },
-      "Tracking": {
-        "description": "A machine's tracking switch as kept.",
-        "properties": {
-          "machine": {
-            "type": "string"
-          },
-          "on": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "machine",
-          "on"
-        ],
-        "type": "object"
-      },
-      "TrackingSet": {
-        "description": "The tracking switch to set.",
-        "properties": {
-          "on": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "on"
-        ],
-        "type": "object"
       },
       "VolumeView": {
         "description": "One mounted volume.",
@@ -1960,22 +2190,6 @@
             "const": "denied"
           }
         ]
-      },
-      "WireError": {
-        "description": "The body of every answer that is not the route's own: its code and an English sentence.",
-        "properties": {
-          "code": {
-            "$ref": "#/components/schemas/ErrorCode"
-          },
-          "error": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "error"
-        ],
-        "type": "object"
       }
     },
     "securitySchemes": {
@@ -1987,319 +2201,71 @@
     }
   },
   "info": {
-    "description": "The node service: the machines reachable from here and what is known of them. Bodies are JSON with camelCase keys, and times are integers of epoch milliseconds; a duration is named by its unit. Every route needs the service's bearer token. Every failure and refusal is a non-2xx status with a body of `code` and `error`, so a 2xx answer is always the route's own. A list takes one cursor, `after`, and `limit`. Any other method and path is answered 404 `no-route`.",
-    "title": "The node service",
-    "version": "1.0.0"
+    "description": "The node service: the machines reachable from here and what is known of them. Nodes and hubs, how to reach a node, checking whether each answers, and each machine's hardware readings. A machine carries its readings, tracking and CPU limit; whether a launch may start on it is the caller's own policy, read from these fields. Bodies are JSON with camelCase keys, and times are integers of epoch milliseconds. Every route needs the service's bearer token. Every failure and refusal is a non-2xx status with a body of `code` and `error`. A page is `items` and `more`. Any other method and path is answered 404 `no-route`.",
+    "title": "bmo-node",
+    "version": "0.1.0-rev.1"
   },
   "openapi": "3.1.0",
   "paths": {
     "/events": {
       "get": {
-        "operationId": "events",
+        "operationId": "streamEvents",
         "parameters": [
           {
-            "description": "The comma-separated kinds: `nodes-changed`, `machine-pressure`.",
-            "in": "query",
-            "name": "kinds",
-            "required": false,
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "text/event-stream": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "description": "A stream of server-sent events, each named by its kind, its data the event's JSON as the document's `x-events` gives the schema of each kind."
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          }
-        },
-        "summary": "The events of the comma-separated `kinds`, every kind where none is, from the moment the stream is opened.",
-        "tags": [
-          "events"
-        ]
-      }
-    },
-    "/hardware/{machine}": {
-      "get": {
-        "operationId": "hardware",
-        "parameters": [
-          {
-            "description": "`local` for the service's own machine, a node's name for a node.",
-            "in": "path",
-            "name": "machine",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LatestReading"
-                }
-              }
-            },
-            "description": "Answered."
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "404": {
-            "$ref": "#/components/responses/NoNode"
-          },
-          "500": {
-            "$ref": "#/components/responses/Failed"
-          }
-        },
-        "summary": "The machine's latest reading.",
-        "tags": [
-          "hardware"
-        ]
-      }
-    },
-    "/hardware/{machine}/cpu-limit": {
-      "put": {
-        "operationId": "setCpuLimit",
-        "parameters": [
-          {
-            "description": "`local` for the service's own machine, a node's name for a node.",
-            "in": "path",
-            "name": "machine",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CpuLimitSet"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CpuLimit"
-                }
-              }
-            },
-            "description": "Answered."
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "404": {
-            "$ref": "#/components/responses/NoNode"
-          },
-          "500": {
-            "$ref": "#/components/responses/Failed"
-          }
-        },
-        "summary": "Sets the machine's CPU limit, above 0 °C and below 127 °C; null clears it.",
-        "tags": [
-          "hardware"
-        ]
-      }
-    },
-    "/hardware/{machine}/history": {
-      "get": {
-        "operationId": "history",
-        "parameters": [
-          {
-            "description": "`local` for the service's own machine, a node's name for a node.",
-            "in": "path",
-            "name": "machine",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "span",
-            "required": false,
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HistoryRange"
-                }
-              }
-            },
-            "description": "Answered."
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "404": {
-            "$ref": "#/components/responses/NoNode"
-          },
-          "500": {
-            "$ref": "#/components/responses/Failed"
-          }
-        },
-        "summary": "One span of the machine's history ending now.",
-        "tags": [
-          "hardware"
-        ]
-      }
-    },
-    "/hardware/{machine}/live": {
-      "get": {
-        "operationId": "live",
-        "parameters": [
-          {
-            "description": "`local` for the service's own machine, a node's name for a node.",
-            "in": "path",
-            "name": "machine",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "description": "The time of the last reading already read, in epoch milliseconds.",
+            "description": "The number of the last event already read; the stream starts at the moment it is opened where none is\ngiven.",
             "in": "query",
             "name": "after",
             "required": false,
             "schema": {
               "format": "int64",
-              "type": [
-                "integer",
-                "null"
-              ]
+              "type": "integer"
             }
           },
           {
-            "description": "The most readings to answer: the first after `after`, or the last where `after` is not given.",
+            "description": "The comma-separated kinds; every kind where none is given.",
+            "in": "query",
+            "name": "kinds",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The most events a page answers, for a reader asking `Accept: application/json`.",
             "in": "query",
             "name": "limit",
             "required": false,
             "schema": {
               "format": "uint32",
               "minimum": 0,
-              "type": [
-                "integer",
-                "null"
-              ]
+              "type": "integer"
             }
           },
           {
+            "description": "Keeps the `machine.changed` and `reading.created` events of this machine alone.",
             "in": "query",
-            "name": "metrics",
+            "name": "machineName",
             "required": false,
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LiveRange"
-                }
-              }
-            },
-            "description": "Answered."
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "404": {
-            "$ref": "#/components/responses/NoNode"
-          },
-          "500": {
-            "$ref": "#/components/responses/Failed"
-          }
-        },
-        "summary": "The live record's readings of the machine taken after `after`, no further back than the record reaches: the first `limit` after `after`, or the last `limit` where `after` is not given.",
-        "tags": [
-          "hardware"
-        ]
-      }
-    },
-    "/hardware/{machine}/tracking": {
-      "put": {
-        "operationId": "setTracking",
-        "parameters": [
-          {
-            "description": "`local` for the service's own machine, a node's name for a node.",
-            "in": "path",
-            "name": "machine",
-            "required": true,
             "schema": {
               "type": "string"
             }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TrackingSet"
-              }
-            }
-          },
-          "required": true
-        },
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Tracking"
+                  "$ref": "#/components/schemas/EventPage"
+                }
+              },
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/Event"
                 }
               }
             },
-            "description": "Answered."
+            "description": "Server-sent events, each named by its kind with its number as its id and its data an Event; or, to a reader asking `Accept: application/json`, a page of the same events."
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
@@ -2307,22 +2273,19 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
-          "404": {
-            "$ref": "#/components/responses/NoNode"
-          },
-          "500": {
-            "$ref": "#/components/responses/Failed"
+          "410": {
+            "$ref": "#/components/responses/Gone"
           }
         },
-        "summary": "Turns the machine's live tracking on or off; the recorder follows at once.",
+        "summary": "The one event stream: nodes, machines and hardware readings, resumed with `Last-Event-ID` or `after`.",
         "tags": [
-          "hardware"
+          "events"
         ]
       }
     },
     "/health": {
       "get": {
-        "operationId": "health",
+        "operationId": "getHealth",
         "responses": {
           "200": {
             "content": {
@@ -2332,70 +2295,51 @@
                 }
               }
             },
-            "description": "Answered."
+            "description": "Readiness and version."
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           }
         },
-        "summary": "Whether the service's store is open and migrated and its loops have started.",
+        "summary": "Readiness and version.",
         "tags": [
           "health"
         ]
       }
     },
     "/hubs": {
-      "delete": {
-        "operationId": "removeHub",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "url",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+      "get": {
+        "operationId": "listHubs",
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HubRemoved"
+                  "$ref": "#/components/schemas/HubPage"
                 }
               }
             },
-            "description": "Answered."
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
+            "description": "The hubs listed."
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
-          },
-          "404": {
-            "$ref": "#/components/responses/NoHub"
-          },
-          "422": {
-            "$ref": "#/components/responses/BadField"
           },
           "500": {
             "$ref": "#/components/responses/Failed"
           }
         },
-        "summary": "Removes a hub and every jake node reached through it.",
+        "summary": "The hubs listed.",
         "tags": [
           "hubs"
         ]
       },
       "post": {
-        "operationId": "addHub",
+        "operationId": "createHubs",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Hub"
+                "$ref": "#/components/schemas/NewHub"
               }
             }
           },
@@ -2410,7 +2354,7 @@
                 }
               }
             },
-            "description": "Made."
+            "description": "Add a hub."
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
@@ -2419,7 +2363,7 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "409": {
-            "$ref": "#/components/responses/HubTaken"
+            "$ref": "#/components/responses/Conflict"
           },
           "422": {
             "$ref": "#/components/responses/BadField"
@@ -2428,52 +2372,60 @@
             "$ref": "#/components/responses/Failed"
           }
         },
-        "summary": "Lists a hub.",
+        "summary": "Add a hub.",
         "tags": [
           "hubs"
         ]
       }
     },
-    "/machine/room": {
-      "get": {
-        "operationId": "room",
+    "/hubs/{hubId}": {
+      "delete": {
+        "operationId": "deleteHub",
+        "parameters": [
+          {
+            "description": "The hub's id.",
+            "in": "path",
+            "name": "hubId",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
         "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Room"
-                }
-              }
-            },
-            "description": "Answered."
+          "204": {
+            "description": "Done."
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
           },
           "500": {
             "$ref": "#/components/responses/Failed"
           }
         },
-        "summary": "What the service's machine is short of for another launch, read now; empty where it has room.",
+        "summary": "Remove a hub and every hub node reached through it.",
         "tags": [
-          "machine"
+          "hubs"
         ]
       }
     },
-    "/machine/standing": {
+    "/machines": {
       "get": {
-        "operationId": "standing",
+        "operationId": "listMachines",
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Standing"
+                  "$ref": "#/components/schemas/MachinePage"
                 }
               }
             },
-            "description": "Answered."
+            "description": "Every machine the hardware monitor knows, each with its latest recorded reading."
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
@@ -2482,15 +2434,238 @@
             "$ref": "#/components/responses/Failed"
           }
         },
-        "summary": "The service's machine as the minute watch last read it.",
+        "summary": "Every machine the hardware monitor knows, each with its latest recorded reading.",
         "tags": [
-          "machine"
+          "machines"
+        ]
+      }
+    },
+    "/machines/{machineName}": {
+      "get": {
+        "operationId": "getMachine",
+        "parameters": [
+          {
+            "description": "`local` for the service's own machine, a node's name for a node.",
+            "in": "path",
+            "name": "machineName",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Machine"
+                }
+              }
+            },
+            "description": "One machine: its latest reading, tracking and CPU limit, and for this machine its standing."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/Failed"
+          }
+        },
+        "summary": "One machine: its latest reading, tracking and CPU limit, and for this machine its standing.",
+        "tags": [
+          "machines"
+        ]
+      },
+      "patch": {
+        "operationId": "changeMachine",
+        "parameters": [
+          {
+            "description": "`local` for the service's own machine, a node's name for a node.",
+            "in": "path",
+            "name": "machineName",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MachineChanges"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Machine"
+                }
+              }
+            },
+            "description": "Change a machine's tracking or CPU limit; null clears the limit."
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "$ref": "#/components/responses/BadField"
+          },
+          "500": {
+            "$ref": "#/components/responses/Failed"
+          }
+        },
+        "summary": "Change a machine's tracking or CPU limit; null clears the limit.",
+        "tags": [
+          "machines"
+        ]
+      }
+    },
+    "/machines/{machineName}/readings": {
+      "get": {
+        "operationId": "listMachinesReadings",
+        "parameters": [
+          {
+            "description": "`local` for the service's own machine, a node's name for a node.",
+            "in": "path",
+            "name": "machineName",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "In epoch milliseconds; the reach of the rows the span is read from where none is given.",
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "In epoch milliseconds; now where none is given.",
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "format": "uint32",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Each stretch's width: whole seconds under a minute, whole minutes from a minute up; 1000 where none\nis given.",
+            "in": "query",
+            "name": "spanMs",
+            "required": false,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadingPage"
+                }
+              }
+            },
+            "description": "Past hardware readings, oldest first: the stretches of `spanMs` after `after` and before `before`."
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/Failed"
+          }
+        },
+        "summary": "Past hardware readings, oldest first: the stretches of `spanMs` after `after` and before `before`.",
+        "tags": [
+          "machines"
+        ]
+      }
+    },
+    "/node-checks": {
+      "post": {
+        "operationId": "createNodeChecks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NodeCheckAsk"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NodeCheck"
+                }
+              }
+            },
+            "description": "Probe the nodes named, or every node, now; each node's state and checkedAt follow."
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "422": {
+            "$ref": "#/components/responses/BadField"
+          },
+          "500": {
+            "$ref": "#/components/responses/Failed"
+          }
+        },
+        "summary": "Probe the nodes named, or every node, now; each node's state and checkedAt follow.",
+        "tags": [
+          "node-checks"
         ]
       }
     },
     "/nodes": {
       "get": {
-        "operationId": "nodes",
+        "operationId": "listNodes",
         "parameters": [
           {
             "description": "The name of the last node already read.",
@@ -2498,10 +2673,7 @@
             "name": "after",
             "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
@@ -2512,10 +2684,7 @@
             "schema": {
               "format": "uint32",
               "minimum": 0,
-              "type": [
-                "integer",
-                "null"
-              ]
+              "type": "integer"
             }
           }
         ],
@@ -2524,11 +2693,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NodeList"
+                  "$ref": "#/components/schemas/NodePage"
                 }
               }
             },
-            "description": "Answered."
+            "description": "Every node, in the list's order."
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
@@ -2540,13 +2709,13 @@
             "$ref": "#/components/responses/Failed"
           }
         },
-        "summary": "The nodes in the list's order, after the one `after` names and at most `limit` of them.",
+        "summary": "Every node, in the list's order.",
         "tags": [
           "nodes"
         ]
       },
       "post": {
-        "operationId": "addNode",
+        "operationId": "createNodes",
         "requestBody": {
           "content": {
             "application/json": {
@@ -2566,7 +2735,7 @@
                 }
               }
             },
-            "description": "Made."
+            "description": "Add an ssh node; it goes last."
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
@@ -2575,79 +2744,36 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "409": {
-            "$ref": "#/components/responses/NameTaken"
+            "$ref": "#/components/responses/Conflict"
           },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WireError"
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             },
-            "description": "- `name-rule`: the name is not lowercase letters, digits and hyphens of at most 32 characters\n- `bad-field`: a field is out of range or of the other connection type; the error names it"
+            "description": "- `name-rule`: a node's name is not lowercase letters, digits and hyphens of at most 32 characters\n- `bad-field`: a field is out of range, of the other connection type, or names nothing listed; the error names it"
           },
           "500": {
             "$ref": "#/components/responses/Failed"
           }
         },
-        "summary": "Registers an ssh node; it goes last.",
+        "summary": "Add an ssh node; it goes last.",
         "tags": [
           "nodes"
         ]
       }
     },
-    "/nodes/check": {
-      "post": {
-        "operationId": "checkNodes",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CheckNodes"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NodeList"
-                }
-              }
-            },
-            "description": "Answered."
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "404": {
-            "$ref": "#/components/responses/NoNode"
-          },
-          "500": {
-            "$ref": "#/components/responses/Failed"
-          }
-        },
-        "summary": "Checks the one node named, or every node, now; then answers the whole list.",
-        "tags": [
-          "nodes"
-        ]
-      }
-    },
-    "/nodes/{name}": {
+    "/nodes/{nodeName}": {
       "delete": {
-        "operationId": "removeNode",
+        "operationId": "deleteNode",
         "parameters": [
           {
             "description": "The node's name.",
             "in": "path",
-            "name": "name",
+            "name": "nodeName",
             "required": true,
             "schema": {
               "type": "string"
@@ -2655,38 +2781,31 @@
           }
         ],
         "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Removed"
-                }
-              }
-            },
-            "description": "Answered."
+          "204": {
+            "description": "Done."
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
           "404": {
-            "$ref": "#/components/responses/NoNode"
+            "$ref": "#/components/responses/NotFound"
           },
           "500": {
             "$ref": "#/components/responses/Failed"
           }
         },
-        "summary": "Removes a node.",
+        "summary": "Remove a node.",
         "tags": [
           "nodes"
         ]
       },
       "get": {
-        "operationId": "node",
+        "operationId": "getNode",
         "parameters": [
           {
             "description": "The node's name.",
             "in": "path",
-            "name": "name",
+            "name": "nodeName",
             "required": true,
             "schema": {
               "type": "string"
@@ -2702,13 +2821,13 @@
                 }
               }
             },
-            "description": "Answered."
+            "description": "One node."
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
           "404": {
-            "$ref": "#/components/responses/NoNode"
+            "$ref": "#/components/responses/NotFound"
           },
           "500": {
             "$ref": "#/components/responses/Failed"
@@ -2725,7 +2844,7 @@
           {
             "description": "The node's name.",
             "in": "path",
-            "name": "name",
+            "name": "nodeName",
             "required": true,
             "schema": {
               "type": "string"
@@ -2751,7 +2870,7 @@
                 }
               }
             },
-            "description": "Answered."
+            "description": "Change a node: the fields sent, null clearing `keyPath` and `role`. A changed address, port, account, key or shell clears the last check; a hub node takes `label` and `role` alone."
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
@@ -2760,7 +2879,7 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "404": {
-            "$ref": "#/components/responses/NoNode"
+            "$ref": "#/components/responses/NotFound"
           },
           "422": {
             "$ref": "#/components/responses/BadField"
@@ -2769,71 +2888,20 @@
             "$ref": "#/components/responses/Failed"
           }
         },
-        "summary": "Changes the fields sent; null clears `keyPath` and `role`. A changed address, port, account, key or shell clears the last check. A jake node takes `label` and `role` alone.",
+        "summary": "Change a node: the fields sent, null clearing `keyPath` and `role`. A changed address, port, account, key or shell clears the last check; a hub node takes `label` and `role` alone.",
         "tags": [
           "nodes"
         ]
       }
     },
-    "/nodes/{name}/login": {
+    "/nodes/{nodeName}/target": {
       "get": {
-        "operationId": "login",
+        "operationId": "getNodesTarget",
         "parameters": [
           {
             "description": "The node's name.",
             "in": "path",
-            "name": "name",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Login"
-                }
-              }
-            },
-            "description": "Answered."
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "404": {
-            "$ref": "#/components/responses/NoNode"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WireError"
-                }
-              }
-            },
-            "description": "- `not-ssh`: the node is reached through a hub and has no SSH route\n- `incomplete`: the node lacks a field its connection type needs"
-          },
-          "500": {
-            "$ref": "#/components/responses/Failed"
-          }
-        },
-        "summary": "The arguments that open a batch SSH login to the node, ahead of the command.",
-        "tags": [
-          "nodes"
-        ]
-      }
-    },
-    "/nodes/{name}/target": {
-      "get": {
-        "operationId": "target",
-        "parameters": [
-          {
-            "description": "The node's name.",
-            "in": "path",
-            "name": "name",
+            "name": "nodeName",
             "required": true,
             "schema": {
               "type": "string"
@@ -2849,22 +2917,22 @@
                 }
               }
             },
-            "description": "Answered."
+            "description": "How to reach a node: host, port, user, key, the SSH policy options, and the same spread as SSH arguments; or the hub, its token file and the agent for a hub node."
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
           "404": {
-            "$ref": "#/components/responses/NoNode"
+            "$ref": "#/components/responses/NotFound"
           },
-          "409": {
+          "422": {
             "$ref": "#/components/responses/Incomplete"
           },
           "500": {
             "$ref": "#/components/responses/Failed"
           }
         },
-        "summary": "The node's connection, the one form it is reached by.",
+        "summary": "How to reach a node: host, port, user, key, the SSH policy options, and the same spread as SSH arguments; or the hub, its token file and the agent for a hub node.",
         "tags": [
           "nodes"
         ]
@@ -2876,38 +2944,247 @@
       "bearer": []
     }
   ],
+  "servers": [
+    {
+      "description": "the node service",
+      "url": "/"
+    }
+  ],
   "tags": [
     {
-      "description": "The machines reachable from here, each checked for whether it answers.",
+      "description": "Whether the service stands.",
+      "name": "health"
+    },
+    {
+      "description": "The one event stream: nodes, machines and hardware readings.",
+      "name": "events"
+    },
+    {
+      "description": "The machines reachable from here, and how to reach each.",
       "name": "nodes"
     },
     {
-      "description": "The jake hubs jake nodes are reached through.",
+      "description": "Checking whether nodes answer, now.",
+      "name": "node-checks"
+    },
+    {
+      "description": "The hubs hub nodes are reached through.",
       "name": "hubs"
     },
     {
       "description": "Every machine's hardware, read live and kept for a month.",
-      "name": "hardware"
-    },
-    {
-      "description": "The service's own machine: its room for another launch and its standing.",
-      "name": "machine"
-    },
-    {
-      "description": "The events the service publishes, as server-sent events.",
-      "name": "events"
-    },
-    {
-      "description": "Whether the service stands.",
-      "name": "health"
+      "name": "machines"
     }
   ],
+  "x-calls": [],
   "x-events": {
-    "machine-pressure": {
-      "$ref": "#/components/schemas/MachinePressure"
+    "machine.changed": {
+      "data": {
+        "$ref": "#/components/schemas/Machine"
+      }
     },
-    "nodes-changed": {
-      "$ref": "#/components/schemas/NodesChanged"
+    "node.changed": {
+      "data": {
+        "$ref": "#/components/schemas/Node"
+      }
+    },
+    "node.created": {
+      "data": {
+        "$ref": "#/components/schemas/Node"
+      }
+    },
+    "node.deleted": {
+      "data": {
+        "$ref": "#/components/schemas/NodeKey"
+      }
+    },
+    "reading.created": {
+      "data": {
+        "$ref": "#/components/schemas/Reading"
+      }
     }
-  }
+  },
+  "x-harness": {
+    "entry": "A harness asks node_target how to reach a node before it logs in, and node_machine how loaded a machine is before it starts heavy work there.",
+    "mcp": "bmo-node mcp",
+    "plugin": "ahas-node"
+  },
+  "x-layer": "upstream",
+  "x-tools": [
+    {
+      "description": "Every node, in the list's order: its name, connection type, address, role and the last check's state.",
+      "input": {
+        "description": "Which page of the node list to read: the nodes after the one `after` names, at most `limit` of them.",
+        "properties": {
+          "after": {
+            "description": "The name of the last node already read.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "limit": {
+            "description": "The most nodes to answer.",
+            "format": "uint32",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "name": "node_nodes",
+      "output": {
+        "$ref": "#/components/schemas/NodePage"
+      },
+      "route": "GET /nodes"
+    },
+    {
+      "description": "One node, by its name.",
+      "input": {
+        "description": "One node, by its name.",
+        "properties": {
+          "nodeName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "nodeName"
+        ],
+        "type": "object"
+      },
+      "name": "node_node",
+      "output": {
+        "$ref": "#/components/schemas/Node"
+      },
+      "route": "GET /nodes/{nodeName}"
+    },
+    {
+      "description": "How to reach a node: host, port, user, key, the SSH policy options, and the same spread as SSH arguments; or the hub, its token file and the agent for a hub node.",
+      "input": {
+        "description": "One node, by its name.",
+        "properties": {
+          "nodeName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "nodeName"
+        ],
+        "type": "object"
+      },
+      "name": "node_target",
+      "output": {
+        "$ref": "#/components/schemas/Target"
+      },
+      "route": "GET /nodes/{nodeName}/target"
+    },
+    {
+      "description": "Probe the nodes named, or every node, now; each node's state and checkedAt follow.",
+      "input": {
+        "description": "A body sent as it is.",
+        "properties": {
+          "body": {
+            "$ref": "#/components/schemas/NodeCheckAsk"
+          }
+        },
+        "required": [
+          "body"
+        ],
+        "type": "object"
+      },
+      "name": "node_check",
+      "output": {
+        "$ref": "#/components/schemas/NodeCheck"
+      },
+      "route": "POST /node-checks"
+    },
+    {
+      "description": "Every machine the hardware monitor knows, each with its latest recorded reading.",
+      "input": {
+        "additionalProperties": false,
+        "description": "No input.",
+        "type": "object"
+      },
+      "name": "node_machines",
+      "output": {
+        "$ref": "#/components/schemas/MachinePage"
+      },
+      "route": "GET /machines"
+    },
+    {
+      "description": "One machine: its latest reading, tracking and CPU limit, and for this machine its standing.",
+      "input": {
+        "description": "One machine, by its name: `local` for the service's own machine, a node's name for a node.",
+        "properties": {
+          "machineName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "machineName"
+        ],
+        "type": "object"
+      },
+      "name": "node_machine",
+      "output": {
+        "$ref": "#/components/schemas/Machine"
+      },
+      "route": "GET /machines/{machineName}"
+    },
+    {
+      "description": "Past hardware readings of one machine, oldest first, each figure's lowest, highest and mean over a stretch of spanMs.",
+      "input": {
+        "description": "One machine's readings: the machine, and which of its stretches to read.",
+        "properties": {
+          "after": {
+            "description": "In epoch milliseconds; the reach of the rows the span is read from where none is given.",
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "before": {
+            "description": "In epoch milliseconds; now where none is given.",
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "limit": {
+            "format": "uint32",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "machineName": {
+            "type": "string"
+          },
+          "spanMs": {
+            "description": "Each stretch's width: whole seconds under a minute, whole minutes from a minute up; 1000 where none\nis given.",
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "machineName"
+        ],
+        "type": "object"
+      },
+      "name": "node_readings",
+      "output": {
+        "$ref": "#/components/schemas/ReadingPage"
+      },
+      "route": "GET /machines/{machineName}/readings"
+    }
+  ]
 }
