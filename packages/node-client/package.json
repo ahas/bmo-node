@@ -2,6 +2,7 @@
   "name": "bmo-node-client",
   "version": "0.1.0-rev.2",
   "description": "The node service's client, generated from its OpenAPI document: every body as a type and a typed call for every route.",
+  "license": "MIT",
   "type": "module",
   "private": true,
   "exports": {

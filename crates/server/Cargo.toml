@@ -3,6 +3,7 @@ name = "node-server"
 description = "The node service: its routes, its loops and the bmo-node command."
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 publish = false
 
 [[bin]]

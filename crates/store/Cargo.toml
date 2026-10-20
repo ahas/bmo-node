@@ -3,6 +3,7 @@ name = "store"
 description = "The node service's own store: the node list, the hubs, the hardware history and the settings."
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 publish = false
 
 [dependencies]

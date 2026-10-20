@@ -17,8 +17,8 @@
       "core/client",
       "core/store"
     ],
-    "base": "d29e8207d9d1be1d43c93b32ff16ce07e981cd96",
-    "changed": 1792498550667
+    "base": "aa395ebf0b8e9885eec087155db7da8d07c18c45",
+    "changed": 1792518220496
   },
   {
     "id": "hardware/monitor",
@@ -52,8 +52,8 @@
       "nodes/node-check",
       "hardware/roads-and-probe"
     ],
-    "base": "d29e8207d9d1be1d43c93b32ff16ce07e981cd96",
-    "changed": 1792498550665
+    "base": "aa395ebf0b8e9885eec087155db7da8d07c18c45",
+    "changed": 1792518220507
   },
   {
     "id": "hardware/roads-and-probe",
@@ -94,7 +94,7 @@
       "core/policy",
       "nodes/node-check"
     ],
-    "base": "d29e8207d9d1be1d43c93b32ff16ce07e981cd96",
-    "changed": 1792498550663
+    "base": "aa395ebf0b8e9885eec087155db7da8d07c18c45",
+    "changed": 1792518220519
   }
 ]

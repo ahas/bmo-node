@@ -26,8 +26,8 @@
     ],
     "aliases": [],
     "needs": [],
-    "base": "d29e8207d9d1be1d43c93b32ff16ce07e981cd96",
-    "changed": 1792498550657
+    "base": "aa395ebf0b8e9885eec087155db7da8d07c18c45",
+    "changed": 1792518220452
   },
   {
     "id": "core/policy",
@@ -51,8 +51,8 @@
     "needs": [
       "core/client"
     ],
-    "base": "d29e8207d9d1be1d43c93b32ff16ce07e981cd96",
-    "changed": 1792498522069
+    "base": "aa395ebf0b8e9885eec087155db7da8d07c18c45",
+    "changed": 1792518220463
   },
   {
     "id": "core/repository-rules",
@@ -69,8 +69,8 @@
     "symbols": [],
     "aliases": [],
     "needs": [],
-    "base": "d29e8207d9d1be1d43c93b32ff16ce07e981cd96",
-    "changed": 1792498550661
+    "base": "aa395ebf0b8e9885eec087155db7da8d07c18c45",
+    "changed": 1792518220474
   },
   {
     "id": "core/store",
@@ -98,7 +98,7 @@
       "core/policy",
       "core/client"
     ],
-    "base": "d29e8207d9d1be1d43c93b32ff16ce07e981cd96",
-    "changed": 1792498550659
+    "base": "aa395ebf0b8e9885eec087155db7da8d07c18c45",
+    "changed": 1792518220485
   }
 ]

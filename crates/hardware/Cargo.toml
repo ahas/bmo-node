@@ -3,6 +3,7 @@ name = "hardware"
 description = "Every machine's hardware read live and kept, and this machine's room."
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 publish = false
 
 [dependencies]

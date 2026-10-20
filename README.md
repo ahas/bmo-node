@@ -12,6 +12,17 @@ The node service of bmo: the machines reachable from here and what is known of t
 
 Version 0.1.0-rev.2.
 
+## Layout
+
+| Folder | Holds |
+|---|---|
+| `.graph/` | The code dependency graph in bmo-graph's format, one node per feature with its files and the features it needs |
+| `crates/` | The Rust crates: the client, the harness plugin, the policy files, the store, the node check, the hardware monitor, the tunnel door and the server binary |
+| `deploy/` | The service units, `bmo-node.service` and `bmo-llm-bridge.service` |
+| `docs/` | The canonical documents, and `openapi.json`, the contract the clients are generated from |
+| `packages/` | The TypeScript client `bmo-node-client`, generated from `docs/openapi.json` |
+| `tests/` | Every test, with the probe's fixtures under `tests/hardware/fixtures` |
+
 ## Running it
 
 - `bmo-node --config <file> serve` runs the service; the configuration file's settings are in

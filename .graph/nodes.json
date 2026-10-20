@@ -26,8 +26,8 @@
       "core/policy",
       "core/store"
     ],
-    "base": "d29e8207d9d1be1d43c93b32ff16ce07e981cd96",
-    "changed": 1792498550670
+    "base": "aa395ebf0b8e9885eec087155db7da8d07c18c45",
+    "changed": 1792518220530
   },
   {
     "id": "nodes/node-command",
@@ -60,7 +60,7 @@
       "server/routes",
       "server/plugin"
     ],
-    "base": "d29e8207d9d1be1d43c93b32ff16ce07e981cd96",
-    "changed": 1792498550672
+    "base": "aa395ebf0b8e9885eec087155db7da8d07c18c45",
+    "changed": 1792518220540
   }
 ]
