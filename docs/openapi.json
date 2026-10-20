@@ -3007,7 +3007,7 @@
   "x-harness": {
     "entry": "A harness asks node_target how to reach a node before it logs in, and node_machine how loaded a machine is before it starts heavy work there.",
     "mcp": "bmo-node mcp",
-    "plugin": "ahas-node"
+    "plugin": "bmo-node"
   },
   "x-layer": "upstream",
   "x-tools": [

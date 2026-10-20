@@ -1,4 +1,4 @@
-//! The node service's harness plugin, `ahas-node` (docs/api.md, 「The clients and the harness plugin」).
+//! The node service's harness plugin, `bmo-node` (docs/api.md, 「The clients and the harness plugin」).
 //!
 //! `bmo-node mcp` starts this crate's MCP server, one tool for each route a harness reaches nodes and
 //! machines through, each a thin call of the node client; the skill beside this crate tells a harness when

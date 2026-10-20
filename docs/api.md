@@ -59,8 +59,8 @@ its own.
 - **`bmo-node-client`** (`packages/node-client`), the TypeScript package, is generated from the same
   document: its types by `openapi-typescript`, its calls by `openapi-fetch`. `bun run generate` writes the
   types again, and `bun run check` fails where they differ from the document.
-- **The harness plugin, `ahas-node`** (`crates/plugin`): the MCP server `bmo-node mcp` starts on standard
-  input and output (「The command」), and the `ahas-node` skill beside it that tells a harness when and how
+- **The harness plugin, `bmo-node`** (`crates/plugin`): the MCP server `bmo-node mcp` starts on standard
+  input and output (「The command」), and the `bmo-node` skill beside it that tells a harness when and how
   to use it. Each tool is one call of one route through the Rust client:
 
   | Tool | Route |

@@ -30,7 +30,7 @@ Version 0.1.0-rev.2.
 - `bmo-node --config <file> node` lists and changes the nodes; `bmo-node --config <file> hardware-setup`
   puts the Windows sensor library in place on the nodes that need it.
 - `bmo-node mcp --url <url>` is the harness plugin's MCP server, its token in `BMO_NODE_TOKEN`; the
-  `ahas-node` skill under `crates/plugin/skills` tells a harness when and how to use it.
+  `bmo-node` skill under `crates/plugin/skills` tells a harness when and how to use it.
 - The units in `deploy/` run the service and the door under systemd's user manager.
 
 ## The boundary

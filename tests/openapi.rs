@@ -61,7 +61,7 @@ fn the_document_states_the_routes_events_and_tools_of_the_api_document() {
   );
   assert_eq!(
     (document["x-harness"]["plugin"].as_str(), document["x-harness"]["mcp"].as_str()),
-    (Some("ahas-node"), Some("bmo-node mcp"))
+    (Some("bmo-node"), Some("bmo-node mcp"))
   );
   assert_eq!(document["info"]["version"], env!("CARGO_PKG_VERSION"));
 

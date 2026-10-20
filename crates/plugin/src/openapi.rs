@@ -100,7 +100,7 @@ pub fn openapi() -> Value {
     "x-layer": "upstream",
     "x-calls": [],
     "x-harness": {
-      "plugin": "ahas-node",
+      "plugin": "bmo-node",
       "mcp": "bmo-node mcp",
       "entry": ENTRY,
     },

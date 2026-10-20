@@ -48,7 +48,7 @@ which job a process serves, whether a launch goes ahead and what the chat agent 
 - `crates/`: the Rust crates.
   - `client`: `bmo-node-client`, every body of the API as a type and a call for every route (`docs/api.md`).
   - `plugin`: `bmo-node-plugin`, the harness plugin: the MCP server `bmo-node mcp` starts, its tools, the
-    `ahas-node` skill under `skills/`, and the generator of `docs/openapi.json`.
+    `bmo-node` skill under `skills/`, and the generator of `docs/openapi.json`.
   - `policy`: the policy files, `node-states.toml`, `ssh.toml` and `windows-sensors.toml`, and their readers.
   - `store`: node's own database and the live record's path (`docs/store.md`).
   - `node-check`: whether each node answers, the SSH login's arguments and a hub's token (`docs/nodes.md`).

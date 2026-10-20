@@ -52,7 +52,7 @@
   {
     "id": "server/plugin",
     "title": "Node harness plugin",
-    "what": "The ahas-node harness plugin in crates/plugin: the MCP server bmo-node mcp starts, its seven tools each calling one route through the client, the ahas-node skill, and the generator of docs/openapi.json.",
+    "what": "The bmo-node harness plugin in crates/plugin: the MCP server bmo-node mcp starts, its seven tools each calling one route through the client, the bmo-node skill, and the generator of docs/openapi.json.",
     "files": [
       "crates/plugin/Cargo.toml",
       "crates/plugin/src/lib.rs",
@@ -60,7 +60,7 @@
       "crates/plugin/src/server.rs",
       "crates/plugin/src/openapi.rs",
       "crates/plugin/examples/openapi.rs",
-      "crates/plugin/skills/ahas-node/SKILL.md",
+      "crates/plugin/skills/bmo-node/SKILL.md",
       "docs/openapi.json",
       "tests/openapi.rs",
       "tests/server/mcp.rs"
@@ -75,7 +75,7 @@
       "core/client"
     ],
     "base": "aa395ebf0b8e9885eec087155db7da8d07c18c45",
-    "changed": 1792518220571
+    "changed": 1792529593409
   },
   {
     "id": "server/routes",
@@ -122,7 +122,7 @@
       "hardware/machine-standing",
       "server/plugin"
     ],
-    "base": "aa395ebf0b8e9885eec087155db7da8d07c18c45",
-    "changed": 1792518220582
+    "base": "a48024be643faf242472605764ed9f3162d1fd70",
+    "changed": 1792529727664
   }
 ]

@@ -1,9 +1,9 @@
 ---
-name: ahas-node
+name: bmo-node
 description: Reach the machines a node service lists, through the bmo-node MCP server. Use before logging into a node over SSH, to learn how it is reached, and before starting heavy work on a machine, to see how loaded it is; also to list the nodes, check whether they answer now, and read a machine's past hardware figures.
 ---
 
-# ahas-node
+# bmo-node
 
 A node service lists the machines reachable from where it runs, checks once a minute whether each answers,
 and reads every machine's hardware live, keeping a month of it. The `bmo-node` MCP server reads all of it

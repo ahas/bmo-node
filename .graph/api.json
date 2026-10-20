@@ -73,12 +73,12 @@
   {
     "id": "api/mcp",
     "title": "Harness plugin tools",
-    "what": "The ahas-node harness plugin's MCP server and its seven tools, each one call of one route, and the skill that tells a harness when to use it.",
+    "what": "The bmo-node harness plugin's MCP server and its seven tools, each one call of one route, and the skill that tells a harness when to use it.",
     "files": [
       "docs/api.md",
       "crates/plugin/src/server.rs",
       "crates/plugin/src/tools.rs",
-      "crates/plugin/skills/ahas-node/SKILL.md"
+      "crates/plugin/skills/bmo-node/SKILL.md"
     ],
     "symbols": [
       "NodeServer",
@@ -90,7 +90,7 @@
       "api/client"
     ],
     "base": "aa395ebf0b8e9885eec087155db7da8d07c18c45",
-    "changed": 1792518220442,
+    "changed": 1792529593398,
     "boundary": {
       "side": "exposes"
     }
