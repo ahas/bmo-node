@@ -28,12 +28,14 @@
   {
     "id": "nodes/node-command",
     "title": "Node command",
-    "what": "The bmo-node command's node verbs and Windows sensor setup: add, set, remove, check, target and list nodes and hubs over the store, and hand a Windows machine the sensor setup script, in the server crate's cli module.",
+    "what": "The bmo-node command: the nouns it declares to bmo, the node verbs (add, set, remove, check, target, list) and hubs over the store, and the Windows sensor setup, in the server crate's cli module.",
     "files": [
       "crates/server/src/cli.rs",
       "crates/server/src/main.rs",
+      "docs/api.md",
       "docs/nodes.md",
       "tests/cli/main.rs",
+      "tests/cli/nouns.rs",
       "tests/cli/verbs.rs",
       "tests/cli/list.rs",
       "tests/cli/setup.rs",

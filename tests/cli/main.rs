@@ -6,6 +6,7 @@
 mod binary;
 
 mod list;
+mod nouns;
 mod setup;
 mod store_rules;
 mod verbs;

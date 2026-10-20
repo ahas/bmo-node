@@ -1,6 +1,6 @@
 # The node service's boundary
 
-This document states the API of the node service, version **0.1.0-rev.1**: every route and event it
+This document states the API of the node service, version **0.1.0-rev.2**: every route and event it
 answers, the clients and the harness plugin it publishes, its configuration and its command. A change to
 anything here changes this document in the same commit and follows the version rule (「Versions」).
 
@@ -264,16 +264,31 @@ The node service calls no other unit. It reaches the machines themselves:
 
 `bmo-node` followed by:
 
-- `--config <file> serve`: runs the migrations, then the routes, the check pass, the recorder and the
-  machine look;
-- `--config <file> health`: as above;
-- `--config <file> node` with the verbs of `docs/nodes.md`, 「Registering and changing a node」, against the
-  same store; `--target <name>` prints the node's target as `GET /nodes/{nodeName}/target` answers it;
-- `--config <file> hardware-setup [<node>…]`: the Windows sensor setup (`docs/hardware.md`, 「The Windows
-  side」);
+- `--config <file>`: the configuration every step but `nouns` and `mcp` needs. It may stand before or
+  after the step's words, since `bmo` hands a noun's words on after the noun.
+- `nouns`: prints the nouns the command carries for `bmo` to dispatch, one a line, each marked `home`
+  after a tab since both act on the node list the service keeps. It is asked with no configuration and
+  no standard input.
+- `serve`: runs the migrations, then the routes, the check pass, the recorder and the machine look;
+- `health`: asks the service the configuration names whether it is ready;
+- `node` with the verbs of `docs/nodes.md`, 「Registering and changing a node」, against the same store;
+  `--target <name>` prints the node's target as `GET /nodes/{nodeName}/target` answers it;
+- `hardware-setup [<node>…]`: the Windows sensor setup (`docs/hardware.md`, 「The Windows side」);
 - `mcp`: the harness plugin's MCP server on standard input and output, calling the service at `--url`
   with the token `--token` or the `BMO_NODE_TOKEN` environment variable gives; with `--config <file>` and
   neither, the address and the token that configuration names.
+
+### The nouns `bmo` serves
+
+Each noun runs where the service stands, and against the store the configuration names rather than through
+the service's routes. Where a route makes the same change, the table names it.
+
+| Noun | Takes | Route making the same change |
+|---|---|---|
+| `node` | the verbs and arguments of `docs/nodes.md`, 「Registering and changing a node」 | `GET /nodes`, `POST /nodes`, `PATCH /nodes/{nodeName}`, `DELETE /nodes/{nodeName}`, `GET /nodes/{nodeName}/target`, `POST /hubs`, `DELETE /hubs/{hubId}` and `POST /node-checks` |
+| `hardware-setup` | the nodes to set up, or every node | none: the Windows sensor setup runs over each node's own road |
+
+Through `bmo`, the same commands are typed as `bmo node …` and `bmo hardware-setup …`.
 
 ## Versions
 

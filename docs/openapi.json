@@ -2203,7 +2203,7 @@
   "info": {
     "description": "The node service: the machines reachable from here and what is known of them. Nodes and hubs, how to reach a node, checking whether each answers, and each machine's hardware readings. A machine carries its readings, tracking and CPU limit; whether a launch may start on it is the caller's own policy, read from these fields. Bodies are JSON with camelCase keys, and times are integers of epoch milliseconds. Every route needs the service's bearer token. Every failure and refusal is a non-2xx status with a body of `code` and `error`. A page is `items` and `more`. Any other method and path is answered 404 `no-route`.",
     "title": "bmo-node",
-    "version": "0.1.0-rev.1"
+    "version": "0.1.0-rev.2"
   },
   "openapi": "3.1.0",
   "paths": {

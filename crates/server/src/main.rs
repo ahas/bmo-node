@@ -23,8 +23,9 @@ use store::Store;
   about = "The node service: the node list, the node checks, the hardware monitor and this machine's standing"
 )]
 struct Cli {
-  /// The configuration file; every step but `mcp` needs one.
-  #[arg(long)]
+  /// The configuration file; every step but `nouns` and `mcp` needs one. It may stand before or after the
+  /// step's words, since `bmo` hands a noun's words on after the noun.
+  #[arg(long, global = true)]
   config: Option<PathBuf>,
   #[command(subcommand)]
   step: Step,
@@ -32,6 +33,8 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Step {
+  /// Prints the nouns this command carries for `bmo`, one a line, each marked after a tab.
+  Nouns,
   /// Runs the migrations, then the routes, the check pass, the recorder and the machine watch.
   Serve,
   /// Asks the service the configuration names whether it is ready; ends 0 where it is.
@@ -65,8 +68,14 @@ async fn main() -> ExitCode {
     }
   };
 
-  if let Step::Mcp { url, token } = cli.step {
-    return mcp(config.as_ref(), url, token).await;
+  match cli.step {
+    Step::Nouns => {
+      node_server::cli::NOUNS.iter().for_each(|noun| println!("{noun}"));
+
+      return ExitCode::SUCCESS;
+    }
+    Step::Mcp { url, token } => return mcp(config.as_ref(), url, token).await,
+    _ => {}
   }
 
   let Some(config) = config else {
@@ -86,6 +95,7 @@ async fn main() -> ExitCode {
     Step::HardwareSetup { nodes } => {
       return command(&config, |store| async move { hardware_setup(&store, &nodes).await }).await;
     }
+    Step::Nouns => unreachable!("the nouns are printed above"),
     Step::Mcp { .. } => unreachable!("the MCP server is served above"),
   };
 

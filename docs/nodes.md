@@ -119,7 +119,8 @@ service's API (`docs/api.md`); nothing else keeps a list of its own.
 
 ## Registering and changing a node
 
-The command is `bmo-node --config <file> node`, and the registry routes do the same (`docs/api.md`).
+The command is `bmo-node --config <file> node`, served through `bmo` as `bmo node …`, and the registry
+routes do the same (`docs/api.md`).
 
 - `node` alone lists the nodes with their state and when each was last connected, and the hubs after
   them.

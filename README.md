@@ -10,7 +10,7 @@ The node service of bmo: the machines reachable from here and what is known of t
   as an event (`docs/machine.md`). Whether a launch may start is the caller's own policy.
 - **The tunnel door:** `llm-bridge`, which a node's tunnel dials in by over HTTPS (`docs/llm-bridge.md`).
 
-Version 0.1.0-rev.1.
+Version 0.1.0-rev.2.
 
 ## Running it
 

@@ -20,6 +20,10 @@ use tokio_util::sync::CancellationToken;
 
 use crate::views;
 
+/// The nouns `bmo` dispatches to this command, each marked `home`: both act on the node list the service
+/// keeps, so the command runs where the service stands.
+pub const NOUNS: [&str; 2] = ["node\thome", "hardware-setup\thome"];
+
 /// How the command is run, said under each refusal of its arguments.
 pub const NODES_USAGE: &str = "usage: bmo-node --config <file> node
        bmo-node --config <file> node --add <name> --ssh <user@host> [--port <n>] [--key <path>] [--shell posix|powershell] [--label <label>] [--role <service>]
