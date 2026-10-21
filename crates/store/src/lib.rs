@@ -11,6 +11,7 @@ use bmo_node_client::ErrorCode;
 use rusqlite::Connection;
 
 pub mod history;
+pub mod import;
 mod migration;
 pub mod nodes;
 pub mod settings;

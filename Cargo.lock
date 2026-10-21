@@ -2325,6 +2325,7 @@ dependencies = [
  "bmo-node-client",
  "policy",
  "rusqlite",
+ "serde_json",
  "url",
 ]
 

@@ -2,6 +2,7 @@
 //! changed, a check written to its row, the settings, and the hardware history's rows.
 
 mod history;
+mod import;
 mod nodes;
 mod settings;
 

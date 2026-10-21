@@ -1,6 +1,6 @@
 //! `bmo-node`: the node service and its command (docs/api.md, 「The command」).
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::sync::Arc;
 use std::time::Duration;
@@ -35,6 +35,18 @@ struct Cli {
 enum Step {
   /// Prints the nouns this command carries for `bmo`, one a line, each marked after a tab.
   Nouns,
+  /// Moves the old archive's node tables from the item's export into this service's store (TODO #1923).
+  Import {
+    /// The export directory the item's export hand wrote.
+    #[arg(long)]
+    export: PathBuf,
+    /// The store's SQLite file; made and migrated where it does not stand.
+    #[arg(long)]
+    database: PathBuf,
+    /// Reads the export and reports what it would write, writing nothing.
+    #[arg(long)]
+    dry_run: bool,
+  },
   /// Runs the migrations, then the routes, the check pass, the recorder and the machine watch.
   Serve,
   /// Asks the service the configuration names whether it is ready; ends 0 where it is.
@@ -75,6 +87,12 @@ async fn main() -> ExitCode {
       return ExitCode::SUCCESS;
     }
     Step::Mcp { url, token } => return mcp(config.as_ref(), url, token).await,
+    // The import reads its own arguments and never the deployment's configuration.
+    Step::Import {
+      export,
+      database,
+      dry_run,
+    } => return imported(&export, &database, dry_run),
     _ => {}
   }
 
@@ -97,10 +115,28 @@ async fn main() -> ExitCode {
     }
     Step::Nouns => unreachable!("the nouns are printed above"),
     Step::Mcp { .. } => unreachable!("the MCP server is served above"),
+    Step::Import { .. } => unreachable!("the import is answered before the configuration is read"),
   };
 
   match ended {
     Ok(()) => ExitCode::SUCCESS,
+    Err(why) => {
+      eprintln!("bmo-node: {why}");
+      ExitCode::FAILURE
+    }
+  }
+}
+
+/// The old archive's node tables moved into the store: the report printed, and a failure where the
+/// count-and-sample compare found one.
+fn imported(export: &Path, database: &Path, dry_run: bool) -> ExitCode {
+  match store::import::run(database, export, dry_run) {
+    Ok(report) => {
+      for line in report.lines() {
+        println!("{line}");
+      }
+      if report.sample.failures.is_empty() { ExitCode::SUCCESS } else { ExitCode::FAILURE }
+    }
     Err(why) => {
       eprintln!("bmo-node: {why}");
       ExitCode::FAILURE

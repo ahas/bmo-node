@@ -10,4 +10,6 @@ publish = false
 bmo-node-client = { path = "../client" }
 policy = { path = "../policy" }
 rusqlite.workspace = true
+# The export the import reads: one JSON object a row.
+serde_json.workspace = true
 url.workspace = true
