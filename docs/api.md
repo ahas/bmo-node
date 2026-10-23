@@ -12,7 +12,7 @@ read from the fields below.
 
 ## Wire format
 
-The service answers in the common wire format of bmo-next (bmo-chat's `docs/conventions.md`, 「The common
+The service answers in the common wire format of bmo (bmo-chat's `docs/conventions.md`, 「The common
 wire format」 and 「API design」): camelCase keys, times as one integer of epoch milliseconds, every failure
 and refusal a non-2xx status with a body of `code` and `error`, and lists as a page of `items` and `more`.
 What the service adds to it:

@@ -3,7 +3,7 @@
 //!
 //! A personal literal is read off the machine the test runs on rather than written here, since a list of
 //! them would itself be one: the account's name where its home is a person's, the machine's host name and
-//! the e-mail address git commits under. The harness plugin's name, which bmo-next's conventions fix for
+//! the e-mail address git commits under. The harness plugin's name, which bmo's conventions fix for
 //! every upstream unit, is the one name exempt, read off the committed OpenAPI document's `x-harness`.
 
 use std::path::{Path, PathBuf};

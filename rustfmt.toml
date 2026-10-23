@@ -1,4 +1,4 @@
-# The shape every bmo-next repository is written in, held to the options stable rustfmt reads.
+# The shape every bmo repository is written in, held to the options stable rustfmt reads.
 edition = "2024"
 
 max_width = 108
