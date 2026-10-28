@@ -4,8 +4,9 @@ testbed = 0
 name = "node"
 
 [test]
-# The Cargo workspace's crates, the root package's test groups among them.
-languages = ["cargo"]
+# The Cargo workspace's crates, the root package's test groups among them; and bun, whose project stands in
+# `packages/node-client`, beside its own lockfile.
+languages = ["cargo", "bun"]
 
 [check]
 quick = ["layout", "dependencies"]
