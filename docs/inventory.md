@@ -21,10 +21,10 @@ Treatments:
 |---|---|---|---|
 | `nodes/node-check/src`: `lib`, `main`, `hub`, `pass`, `rows`, `ssh` | 6 | `crates/node-check` | carried; it reads node's own store and policy crates |
 | `nodes/node-check/Cargo.toml` | 1 | `crates/node-check` | carried, its dependencies on the old shared crates removed |
-| `nodes/node-check/tests/check.rs` | 1 | `tests/node-check` | carried |
+| `nodes/node-check/tests/check.rs` | 1 | `tests/node_check` | carried |
 | `llm-server/llm-bridge/src`: `lib`, `main`, `door`, `keys` | 4 | `crates/llm-bridge` | carried |
 | `llm-server/llm-bridge/Cargo.toml` | 1 | `crates/llm-bridge` | carried |
-| `llm-server/llm-bridge/tests/contract.rs` | 1 | `tests/llm-bridge` | carried |
+| `llm-server/llm-bridge/tests/contract.rs` | 1 | `tests/llm_bridge` | carried |
 | `llm-server/bmo-llm-bridge.service` | 1 | `deploy/bmo-llm-bridge.service` | carried, its description made neutral |
 | `bot/bmo-server/src/watches/hardware`: `chips`, `history`, `js`, `live`, `mod`, `parity`, `probe`, `record`, `roads`, `storage`, `view`, `windows` | 12 | `crates/hardware` | carried; English codes stand where a screen word stood |
 | `bot/bmo-server/src/watches/machine.rs` | 1 | `crates/hardware`, the machine module | carried in part (「The machine watch」 below) |
@@ -67,10 +67,10 @@ scripts.
 | `hardware-read`, `node-view`, `this-machine` | 3 | realised in Rust by `crates/server`'s hardware reads and node views |
 | `process-memory` | 1 | agency's: its `machine memory` verb |
 | `hardware-chips.test`, `hardware-history.test`, `hardware-live-record.test`, `hardware-parity.test`, `hardware-probe.test`, `hardware-storage.test`, `hardware-view.test`, `hardware-windows.test` | 8 | each assertion held by a Rust test in `tests/hardware`; the probe test's bare Linux output stands as `tests/hardware/samples/linux-bare.txt` |
-| `ssh-login.test` | 1 | each assertion held by a Rust test in `tests/node-check` |
-| `jake-hub.test` | 1 | the token's assertions held in `tests/node-check`, the exec stream's in `tests/hardware`; the file transfer's go with bmo-voice |
+| `ssh-login.test` | 1 | each assertion held by a Rust test in `tests/node_check` |
+| `jake-hub.test` | 1 | the token's assertions held in `tests/node_check`, the exec stream's in `tests/hardware`; the file transfer's go with bmo-voice |
 | `node-shell.test` | 1 | goes with bmo-voice and bmo-kakaotalk |
-| `machine-room.test` | 1 | each assertion held by a Rust test in `tests/machine` |
+| `machine-room.test` | 1 | each assertion held by a Rust test in `tests/machine.rs` |
 | `hardware-read.test`, `this-machine.test` | 2 | each assertion held by a Rust test in `tests/server` |
 | `nodes.test` | 1 | each assertion held by a Rust test in `tests/cli` |
 | `process-memory.test` | 1 | agency's |
@@ -90,7 +90,7 @@ The old archive package's facade over tables other units own; these four were as
 | `archive/archive/nodes.ts` | realised in Rust: the registry's operations in `crates/store` |
 | `archive/archive/hardware-tables.ts` | realised in Rust: the history tables in `crates/store`'s migration |
 | `archive/archive/node-state.ts` | realised in Rust: the state words and their tones in `crates/policy` |
-| `archive/archive/node-state.test.ts` | its assertion held by a Rust test in `tests/policy` |
+| `archive/archive/node-state.test.ts` | its assertion held by a Rust test in `tests/policy.rs` |
 
 ## Policy files and words: 5 sources
 
@@ -109,13 +109,13 @@ are not depended on.
 
 | Source | Tests | Here |
 |---|---|---|
-| `nodes/node-check/tests/check.rs` | 11 | `tests/node-check` |
-| `nodes/node-check/src/ssh.rs`, inline | 2 | `tests/node-check` |
-| `llm-server/llm-bridge/tests/contract.rs` | 8 | `tests/llm-bridge` |
-| `llm-server/llm-bridge/src/keys.rs`, inline | 4 | `tests/llm-bridge` |
+| `nodes/node-check/tests/check.rs` | 11 | `tests/node_check` |
+| `nodes/node-check/src/ssh.rs`, inline | 2 | `tests/node_check` |
+| `llm-server/llm-bridge/tests/contract.rs` | 8 | `tests/llm_bridge` |
+| `llm-server/llm-bridge/src/keys.rs`, inline | 4 | `tests/llm_bridge` |
 | `watches/hardware`, inline: `js` 2, `history` 1, `parity` 1, `roads` 2, `windows` 1, `live` 6 | 13 | `tests/hardware` |
 | `control/nodes.rs`, inline | 2 | `tests/server` |
-| `watches/machine.rs`, inline | 8 | 7 to `tests/machine`; the rotation's test is agency's |
+| `watches/machine.rs`, inline | 8 | 7 to `tests/machine.rs`; the rotation's test is agency's |
 | `bot/bmo-server/tests/integration/watches.rs` | 6 | below |
 | `bot/bmo-server/tests/integration/machine_verbs.rs` | 8 | `tests/cli` |
 
@@ -123,9 +123,9 @@ The six in `watches.rs`:
 
 - the node pass checking every node and telling the screens only when a state moved: `tests/server`;
 - the machine watch telling the disk, the pressure and herdr once and handing the queue back: its memory
-  and disk parts in `tests/machine`, the rest agency's;
+  and disk parts in `tests/machine.rs`, the rest agency's;
 - the machine read out of the kernel's files and judged against the open jobs: its reading and its four
-  hardware limits in `tests/machine`, the job counts agency's;
+  hardware limits in `tests/machine.rs`, the job counts agency's;
 - the recorder holding live runs for the tracked machines alone, the live record keeping each machine's
   latest and pruning by reach and size, and the history folding closed minutes and rolling up closed half
   hours: `tests/hardware`.

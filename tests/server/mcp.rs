@@ -11,8 +11,8 @@ use store::nodes::SshLogin;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, Lines};
 use tokio::process::{Child, ChildStdin, ChildStdout, Command};
 
-use crate::binary::built;
-use crate::support::{CONTRACT, Stand, TOKEN};
+use crate::server::support::{CONTRACT, Stand, TOKEN};
+use crate::support::binary::built;
 
 /// How long the server may take to answer one request before the test fails; a guard, never a wait.
 const PATIENCE: Duration = Duration::from_secs(30);

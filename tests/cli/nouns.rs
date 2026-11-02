@@ -3,7 +3,7 @@
 use std::process::{Command, Stdio};
 
 fn run(words: &[&str]) -> (i32, String, String) {
-  let done = Command::new(crate::binary::built("node-server", "bmo-node"))
+  let done = Command::new(crate::support::binary::built("node-server", "bmo-node"))
     .args(words)
     .stdin(Stdio::null())
     .output()

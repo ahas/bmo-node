@@ -55,5 +55,5 @@ flowchart LR
 
 ## Its check
 
-`tests/llm-bridge` starts the binary on a port the system chooses, reads the port from the line it prints,
+`tests/llm_bridge` starts the binary on a port the system chooses, reads the port from the line it prints,
 and asks it over a TCP echo; the key comparison is held to constant time by a test of its own.

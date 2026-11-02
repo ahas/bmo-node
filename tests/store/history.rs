@@ -3,7 +3,7 @@
 
 use store::history::Row;
 
-use crate::scratch;
+use crate::store::scratch;
 
 const HALF_HOUR: i64 = 1_800;
 

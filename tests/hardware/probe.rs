@@ -8,7 +8,7 @@ use std::process::{Command, Stdio};
 
 use hardware::probe::{LiveProbe, Snapshot, Watts, read_sections, sections};
 
-use crate::fixtures;
+use crate::hardware::fixtures;
 
 /// What the probe prints on a bare Linux box with two cores of two threads, cpufreq, k10temp, an NVMe
 /// drive, one NVIDIA GPU with its report, the energy counter refused, and systemd.

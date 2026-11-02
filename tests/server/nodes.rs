@@ -6,7 +6,7 @@ use reqwest::{Method, StatusCode};
 use serde_json::json;
 use store::nodes::{Checked, SshLogin};
 
-use crate::support::Stand;
+use crate::server::support::Stand;
 
 #[tokio::test]
 async fn every_route_needs_the_token_and_a_path_none_answers_is_no_route() {

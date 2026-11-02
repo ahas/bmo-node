@@ -5,7 +5,7 @@ use policy::node_states::NodeState;
 use policy::nodes::NodeKind;
 use store::nodes::{Checked, NodeChanges, SshLogin, agent_node_name};
 
-use crate::scratch;
+use crate::store::scratch;
 
 fn login(host: &str) -> SshLogin {
   SshLogin::new(host, "someone")

@@ -3,8 +3,6 @@
 //! the health; the harness plugin's MCP server over them; and the pass, the names and the reading taken
 //! once that stand behind them.
 
-#[path = "../support/binary.rs"]
-mod binary;
 mod hubs;
 mod machines;
 mod mcp;

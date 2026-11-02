@@ -3,7 +3,7 @@
 
 use store::settings::{MachineLimit, leading_float};
 
-use crate::scratch;
+use crate::store::scratch;
 
 #[test]
 fn a_machine_is_tracked_unless_its_tracking_was_turned_off() {

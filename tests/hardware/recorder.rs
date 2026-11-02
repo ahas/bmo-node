@@ -10,7 +10,7 @@ use hardware::{Recorder, probe, view};
 use store::Store;
 use store::nodes::SshLogin;
 
-use crate::fixtures;
+use crate::hardware::fixtures;
 
 /// Runs that print nothing and end only when stopped: a recorder whose roads reach no machine.
 fn quiet_runs() -> Hands {

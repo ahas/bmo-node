@@ -74,7 +74,7 @@ fn command() -> Command {
       command.args(words);
       command
     }
-    _ => Command::new(crate::binary::built("llm-bridge", "llm-bridge")),
+    _ => Command::new(crate::support::binary::built("llm-bridge", "llm-bridge")),
   }
 }
 

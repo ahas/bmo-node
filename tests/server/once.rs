@@ -8,7 +8,7 @@ use hardware::live::Road;
 use hardware::once::read_once;
 use hardware::roads::{Source, StreamEnd};
 
-use crate::support::{failing_road, reading_road};
+use crate::server::support::{failing_road, reading_road};
 
 #[tokio::test]
 async fn this_machine_is_read_until_its_first_whole_reading() {

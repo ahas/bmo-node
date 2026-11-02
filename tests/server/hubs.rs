@@ -4,7 +4,7 @@
 use reqwest::Method;
 use serde_json::json;
 
-use crate::support::Stand;
+use crate::server::support::Stand;
 
 #[tokio::test]
 async fn a_hub_is_listed_once_and_removed_with_every_node_reached_through_it() {

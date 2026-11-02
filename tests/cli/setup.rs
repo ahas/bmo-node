@@ -76,7 +76,7 @@ fn carried(command: &str) -> String {
 }
 
 fn run(dir: &Path, path: &str, words: &[&str]) -> (i32, String, String) {
-  let done = Command::new(crate::binary::built("node-server", "bmo-node"))
+  let done = Command::new(crate::support::binary::built("node-server", "bmo-node"))
     .arg("--config")
     .arg(dir.join("node.toml"))
     .args(words)

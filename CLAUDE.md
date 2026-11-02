@@ -22,8 +22,9 @@ which job a process serves, whether a launch goes ahead and what the chat agent 
 - **No hand-written parser for a general format.** TOML, JSON, XML and command lines are read by a
   maintained library; where none fits, the reason is written beside the code. The probe's sections are
   this repository's own syntax.
-- **Tests live in `tests/`.** The root package holds them: a group of tests is a directory under `tests/`
-  with its own `main.rs`, and the checks that span the repository are files at the top of `tests/`. No test
+- **Tests live in `tests/`.** The root package holds them in one test target, `tests/main.rs` (bmo-chat's
+  `docs/conventions.md`, 「Rust builds」): a group of tests is a module directory under `tests/`, the checks
+  that span the repository are files at the top of `tests/`, and what groups share is `tests/support`. No test
   module sits in a source file.
 - **English only** in code, comments, strings, tests and documents, and in commit messages; `tests/literals.rs`
   fails on Hangul. Messages the service shows are English sentences; what a machine reads is a status code

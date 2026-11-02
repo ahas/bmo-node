@@ -6,9 +6,9 @@ use reqwest::Method;
 use serde_json::json;
 use store::nodes::SshLogin;
 
-use crate::support::{SCOPE, Stand, failing_road};
+use crate::server::support::{SCOPE, Stand, failing_road};
 
-fn writer(stood: &crate::support::Stood) -> hardware::record::Writer {
+fn writer(stood: &crate::server::support::Stood) -> hardware::record::Writer {
   hardware::record::Writer::open(&stood.service.record).unwrap()
 }
 

@@ -10,7 +10,7 @@ use futures_util::StreamExt;
 use reqwest::Method;
 use serde_json::json;
 
-use crate::support::{Stand, TOKEN};
+use crate::server::support::{Stand, TOKEN};
 
 #[tokio::test]
 async fn each_change_is_its_resource_s_own_event_and_a_stream_carries_the_kinds_it_names() {

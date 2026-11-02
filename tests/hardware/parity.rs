@@ -5,7 +5,7 @@ use hardware::probe::{LiveProbe, Sections, read_sections, sections};
 use hardware::view::{hardware_view, history_sample};
 use serde_json::{Value, json};
 
-use crate::fixtures;
+use crate::hardware::fixtures;
 
 fn reading(found: &Sections) -> Value {
   let view = hardware_view(&read_sections(found).expect("a whole reading"));

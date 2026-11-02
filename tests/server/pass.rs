@@ -4,7 +4,7 @@
 use bmo_node_client::events::EventKind;
 use store::nodes::SshLogin;
 
-use crate::support::Stand;
+use crate::server::support::Stand;
 
 #[tokio::test]
 async fn the_node_pass_checks_every_node_and_publishes_only_what_moved() {
