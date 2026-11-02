@@ -1,6 +1,5 @@
 //! How the node service logs in to an ssh node (docs/nodes.md, 「How a node's state is known」): the options
-//! of a login nobody is at and of a person's, the check's own command and wait, and how a login's end is
-//! read.
+//! of a login nobody is at and of a person's, the check's own command, and how a login's end is read.
 
 use serde::Deserialize;
 
@@ -15,12 +14,11 @@ pub struct Login {
   pub key_options: Vec<String>,
 }
 
-/// The check's own login: what it runs, and how long it may take before it is stopped.
+/// The check's own login: what it runs.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Check {
   pub command: String,
-  pub wait_seconds: u64,
 }
 
 /// One state a login's end reads as, and the phrases of OpenSSH's that say it.

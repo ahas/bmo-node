@@ -76,7 +76,7 @@ scripts.
 | `process-memory.test` | 1 | agency's |
 | `package.json`, `tsconfig.json`, `bunfig.toml` | 3 | dropped: no TypeScript package stands here |
 | `fixtures/probe`: `linux-cpuinfo-clocks`, `linux-generic`, `linux-intel-ring`, `linux-limits`, `linux-no-services`, `linux-storage`, `linux-zen2-two-ccds`, `linux-zen3`, `linux`, `live-limits`, `live-local`, `live-synthetic`, `live-windows`, `windows`, `wsl-no-windows`, `wsl`, each a `.txt` output and the `.json` readings made of it | 32 | carried to `tests/hardware/fixtures`, host names and personal paths made neutral and the chip's part names English, as the parser now writes them |
-| `probe-files`: `live-posix-240.sh`, `live-posix-3600.sh`, `live-powershell-3600.ps1` | 3 | carried to `crates/hardware` |
+| `probe-files`: `live-posix-240.sh`, `live-posix-3600.sh`, `live-powershell-3600.ps1` | 3 | carried to `crates/hardware`, the last two standing as `live-posix.sh` and `live-powershell.ps1`, which run until they are stopped |
 
 The two third-party libraries the package used, an event-stream parser and an XML parser, went with the
 TypeScript code; the Rust recorder reads the probe's sections and the GPU report itself.

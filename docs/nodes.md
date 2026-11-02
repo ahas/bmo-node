@@ -66,25 +66,29 @@ service's API (`docs/api.md`); nothing else keeps a list of its own.
   - How OpenSSH is started for a node and how its end is read are the policy's `ssh.toml`, so the check,
     the hardware monitor and the target the service hands out log in the same way.
 - **When a check runs:**
-  - the service checks every node when it starts and once a minute after, all nodes at once, and writes
-    each check to the node's row;
+  - the service starts a pass when it starts and once a minute after, each checking every node at once,
+    and writes each check to the node's row as it lands, so a slow check holds back no other node's;
+  - a pass does not wait on the one before: a node or a hub whose check from an earlier pass is still out
+    is left to that check, so one node is never checked twice at once and a later check never lands
+    under an earlier one;
   - `POST /node-checks` and `bmo-node node --check` make the same check at once.
   - Whatever moves the list is published as the node's own event, `node.created`, `node.changed` or
     `node.deleted` (`docs/api.md`, 「Events」); a check that moves nothing but its times publishes nothing.
 - **An ssh node is checked by one login that runs nothing.** OpenSSH starts in batch mode, asking nobody
-  for anything, with a five-second connection limit, the node's key alone where it names one, and a host
-  key accepted the first time and held to after. A login that has not ended after twelve seconds is
-  stopped. What it met decides the state:
+  for anything, with the node's key alone where it names one, a host key accepted the first time and held
+  to after, and a keep-alive every fifteen seconds that ends a login whose machine stopped answering it
+  three times running. The login is waited on until it ends; a connection that cannot be made ends when
+  the network says so. What it met decides the state:
   - it logged in: `connected`;
   - the machine answered and refused the login: `auth`;
   - the host key is not the one held for that address: `hostkey`;
-  - nothing answered, the connection was refused, the name did not resolve, or the login did not end in
-    time: `unreachable`;
+  - nothing answered, the connection was refused or broken, or the name did not resolve: `unreachable`;
   - anything else: `error`, with OpenSSH's own last line as the detail.
   - A key the row names that is not there is `error` without a login.
 - **A hub node is checked by asking its hub,** once per hub for every node on it: `GET /status` on the
   control address with the token, whose `agents` list names every agent attached and whose `departed`
-  list every agent uninstalled.
+  list every agent uninstalled. The request waits for the hub's answer, and the connection's keep-alive
+  tells a hub gone.
   - the node's agent is in the list: `connected`;
   - the hub names the agent departed: `disconnected`, said as uninstalled, until the next whole pass
     removes the node;
@@ -105,8 +109,9 @@ service's API (`docs/api.md`); nothing else keeps a list of its own.
 ## A node's link
 
 - **A node's `up` says whether it is reachable now,** from the node's own checks: true where its last
-  check found it `connected` and was made within the link window, three minutes, which covers two passes
-  and the check's own wait. A node never checked, or last checked longer ago, is not up.
+  check found it `connected` and was made within the link window, three minutes, which covers two passes.
+  The window only says how fresh the reading is; it ends no check. A node never checked, or last checked
+  longer ago, is not up.
 - A tunnel another unit holds open to a node is that unit's own and is read on its side.
 
 ## This machine

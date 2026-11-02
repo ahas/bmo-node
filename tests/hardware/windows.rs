@@ -170,7 +170,7 @@ fn a_powershell_command_carries_the_script_compressed_inside_an_encoded_command(
 fn the_live_powershell_script_travels_whole_in_one_command_of_bounded_length() {
   let script = std::fs::read_to_string(
     std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-      .join("crates/hardware/probe-files/live-powershell-3600.ps1"),
+      .join("crates/hardware/probe-files/live-powershell.ps1"),
   )
   .unwrap();
   let command = powershell_command(&script);

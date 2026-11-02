@@ -20,7 +20,11 @@ fn logs_in_in_batch_mode_with_the_node_s_own_key_and_port_running_nothing() {
   let args = login_args(&machine, &SSH.batch, &target(), Some(&SSH.check.command));
   let line = args.join(" ");
 
-  assert!(line.starts_with("-o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new"));
+  assert!(line.starts_with(
+    "-o BatchMode=yes -o StrictHostKeyChecking=accept-new -o LogLevel=ERROR -o ServerAliveInterval=15 -o \
+     ServerAliveCountMax=3"
+  ));
+  assert!(!line.contains("ConnectTimeout"));
   assert!(line.contains("-o IdentitiesOnly=yes -i /home/user/.ssh/id_home"));
   assert_eq!(args[args.len() - 4..], ["-p", "2222", "someone@192.0.2.82", "exit"]);
 
@@ -55,7 +59,16 @@ fn reads_what_the_login_met() {
     read(Some(255), "ssh: Could not resolve hostname nowhere: Name or service not known\n").state,
     NodeState::Unreachable
   );
-  assert_eq!(read(None, "").state, NodeState::Unreachable);
+  // A machine that stopped answering the keep-alive, and a connection broken under the login.
+  assert_eq!(
+    read(Some(255), "Timeout, server 192.0.2.82 not responding.\n").state,
+    NodeState::Unreachable
+  );
+  assert_eq!(
+    read(Some(255), "Connection to 192.0.2.82 closed by remote host.\n").state,
+    NodeState::Unreachable
+  );
+  assert_eq!(read(None, ""), Met::new(NodeState::Error, "the login was ended by a signal"));
   assert_eq!(read(Some(1), "something odd\n"), Met::new(NodeState::Error, "something odd"));
   assert_eq!(read(Some(3), ""), Met::new(NodeState::Error, "ssh ended with 3"));
 }

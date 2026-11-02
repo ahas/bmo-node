@@ -1,12 +1,12 @@
-//! The live runs: a reading handed on from a run's second, a run relieved before its lifetime is out, a
-//! failure recorded and tried again, a silent run stopped, runs held for exactly the machines given, and
-//! each road's live script.
+//! The live runs: a reading handed on from a run's second, a run held until its stream ends, a hub's run
+//! relieved before the hub stops it, a failure recorded and tried again, a quiet run left running and
+//! said to be quiet, runs held for exactly the machines given, and each road's live script.
 
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use hardware::live::{
-  Hands, RELIEF_SECONDS, RETRY_FIRST_MS, Reader, SILENCE_SECONDS, Sink, Wanted, live_script,
+  Hands, QUIET, QUIET_SECONDS, RELIEF_SECONDS, RETRY_FIRST_MS, Reader, Sink, Wanted, live_script,
 };
 use hardware::roads::{Source, StreamEnd};
 use hardware::view::HardwareView;
@@ -154,6 +154,16 @@ fn local(name: &str) -> Wanted {
   }
 }
 
+fn through_hub() -> Source {
+  Source::Jake {
+    hub: node_check::rows::Hub {
+      url: "u".into(),
+      token_file: "t".into(),
+    },
+    agent: "a".into(),
+  }
+}
+
 #[tokio::test(start_paused = true)]
 async fn hands_on_each_reading_from_a_runs_second_on_use_worked_out_against_the_reading_before() {
   let mut stand = Stand::new();
@@ -168,16 +178,48 @@ async fn hands_on_each_reading_from_a_runs_second_on_use_worked_out_against_the_
 }
 
 #[tokio::test(start_paused = true)]
-async fn relieves_a_run_before_its_lifetime_is_out_the_next_taking_over_at_its_own_first_reading() {
+async fn holds_a_run_on_a_local_shell_or_an_ssh_login_until_its_stream_ends() {
   let mut stand = Stand::new();
 
+  assert_eq!(Source::Local.run_seconds(), None);
   stand.reader.keep(&[local("box")]);
   settle().await;
   stand.say(0, &reading(10, 0, true)).await;
   stand.say(0, &reading(11, 10, false)).await;
 
-  // The run keeps talking, so only its lifetime ends it.
-  for _ in (0..Source::Local.run_seconds() - RELIEF_SECONDS).step_by(10) {
+  for _ in 0..2 * 60 * 6 {
+    advance(Duration::from_secs(10)).await;
+    stand.say(0, "@@uptime").await;
+  }
+
+  assert_eq!(stand.runs(), 1);
+  assert!(!stand.stopped(0));
+  stand
+    .end(
+      0,
+      StreamEnd {
+        ok: true,
+        failure: String::new(),
+      },
+    )
+    .await;
+  assert_eq!(stand.runs(), 2);
+}
+
+#[tokio::test(start_paused = true)]
+async fn relieves_a_hubs_run_before_the_hub_stops_it_the_next_taking_over_at_its_own_first_reading() {
+  let mut stand = Stand::new();
+
+  stand.reader.keep(&[Wanted {
+    name: "box".into(),
+    source: Some(through_hub()),
+  }]);
+  settle().await;
+  stand.say(0, &reading(10, 0, true)).await;
+  stand.say(0, &reading(11, 10, false)).await;
+
+  // The run keeps talking, so only the span the hub gives it ends it.
+  for _ in (0..through_hub().run_seconds().unwrap() - RELIEF_SECONDS).step_by(10) {
     advance(Duration::from_secs(10)).await;
     stand.say(0, "@@uptime").await;
   }
@@ -236,16 +278,26 @@ async fn records_a_failure_and_tries_again_after_a_wait_that_grows() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn stops_a_run_that_falls_silent_and_starts_another() {
+async fn leaves_a_run_that_falls_quiet_running_and_says_so_once_for_each_quiet_stretch() {
   let mut stand = Stand::new();
 
   stand.reader.keep(&[local("box")]);
   settle().await;
-  advance(Duration::from_secs(SILENCE_SECONDS)).await;
-  assert!(stand.stopped(0));
-  assert!(stand.seen()[0].contains("failed: the machine stopped answering"));
-  advance(Duration::from_millis(RETRY_FIRST_MS)).await;
-  assert_eq!(stand.runs(), 2);
+  advance(Duration::from_secs(QUIET_SECONDS)).await;
+  assert!(!stand.stopped(0));
+  // Said at the moment the stretch is found quiet.
+  assert_eq!(stand.seen(), [format!("box {} failed: {QUIET}", 1000 + QUIET_SECONDS)]);
+  advance(Duration::from_secs(10 * QUIET_SECONDS)).await;
+  assert_eq!(stand.seen().len(), 1);
+  assert_eq!(stand.runs(), 1);
+
+  // A line starts a new stretch, and the readings it brings stand in the notice's place.
+  stand.say(0, &reading(10, 0, true)).await;
+  stand.say(0, &reading(11, 50, false)).await;
+  assert!(stand.seen()[1].ends_with("50%"));
+  advance(Duration::from_secs(QUIET_SECONDS)).await;
+  assert!(stand.seen()[2].ends_with(QUIET));
+  assert!(!stand.stopped(0));
 }
 
 #[tokio::test(start_paused = true)]
@@ -273,7 +325,7 @@ async fn holds_runs_for_exactly_the_machines_it_is_given() {
 }
 
 #[test]
-fn each_road_takes_the_live_script_written_for_its_language_and_its_runs_length() {
+fn each_road_takes_the_live_script_written_for_its_language_and_how_its_runs_end() {
   let ssh = |powershell| Source::Ssh {
     target: node_check::rows::SshTarget {
       host: "h".into(),
@@ -284,17 +336,14 @@ fn each_road_takes_the_live_script_written_for_its_language_and_its_runs_length(
     powershell,
   };
 
-  assert!(live_script(&Source::Local).contains("live_end=$((live_cs + 360000))"));
-  assert!(live_script(&ssh(false)).contains("live_end=$((live_cs + 360000))"));
-  assert!(
-    live_script(&Source::Jake {
-      hub: node_check::rows::Hub {
-        url: "u".into(),
-        token_file: "t".into()
-      },
-      agent: "a".into()
-    })
-    .contains("live_end=$((live_cs + 24000))")
-  );
-  assert!(live_script(&ssh(true)).contains("AddSeconds(3600)"));
+  // A run on a local shell or an ssh login lasts until it is stopped; a hub's ends itself inside the hub's
+  // five minutes.
+  for runs_on in [live_script(&Source::Local), live_script(&ssh(false))] {
+    assert!(runs_on.contains("while :; do"));
+    assert!(!runs_on.contains("live_end"));
+  }
+
+  assert!(live_script(&through_hub()).contains("live_end=$((live_cs + 24000))"));
+  assert!(live_script(&ssh(true)).contains("while ($true) {"));
+  assert!(!live_script(&ssh(true)).contains("AddSeconds"));
 }

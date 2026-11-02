@@ -3,7 +3,6 @@
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::sync::Arc;
-use std::time::Duration;
 
 use bmo_node_client::NodeClient;
 use bmo_node_plugin::NodeServer;
@@ -196,11 +195,7 @@ async fn serve(config: Config) -> Result<(), String> {
 }
 
 async fn health(config: Config) -> Result<(), String> {
-  let http = reqwest::Client::builder()
-    .timeout(Duration::from_secs(5))
-    .build()
-    .map_err(|why| why.to_string())?;
-  let client = NodeClient::with_http(&config.local_address(), &config.token, http)?;
+  let client = NodeClient::new(&config.local_address(), &config.token)?;
   let health = client.health().await.map_err(|why| why.to_string())?;
 
   if health.ready { Ok(()) } else { Err("the service is not ready".into()) }

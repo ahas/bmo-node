@@ -1,8 +1,9 @@
 //! Every machine read live (docs/hardware.md, 「Live」): one run of the probe's live form held open per
-//! machine, each reading handed to the record as it lands. A run is relieved before its lifetime is out
-//! by the next, which takes over at its own first reading; a run that fails, ends early or falls silent
-//! is stopped, its failure recorded, and another started after a wait that grows while the failures go
-//! on.
+//! machine until its stream ends, each reading handed to the record as it lands. A run on a road that
+//! stops runs itself is relieved before then by the next, which takes over at its own first reading; a
+//! run that fails or ends before its first reading has its failure recorded, and another is started after
+//! a wait that grows while the failures go on. A run that falls quiet is left running, and the machine's
+//! latest says so.
 
 use std::collections::BTreeMap;
 use std::future::Future;
@@ -20,12 +21,15 @@ use super::probe::{LiveProbe, read_sections};
 use super::roads::{Source, StreamEnd, stream};
 use super::view::{HardwareView, hardware_view};
 
-/// How far ahead of a run's end the next is started: past the slowest start of a run, a WSL machine's
-/// counters and sensor library included.
+/// How far ahead of the end a road gives a run the next is started: past the slowest start of a run, a
+/// WSL machine's counters and sensor library included.
 pub const RELIEF_SECONDS: i64 = 20;
 
-/// How long a run may go without printing a line before it is taken for stuck.
-pub const SILENCE_SECONDS: u64 = 30;
+/// How long a run goes without printing a line before the machine's latest says it has gone quiet.
+pub const QUIET_SECONDS: u64 = 30;
+
+/// What the machine's latest says of a run gone quiet.
+pub const QUIET: &str = "the machine has printed nothing for thirty seconds";
 
 /// The waits before a failed machine is tried again: the first, and the longest it grows to.
 pub const RETRY_FIRST_MS: u64 = 1_000;
@@ -37,18 +41,19 @@ const ANCHOR_DRIFT_SECONDS: i64 = 5;
 
 // The probe's live form as each road takes it, written out whole under the crate's `probe-files/`, which
 // is the one source of the script (docs/hardware.md, 「The probe」).
-const LIVE_POSIX_HOUR: &str = include_str!("../probe-files/live-posix-3600.sh");
+const LIVE_POSIX: &str = include_str!("../probe-files/live-posix.sh");
 const LIVE_POSIX_HUB: &str = include_str!("../probe-files/live-posix-240.sh");
-const LIVE_POWERSHELL_HOUR: &str = include_str!("../probe-files/live-powershell-3600.ps1");
+const LIVE_POWERSHELL: &str = include_str!("../probe-files/live-powershell.ps1");
 
-/// The live script a road takes, for as long as one run on it lasts.
+/// The live script a road takes: one that ends itself inside the span the road gives a run, or one that
+/// runs until it is stopped.
 pub fn live_script(source: &Source) -> &'static str {
   match source {
     Source::Jake { .. } => LIVE_POSIX_HUB,
     Source::Ssh {
       powershell: true, ..
-    } => LIVE_POWERSHELL_HOUR,
-    _ => LIVE_POSIX_HOUR,
+    } => LIVE_POWERSHELL,
+    _ => LIVE_POSIX,
   }
 }
 
@@ -96,7 +101,8 @@ struct Run {
   lines: Vec<String>,
   published: bool,
   relief_at: Option<Instant>,
-  silent_at: Instant,
+  /// When the run will have gone quiet, none once the machine's latest has said so for this stretch.
+  quiet_at: Option<Instant>,
   /// The second a reading of the run was taken at, as this machine's clock said it, and the machine's
   /// own uptime then.
   anchor: Option<(i64, f64)>,
@@ -133,8 +139,9 @@ impl Machine {
       probe: LiveProbe::default(),
       lines: vec![],
       published: false,
-      relief_at: Some(now + Duration::from_secs((lifetime - RELIEF_SECONDS).max(0) as u64)),
-      silent_at: now + Duration::from_secs(SILENCE_SECONDS),
+      relief_at: lifetime
+        .map(|lifetime| now + Duration::from_secs((lifetime - RELIEF_SECONDS).max(0) as u64)),
+      quiet_at: Some(now + Duration::from_secs(QUIET_SECONDS)),
       anchor: None,
     };
     let (lines, mut heard) = mpsc::channel::<String>(64);
@@ -192,7 +199,7 @@ impl Machine {
       return;
     }
 
-    run.silent_at = Instant::now() + Duration::from_secs(SILENCE_SECONDS);
+    run.quiet_at = Some(Instant::now() + Duration::from_secs(QUIET_SECONDS));
 
     if line.trim() != "@@end" {
       run.lines.push(line);
@@ -280,8 +287,8 @@ impl Machine {
       return;
     }
 
-    // A run that carried the machine to its lifetime's end is simply followed; anything else is a
-    // failure the machine's latest says.
+    // A run that carried the machine to its end is simply followed; anything else is a failure the
+    // machine's latest says.
     if end.ok && run.published {
       self.launch();
       return;
@@ -303,7 +310,7 @@ impl Machine {
     [self.current.as_ref(), self.next.as_ref()]
       .into_iter()
       .flatten()
-      .flat_map(|run| [run.relief_at, Some(run.silent_at)])
+      .flat_map(|run| [run.relief_at, run.quiet_at])
       .chain([self.retry_at])
       .flatten()
       .min()
@@ -326,28 +333,28 @@ impl Machine {
       .map(|run| run.id)
       .collect::<Vec<_>>()
     {
+      let carrying = self.current.as_ref().is_some_and(|current| current.id == id);
       let Some(run) = self.run_mut(id) else {
         continue;
       };
+      let quiet = run.quiet_at.is_some_and(|at| at <= now);
+      let relieved = run.relief_at.is_some_and(|at| at <= now);
 
-      if run.silent_at <= now {
-        run.stop.cancel();
-        self.ended(
-          id,
-          StreamEnd {
-            ok: false,
-            failure: "the machine stopped answering".into(),
-          },
-        );
-        continue;
+      if quiet {
+        run.quiet_at = None;
       }
 
-      if run.relief_at.is_some_and(|at| at <= now) {
+      if relieved {
         run.relief_at = None;
+      }
 
-        if self.current.as_ref().is_some_and(|current| current.id == id) && self.next.is_none() {
-          self.launch();
-        }
+      // Only the run carrying the machine speaks for it, and it goes on running.
+      if quiet && carrying {
+        self.sink.failure(&self.name, self.at(), QUIET);
+      }
+
+      if relieved && carrying && self.next.is_none() {
+        self.launch();
       }
     }
   }

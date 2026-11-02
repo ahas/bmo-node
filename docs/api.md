@@ -131,7 +131,7 @@ A hub node is never registered by a route: it is added when its agent attaches t
 
 | Method and path | Sends | Answers |
 |---|---|---|
-| `POST /node-checks` | `nodeNames?`, the nodes to check; every node where it is empty or left out | 201 and `items`, each node checked now as `GET /nodes/{nodeName}` answers it after its check (`docs/nodes.md`, 「How a node's state is known」); a name no node holds is `bad-field` |
+| `POST /node-checks` | `nodeNames?`, the nodes to check; every node where it is empty or left out | 201 and `items`, each node checked now as `GET /nodes/{nodeName}` answers it after its check; asked for every node, one whose check from a pass is still out is left to that check and answered as its row stands (`docs/nodes.md`, 「How a node's state is known」); a name no node holds is `bad-field` |
 
 A check keeps nothing of its own: each node's `state`, `detail` and `checkedAt` carry what it came to.
 
@@ -234,8 +234,9 @@ A change made by the command, which writes the store itself, is published by the
 
 - **`GET /health`** answers `ready`, `reason`, null when ready and otherwise why not, and `version`: ready
   once the store is open and migrated and the loops have started.
-- **`bmo-node --config <file> health`** asks the service the configuration names, waiting at most five
-  seconds, and ends 0 where it answers ready. The deployment waits on it.
+- **`bmo-node --config <file> health`** asks the service the configuration names, waits for its answer,
+  and ends 0 where it answers ready; a service not listening refuses the connection and ends it at once.
+  The deployment waits on it.
 
 ## Configuration
 

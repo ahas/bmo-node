@@ -9,6 +9,8 @@ WorkingDirectory=%h/.local/share/bmo-node/deploy
 ExecStart=%h/.local/share/bmo-node/deploy/bin/llm-bridge
 Restart=always
 RestartSec=5
+# The door ends on SIGTERM, so a stop waits for it to end.
+TimeoutStopSec=infinity
 
 [Install]
 WantedBy=default.target

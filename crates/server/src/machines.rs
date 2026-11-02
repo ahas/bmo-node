@@ -4,7 +4,7 @@
 use bmo_node_client::events::Change;
 use bmo_node_client::hardware::HardwareView;
 use bmo_node_client::machines::{Machine, MachineKind, Standing};
-use hardware::once::{ONCE_WAIT, read_once};
+use hardware::once::read_once;
 use hardware::record::Reader;
 use hardware::roads::Source;
 use hardware::series::MS_PER_SECOND;
@@ -135,7 +135,7 @@ pub async fn machine(service: &Service, known: Known, read: Read) -> Result<Mach
   let road = service.road.clone();
   let (read_at, read) = cell
     .get_or_init(|| async move {
-      let read = read_once(&road, source, ONCE_WAIT).await.map(|snapshot| hardware_view(&snapshot));
+      let read = read_once(&road, source).await.map(|snapshot| hardware_view(&snapshot));
 
       (hardware::now_ms(), read)
     })

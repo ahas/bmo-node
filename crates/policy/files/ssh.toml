@@ -2,10 +2,17 @@
 # the node's shell, the hardware monitor and the login and connection the service hands out all start
 # OpenSSH from these options.
 
-# A login nobody is at: it asks nobody for anything, gives up connecting after five seconds, takes a
-# host key the first time and holds to it after, and says only its errors.
+# A login nobody is at: it asks nobody for anything, takes a host key the first time and holds to it after,
+# says only its errors, and asks the machine every fifteen seconds whether it is still there, ending once
+# three asks in a row went unanswered. How long a connection takes to be made is the network's own.
 [batch]
-options = ["BatchMode=yes", "ConnectTimeout=5", "StrictHostKeyChecking=accept-new", "LogLevel=ERROR"]
+options = [
+  "BatchMode=yes",
+  "StrictHostKeyChecking=accept-new",
+  "LogLevel=ERROR",
+  "ServerAliveInterval=15",
+  "ServerAliveCountMax=3",
+]
 # Where the row names a key, that key alone is offered.
 key_options = ["IdentitiesOnly=yes"]
 
@@ -15,10 +22,9 @@ key_options = ["IdentitiesOnly=yes"]
 options = ["StrictHostKeyChecking=accept-new"]
 key_options = []
 
-# The check's own login, which runs nothing and is stopped once it has taken this long.
+# The check's own login, which runs nothing and is waited on until it ends.
 [check]
 command = "exit"
-wait_seconds = 12
 
 # What a login that ended met, read off OpenSSH's words: the first state one of whose phrases its
 # standard error holds, in any case. A login that ended otherwise is an error.
@@ -39,5 +45,8 @@ said = [
   "Network is unreachable",
   "Could not resolve",
   "Name or service not known",
-  "Connection closed by remote host",
+  "closed by remote host",
+  "Connection reset",
+  "Broken pipe",
+  "not responding",
 ]

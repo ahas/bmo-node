@@ -24,6 +24,7 @@ pub const MOST_BYTES: i64 = KEEP_SECONDS * 16 * 1024;
 fn open(path: &Path) -> rusqlite::Result<Connection> {
   let record = Connection::open(path)?;
 
+  store::wait_for_locks(&record)?;
   record.pragma_update(None, "journal_mode", "WAL")?;
   record.pragma_update(None, "synchronous", "NORMAL")?;
   record.execute_batch(
@@ -220,6 +221,9 @@ impl Reader {
     let record =
       Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX)
         .ok()?;
+
+    store::wait_for_locks(&record).ok()?;
+
     let made: bool = record
       .query_row("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'live_samples'", [], |_| {
         Ok(true)

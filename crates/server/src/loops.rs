@@ -1,5 +1,5 @@
-//! The service's loops: the node check pass once a minute, the hardware recorder's live runs and its minute
-//! pass, and this machine's minute look (docs/nodes.md, docs/hardware.md, docs/machine.md).
+//! The service's loops: a node check pass started once a minute, the hardware recorder's live runs and its
+//! minute pass, and this machine's minute look (docs/nodes.md, docs/hardware.md, docs/machine.md).
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -17,7 +17,7 @@ use crate::Service;
 use crate::events::Events;
 use crate::machines::publish_changed;
 
-/// How often each loop runs.
+/// How often each loop runs, and a node check pass starts.
 const MINUTE: Duration = Duration::from_secs(60);
 
 /// Every node checked, and whatever moved the list since its events last told it published: a check's
@@ -66,11 +66,16 @@ pub fn start(service: Arc<Service>) -> Result<Vec<JoinHandle<()>>, String> {
 
   let checking = service.clone();
 
+  // Each pass on a task of its own, so one waiting on a slow check holds back no later pass.
   tasks.push(tokio::spawn(async move {
     loop {
-      if let Err(why) = node_pass(&checking).await {
-        eprintln!("bmo-node: the node pass failed: {why}");
-      }
+      let passing = checking.clone();
+
+      tokio::spawn(async move {
+        if let Err(why) = node_pass(&passing).await {
+          eprintln!("bmo-node: the node pass failed: {why}");
+        }
+      });
 
       tokio::time::sleep(MINUTE).await;
     }

@@ -5,7 +5,6 @@ $ProgressPreference = 'SilentlyContinue'
 $t = [char]9
 $nl = [char]10
 $out = [Console]::Out
-$until = [DateTime]::UtcNow.AddSeconds(3600)
 
 $env:Path = "$env:Path;$env:ProgramFiles\NVIDIA Corporation\NVSMI"
 $nvml = $false
@@ -139,7 +138,7 @@ $boot = $null
 $totalKb = $null
 $k = 0
 $next = [DateTime]::UtcNow
-while ([DateTime]::UtcNow -lt $until) {
+while ($true) {
   if ($k % 30 -eq 0) {
     $seldom = New-Object Collections.Generic.List[string]
     $os = Get-CimInstance Win32_OperatingSystem

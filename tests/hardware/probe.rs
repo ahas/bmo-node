@@ -169,7 +169,7 @@ fn script(name: &str) -> String {
 
 #[test]
 fn the_live_scripts_are_plain_posix_shell() {
-  for name in ["live-posix-240.sh", "live-posix-3600.sh"] {
+  for name in ["live-posix-240.sh", "live-posix.sh"] {
     let mut check = Command::new("sh").arg("-n").stdin(Stdio::piped()).spawn().unwrap();
 
     std::io::Write::write_all(&mut check.stdin.take().unwrap(), script(name).as_bytes()).unwrap();

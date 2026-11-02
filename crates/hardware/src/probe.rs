@@ -815,7 +815,9 @@ impl LiveProbe {
       ("gpureport", self.gpu_report.clone()),
       ("blk", kept("blk")),
       ("blkdev", kept("blkdev")),
-      ("df", kept("df")),
+      // The volumes' answers come with every reading where the run asks them in the background, and
+      // with the parts that hardly change where it asks them in the reading itself.
+      ("df", if found.contains_key("df") { own("df") } else { kept("df") }),
       ("win", own("win")),
       ("services", kept("services")),
       ("end", vec![]),

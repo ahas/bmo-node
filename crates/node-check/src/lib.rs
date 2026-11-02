@@ -11,8 +11,10 @@ mod store_rows;
 
 pub use store_rows::check_row;
 
+use std::collections::HashSet;
 use std::path::PathBuf;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::sync::{Arc, Mutex, PoisonError};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 pub use policy::node_states::NodeState;
 use serde::{Deserialize, Serialize};
@@ -57,13 +59,60 @@ pub struct NodeCheck {
   pub at: i64,
 }
 
-/// The machine a check runs on: the OpenSSH it starts, the home a row's `~/` stands for, and the
-/// client it asks a hub with.
+// How often a hub's connection asks whether the hub is still there once it has gone quiet, and how many
+// asks in a row may go unanswered before the connection is taken for broken: the same as an ssh login's
+// keep-alive (`policy/files/ssh.toml`).
+const KEEP_ALIVE: Duration = Duration::from_secs(15);
+const KEEP_ALIVE_MISSES: u32 = 3;
+
+/// A client for a hub, whose requests wait for the hub's answer and whose connections carry a keep-alive
+/// that tells a hub gone.
+fn hub_client() -> reqwest::Client {
+  reqwest::Client::builder()
+    .tcp_keepalive(KEEP_ALIVE)
+    .tcp_keepalive_interval(KEEP_ALIVE)
+    .tcp_keepalive_retries(KEEP_ALIVE_MISSES)
+    .build()
+    .unwrap_or_default()
+}
+
+/// The checks still out on a machine, each by what it asks: a node, or a hub. A whole pass leaves to a
+/// check still out what it asks.
+#[derive(Clone, Default)]
+pub struct Out(Arc<Mutex<HashSet<String>>>);
+
+/// One check out, given back when it is dropped.
+pub struct Asking {
+  out: Out,
+  key: String,
+}
+
+impl Out {
+  /// The check of `key`, taken out; none where one is out already.
+  pub fn take(&self, key: String) -> Option<Asking> {
+    let taken = self.0.lock().unwrap_or_else(PoisonError::into_inner).insert(key.clone());
+
+    taken.then(|| Asking {
+      out: self.clone(),
+      key,
+    })
+  }
+}
+
+impl Drop for Asking {
+  fn drop(&mut self) {
+    self.out.0.lock().unwrap_or_else(PoisonError::into_inner).remove(&self.key);
+  }
+}
+
+/// The machine a check runs on: the OpenSSH it starts, the home a row's `~/` stands for, the client it
+/// asks a hub with, and the checks it has out.
 #[derive(Clone)]
 pub struct Machine {
   pub ssh: PathBuf,
   pub home: PathBuf,
   http: reqwest::Client,
+  pub out: Out,
 }
 
 impl Machine {
@@ -71,8 +120,14 @@ impl Machine {
     Self {
       ssh: ssh.into(),
       home: home.into(),
-      http: reqwest::Client::new(),
+      http: hub_client(),
+      out: Out::default(),
     }
+  }
+
+  /// The client a hub is asked with.
+  pub fn http(&self) -> &reqwest::Client {
+    &self.http
   }
 
   /// This process's own: the PATH's OpenSSH and the home it runs under.

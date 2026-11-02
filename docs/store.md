@@ -9,7 +9,8 @@ else. No other unit reads these files; they reach what is in them through the AP
 | `node/hardware-live.db` | the live record (`docs/hardware.md`, 「Live」) | the recorder alone |
 
 Both are SQLite files in write-ahead-log mode. The service runs the store's migrations as it starts; the
-command runs them too before it reads or writes.
+command runs them too before it reads or writes. A connection to either file that meets another's
+lock waits its turn until the lock is given back, however long it is held.
 
 ## The tables
 

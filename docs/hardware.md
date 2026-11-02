@@ -32,7 +32,8 @@ what this service answers (`docs/api.md`, 「Machines」).
   is read where the recorder has nothing fresh of it (「How often」); and live, one run that stays open
   over the machine's road and prints a reading every second (「Live」).
 - **The scripts stand written in this repository** and the recorder embeds them: two POSIX live scripts,
-  one lasting four minutes and one an hour, and the PowerShell live script.
+  one for a hub's exec, which ends itself after four minutes, and one that runs until it is stopped, and
+  the PowerShell live script, which runs until it is stopped.
 - **The probe's fixtures** stand beside the tests: each a probe output, from a test sample or a real
   machine, with the readings the parser makes of it written beside it. The parity test reads every output
   and fails where a reading differs from the one written.
@@ -54,8 +55,7 @@ what this service answers (`docs/api.md`, 「Machines」).
     memory and fan, and whether thermal slowdown is holding its clocks down; and its whole report as XML,
     where the temperature each GPU slows down at stands, read in a live run's first reading alone;
   - the block devices from `lsblk`, the sysfs device each disk stands on, and from `df` each mounted file
-    system a volume can be, asked one at a time and given a few seconds each, so a mount that stopped
-    answering costs only its own figures;
+    system a volume can be (「Storage」);
   - on WSL, the Windows side (below);
   - the running and failed services of systemd, the system's and the account's own.
 - **A value that cannot be read is null, never nought.** In particular:
@@ -65,8 +65,8 @@ what this service answers (`docs/api.md`, 「Machines」).
     not open to it, the power is the code `denied`;
   - a board input nothing is wired to reads nought, -128 or a byte's top; a temperature at or below nought
     or at 127 °C and above is no temperature and is left out.
-- A machine that cannot be reached at all (the login refused, the agent not attached, the probe running
-  past its limit) answers a failure with what was met, and none of its figures.
+- A machine that cannot be reached at all (the login refused or broken, the agent not attached) answers a
+  failure with what was met, and none of its figures.
 
 ## The Windows side
 
@@ -126,6 +126,12 @@ what this service answers (`docs/api.md`, 「Machines」).
   source already shown is not shown again. A disk connected with nothing mounted is still listed. The
   kernel's own file systems and loop devices are not storage.
 - A network share (NFS, SMB, an rclone or sshfs mount) is a device of its own, named by its source.
+- **A mount that stopped answering costs only its own figures and never holds a reading up.** Each
+  volume is asked on its own, in the background, with the parts that hardly change, and every reading
+  carries the answers that have come in. A volume whose asking is still out when it is asked again is left
+  out of the readings until it answers, and is not asked twice at once. The answers are kept in a folder
+  of the run's own under the machine's temporary directory, removed when the run ends; where no such
+  folder can be made, the volumes are asked in the reading itself, one after another.
 - A drive's temperature is its own hwmon chip's (`nvme`, `drivetemp`), matched by the sysfs device the chip
   and the disk share; the composite reading where a drive reports several.
 - On WSL the Windows disks are the machine's drives, and the Linux side contributes only the virtual disk.
@@ -141,7 +147,8 @@ what this service answers (`docs/api.md`, 「Machines」).
   has nothing fresh of a tracked machine, no reading or failure within ten seconds, the service reads it
   itself with the probe run once, keeps that reading for one period and joins a read already under way, so
   several askers at once cost the machine one probe.
-- A probe run once that has not finished in twenty seconds is given up and answered as a failure.
+- **A probe run once is waited on until it gives its first whole reading or its run ends,** whatever
+  that takes; a run that ends first is answered as a failure with what it met.
 
 ## Units
 
@@ -201,12 +208,17 @@ flowchart TD
   - **A reading's second is counted along the machine's own clock** from the second this machine saw the
     run's first reading at. A count that strays more than five seconds from this machine's clock starts
     again from now.
-  - **A run lasts a set time and is relieved before it ends:** the next run starts twenty seconds ahead
-    and takes over at its first reading. Its length is the road's: four minutes through a hub, which
-    stops an exec at five; an hour on a local shell or an ssh login.
-  - A run that ends early, fails or stays silent for thirty seconds is stopped, the machine's latest
-    becomes the failure with what was met, and a run starts again after a wait that grows from a second to
-    thirty while the failures go on.
+  - **A run on a local shell or an ssh login lasts until its stream ends:** its script ends, the login
+    breaks, or the machine is no longer read. The login's keep-alive tells a machine gone (`docs/nodes.md`,
+    「How a node's state is known」), and the hub's stream carries the connection's own keep-alive.
+  - **A run through a hub is relieved before the hub stops it:** the hub stops an exec at five minutes, so
+    the run's script ends itself after four, the next run starts twenty seconds ahead of that and takes
+    over at its first reading.
+  - A run that ends after carrying the machine is followed by the next at once. A run that fails or ends
+    before its first reading makes the machine's latest the failure with what was met, and a run starts
+    again after a wait that grows from a second to thirty while the failures go on.
+  - **A run that has printed nothing for thirty seconds is left running:** the machine's latest says it
+    has gone quiet, once for each quiet stretch, and its next reading stands in its place.
 - **The live record** is a SQLite file of its own, `hardware-live.db`, written by the recorder alone, on a
   thread of its own, since a commit waits on the disk and a reading lands every second. The service reads
   it over a connection that only reads.

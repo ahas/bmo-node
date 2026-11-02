@@ -108,6 +108,17 @@ pub struct Store {
   connection: Mutex<Connection>,
 }
 
+/// A connection that meets another's lock waits until the lock is given back, however long it is held,
+/// looking again a little later each time, up to a tenth of a second apart (docs/store.md).
+pub fn wait_for_locks(connection: &Connection) -> rusqlite::Result<()> {
+  connection.busy_handler(Some(look_again))
+}
+
+fn look_again(tries: i32) -> bool {
+  std::thread::sleep(std::time::Duration::from_millis(tries.clamp(0, 99) as u64 + 1));
+  true
+}
+
 impl Store {
   /// The store at its file under the data root, its folder made and its migrations run.
   pub fn open_in(data_root: &Path) -> Result<Self> {
@@ -121,7 +132,7 @@ impl Store {
 
     connection.pragma_update(None, "journal_mode", "WAL")?;
     connection.pragma_update(None, "synchronous", "NORMAL")?;
-    connection.busy_timeout(std::time::Duration::from_secs(5))?;
+    wait_for_locks(&connection)?;
     Self::settled(connection)
   }
 

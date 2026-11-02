@@ -1,14 +1,14 @@
 //! A node checked, every node checked, and each outcome written to its row through the store the caller
 //! holds.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::future::Future;
 
 use futures::future::join_all;
 
 use crate::hub::{self, HubAnswer};
 use crate::rows::{Hub, NodeRow, Target};
-use crate::{Machine, Met, NodeCheck, NodeState, now_seconds, ssh};
+use crate::{Asking, Machine, Met, NodeCheck, NodeState, now_seconds, ssh};
 
 /// One node checked, by its own login or by asking its own hub.
 pub async fn check_node(machine: &Machine, node: &NodeRow) -> NodeCheck {
@@ -66,10 +66,11 @@ pub struct Checked {
   pub checked: usize,
 }
 
-/// Every node checked at once, or the one named, and each outcome written to its row. A whole pass
-/// asks every hub once, adds a node for each agent attached to a listed hub that none stands for yet,
+/// Every node checked at once, or the one named, and each outcome written to its row as it lands. A whole
+/// pass asks every hub once, adds a node for each agent attached to a listed hub that none stands for yet,
 /// removes the node of each agent a hub says has departed, and reads every jake node's state off its
-/// hub's answer.
+/// hub's answer. It leaves to a check still out from another pass the hub or the node that check asks, and
+/// a jake node whose hub it so left.
 pub async fn check_nodes<S: NodeRows>(
   store: &S,
   machine: &Machine,
@@ -77,11 +78,36 @@ pub async fn check_nodes<S: NodeRows>(
 ) -> Result<Checked, S::Error> {
   if let Some(name) = only {
     let nodes: Vec<NodeRow> = store.list().await?.into_iter().filter(|node| node.name == name).collect();
+    let checks = check_rows(machine, &nodes, &HashMap::new()).await;
+    let mut changed = false;
 
-    return record(store, &nodes, check_rows(machine, &nodes, &HashMap::new()).await, false).await;
+    for (node, check) in nodes.iter().zip(&checks) {
+      changed |= record(store, node, check).await?;
+    }
+
+    return Ok(Checked {
+      changed,
+      checked: checks.len(),
+    });
   }
 
-  let asked = ask_hubs(machine, &store.hubs().await?).await;
+  let mut hubs = Vec::new();
+  let mut left = HashSet::new();
+
+  for hub in store.hubs().await? {
+    match machine.out.take(format!("hub {}", hub.url)) {
+      Some(asking) => hubs.push((hub, asking)),
+      None => {
+        left.insert(hub.url);
+      }
+    }
+  }
+
+  let asked =
+    join_all(hubs.iter().map(async |(hub, _)| (hub.url.clone(), hub::ask(machine, hub).await))).await;
+
+  drop(hubs);
+
   let before = store.list().await?.len();
   let mut removed = false;
 
@@ -99,29 +125,42 @@ pub async fn check_nodes<S: NodeRows>(
 
   let answers: HashMap<String, HubAnswer> = asked.into_iter().collect();
   let nodes = store.list().await?;
-  let checks = check_rows(machine, &nodes, &answers).await;
+  let listed = nodes.len();
+  let taken: Vec<(&NodeRow, Asking)> = nodes
+    .iter()
+    .filter(|node| node.jake().is_none_or(|(hub, _)| !left.contains(hub)))
+    .filter_map(|node| Some((node, machine.out.take(format!("node {}", node.name))?)))
+    .collect();
+  let landed = join_all(taken.iter().map(async |(node, _)| {
+    let answered = node.jake().and_then(|(hub, agent)| Some((answers.get(hub)?, agent)));
+    let check = match answered {
+      Some((answer, agent)) => answer.state_of(agent).at(now_seconds()),
+      None => check_node(machine, node).await,
+    };
 
-  record(store, &nodes, checks, removed || nodes.len() != before).await
-}
+    record(store, node, &check).await
+  }))
+  .await;
+  let mut changed = removed || listed != before;
 
-async fn record<S: NodeRows>(
-  store: &S,
-  nodes: &[NodeRow],
-  checks: Vec<NodeCheck>,
-  mut changed: bool,
-) -> Result<Checked, S::Error> {
-  for (node, check) in nodes.iter().zip(&checks) {
-    // A node removed while its check was out is not written back.
-    if !store.exists(&node.name).await? {
-      continue;
-    }
-
-    store.record(&node.name, check).await?;
-    changed |= check.state != node.state || check.detail != node.detail;
+  for one in landed {
+    changed |= one?;
   }
 
   Ok(Checked {
     changed,
-    checked: checks.len(),
+    checked: taken.len(),
   })
+}
+
+/// One check written to its node's row, unless the node was removed while the check was out; whether
+/// its state or its detail moved.
+async fn record<S: NodeRows>(store: &S, node: &NodeRow, check: &NodeCheck) -> Result<bool, S::Error> {
+  if !store.exists(&node.name).await? {
+    return Ok(false);
+  }
+
+  store.record(&node.name, check).await?;
+
+  Ok(check.state != node.state || check.detail != node.detail)
 }

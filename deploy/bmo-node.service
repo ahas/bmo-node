@@ -16,7 +16,8 @@ Environment=BMO_DATA_DIR=%h/.local/share/bmo/data
 Environment=PATH=%h/.local/bin:%h/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 Restart=always
 RestartSec=2
-TimeoutStopSec=30
+# The service, its logins and its probes all end on SIGTERM, so a stop waits for them to end.
+TimeoutStopSec=infinity
 
 [Install]
 WantedBy=default.target

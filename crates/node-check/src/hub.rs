@@ -1,17 +1,12 @@
 //! A jake node's check: its hub asked which agents are attached and which have departed, with the
 //! control token read out of the hub's token file for that one request.
 
-use std::time::Duration;
-
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::rows::Hub;
 use crate::{Machine, Met, NodeState, last_line};
-
-// How long a hub is waited on.
-const HUB_WAIT: Duration = Duration::from_secs(5);
 
 // The key a hub's token file holds its control token under.
 const TOKEN_KEY: &str = "JAKE_CONTROL_TOKEN";
@@ -87,13 +82,7 @@ pub async fn ask(machine: &Machine, hub: &Hub) -> HubAnswer {
     Ok(token) => token,
     Err(detail) => return failed(NodeState::Error, detail),
   };
-  let asked = machine
-    .http
-    .get(format!("{}/status", hub.url))
-    .bearer_auth(token)
-    .timeout(HUB_WAIT)
-    .send()
-    .await;
+  let asked = machine.http.get(format!("{}/status", hub.url)).bearer_auth(token).send().await;
   let answer = match asked {
     Ok(answer) => answer,
     Err(error) => {

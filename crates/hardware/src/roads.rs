@@ -40,12 +40,13 @@ impl Source {
     )
   }
 
-  /// How long one live run lasts on the road: through a jake hub, inside the five minutes the hub gives
-  /// an exec; on a local shell or an ssh login, an hour.
-  pub fn run_seconds(&self) -> i64 {
+  /// How long one live run lasts where the road itself stops a run: through a jake hub, inside the five
+  /// minutes the hub gives an exec. None on a local shell or an ssh login, where a run lasts until its
+  /// stream ends.
+  pub fn run_seconds(&self) -> Option<i64> {
     match self {
-      Self::Jake { .. } => 4 * 60,
-      _ => 60 * 60,
+      Self::Jake { .. } => Some(4 * 60),
+      _ => None,
     }
   }
 

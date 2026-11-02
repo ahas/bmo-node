@@ -2,8 +2,6 @@
 //! at the node's own agent, its output handed on as it comes and its ending told apart. The control token
 //! is read out of the hub's token file for the one request that needs it and is part of no answer.
 
-use std::sync::LazyLock;
-
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
 use futures_util::StreamExt;
@@ -35,8 +33,6 @@ const WAITING_CHUNKS: usize = 8;
 
 // The most a road's failure says.
 const DETAIL_MOST: usize = 200;
-
-static HTTP: LazyLock<reqwest::Client> = LazyLock::new(reqwest::Client::new);
 
 fn last_line(text: &str) -> String {
   text
@@ -112,7 +108,9 @@ impl HubExec {
       Ok(token) => token,
       Err(why) => return Ended::Failed(why),
     };
-    let asked = HTTP
+    let asked = self
+      .machine
+      .http()
       .post(format!("{}/exec?agent={}", self.hub.url, encoded(&self.agent)))
       .bearer_auth(&token)
       .json(&json!({ "shell": "linux", "command": script, "env": {} }))
@@ -175,7 +173,9 @@ impl HubExec {
   }
 
   async fn cancel(&self, token: &str, id: &str) {
-    let _ = HTTP
+    let _ = self
+      .machine
+      .http()
       .post(format!("{}/cancel", self.hub.url))
       .bearer_auth(token)
       .json(&json!({ "id": id }))

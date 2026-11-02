@@ -3,8 +3,6 @@
 //! checked now, a node's target printed for a tool, and the Windows of each node made readable in full.
 //! No line holds a credential, only where one is kept.
 
-use std::time::Duration;
-
 use clap::Parser;
 use hardware::roads::{Source, stream};
 use hardware::source_of;
@@ -389,9 +387,6 @@ pub async fn nodes(store: &Store, machine: &Machine, args: NodesArgs) -> Result<
   })
 }
 
-// How long one node's setup may take: a download and a driver's install.
-const SETUP: Duration = Duration::from_secs(5 * 60);
-
 const WINDOWS_POWERSHELL: &str = "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe";
 
 // What the setup prints where there is no Windows under the machine to set up.
@@ -480,8 +475,7 @@ pub async fn run_setup(source: &Source) -> WindowsSetup {
   let script = windows_setup_script();
   let script = if source.powershell() { script } else { windows_shell_line(&script) };
   let (lines, mut read) = mpsc::channel(64);
-  let stop = CancellationToken::new();
-  let run = stream(source, &script, lines, stop.clone());
+  let run = stream(source, &script, lines, CancellationToken::new());
   let gather = async {
     let mut printed = Vec::new();
 
@@ -491,10 +485,7 @@ pub async fn run_setup(source: &Source) -> WindowsSetup {
 
     printed
   };
-  let Ok((end, printed)) = tokio::time::timeout(SETUP, async { tokio::join!(run, gather) }).await else {
-    stop.cancel();
-    return read_setup("", Err("the script did not finish in time".to_owned()));
-  };
+  let (end, printed) = tokio::join!(run, gather);
   let ended = if end.ok { Ok(()) } else { Err(end.failure) };
 
   read_setup(&printed.join("\n"), ended)

@@ -149,9 +149,11 @@ fn a_windows_login_is_kept_carried_in_its_target_said_beside_its_address_and_a_c
     json!({
       "nodeName": "pc-node", "kind": "ssh", "role": null,
       "host": "192.0.2.82", "port": 2222, "user": "tester", "keyPath": "~/.ssh/id_home", "shell": "powershell",
-      "sshOptions": ["BatchMode=yes", "ConnectTimeout=5", "StrictHostKeyChecking=accept-new", "LogLevel=ERROR", "IdentitiesOnly=yes"],
+      "sshOptions": ["BatchMode=yes", "StrictHostKeyChecking=accept-new", "LogLevel=ERROR", "ServerAliveInterval=15",
+        "ServerAliveCountMax=3", "IdentitiesOnly=yes"],
       "sshArgs": [
-        "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", "-o", "StrictHostKeyChecking=accept-new", "-o", "LogLevel=ERROR",
+        "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=accept-new", "-o", "LogLevel=ERROR",
+        "-o", "ServerAliveInterval=15", "-o", "ServerAliveCountMax=3",
         "-o", "IdentitiesOnly=yes", "-i", "/srv/tester/.ssh/id_home", "-p", "2222", "tester@192.0.2.82",
       ],
       "hubId": null, "hubAddress": null, "hubTokenFile": null, "agentName": null,
