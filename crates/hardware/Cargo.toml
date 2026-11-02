@@ -16,7 +16,7 @@ node-check = { path = "../node-check" }
 percent-encoding.workspace = true
 policy = { path = "../policy" }
 regex.workspace = true
-reqwest = { workspace = true, features = ["stream"] }
+reqwest.workspace = true
 roxmltree.workspace = true
 rusqlite.workspace = true
 serde.workspace = true
