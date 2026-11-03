@@ -205,7 +205,9 @@
       "gpu0|watts": 31.5,
       "gpu0|mhz": 210,
       "gpu0:vram|gb": 1.17,
-      "storage:win0|gb": 465.27
+      "storage:win0|gb": 465.27,
+      "memory:available|gb": 16.0,
+      "swap|gb": 0.5
     }
   },
   null,
@@ -413,7 +415,9 @@
       "gpu0|watts": 31.5,
       "gpu0|mhz": 210,
       "gpu0:vram|gb": 1.17,
-      "storage:win0|gb": 465.27
+      "storage:win0|gb": 465.27,
+      "memory:available|gb": 16.0,
+      "swap|gb": 0.5
     }
   }
 ]

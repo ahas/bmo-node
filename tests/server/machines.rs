@@ -230,3 +230,38 @@ async fn a_machine_s_readings_are_paged_out_of_the_rows_their_span_is_drawn_from
   );
   assert_eq!(stood.refused(Method::GET, "/machines/gone/readings", None).await, "not-found");
 }
+
+#[tokio::test]
+async fn a_machine_s_memory_samples_answer_who_held_its_memory_and_an_unknown_machine_is_refused() {
+  let stood = Stand::default().up().await;
+  let writer = writer(&stood);
+  let now = store::now_seconds();
+  let (processes, units) = hardware::memory::holders(&hardware::probe::sections(
+    "@@procmem\n2048 1024 0 7 a.service a process\n@@unitmem\n4096 1024 2048 0 0 a.service\n",
+  ))
+  .unwrap();
+
+  writer.memory(
+    "local",
+    now - 5,
+    &hardware::memory::sample_of("local", now - 5, &view(), processes, units),
+  );
+  writer.reading("local", now, &view());
+  writer.written();
+
+  let page = stood.get("/machines/local/memory").await;
+
+  assert_eq!(page["more"], false);
+  assert_eq!(page["items"][0]["machineName"], "local");
+  assert_eq!(page["items"][0]["at"], (now - 5) * 1000);
+  assert_eq!(
+    page["items"][0]["processes"],
+    json!([{ "pid": 7, "name": "a process", "unit": "a.service", "rssMb": 2, "shmemMb": 1, "swapMb": 0 }])
+  );
+  assert_eq!(
+    page["items"][0]["units"],
+    json!([{ "unit": "a.service", "currentMb": 4, "anonMb": 1, "shmemMb": 2, "fileMb": 0, "swapMb": 0 }])
+  );
+
+  assert_eq!(stood.refused(Method::GET, "/machines/gone/memory", None).await, "not-found");
+}

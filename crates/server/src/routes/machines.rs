@@ -5,9 +5,10 @@ use axum::Json;
 use axum::body::Bytes;
 use axum::extract::Path;
 use axum::http::Uri;
-use bmo_node_client::hardware::{ReadingPage, ReadingsQuery};
+use bmo_node_client::hardware::{MemorySamplePage, MemorySamplesQuery, ReadingPage, ReadingsQuery};
 use bmo_node_client::machines::{Machine, MachineChanges, MachinePage};
 use hardware::follow_tracking;
+use hardware::memory::{AskedSamples, read_samples};
 use hardware::probe::plausible_celsius;
 use hardware::record::Reader;
 use hardware::series::{Asked, DEFAULT_SPAN_MS, ReadingsError, read_readings};
@@ -72,6 +73,21 @@ pub async fn readings(service: Shared, Path(name): Path<String>, uri: Uri) -> An
       ReadingsError::Span(_) => Reply::bad_request(why.to_string()),
       other => Reply::failed(other.to_string()),
     })?;
+
+  Ok(Json(page))
+}
+
+pub async fn memory(service: Shared, Path(name): Path<String>, uri: Uri) -> Answer<MemorySamplePage> {
+  let asked: MemorySamplesQuery = query(&uri)?;
+  let named = known(&service, &name)?;
+  let asked = AskedSamples {
+    after_ms: asked.after,
+    before_ms: asked.before,
+    limit: asked.limit.map(|limit| limit as usize),
+  };
+  let live = Reader::open(&service.record);
+  let page = read_samples(&service.store, live.as_ref(), &named.name, asked, store::now_seconds())
+    .map_err(|why| Reply::failed(why.to_string()))?;
 
   Ok(Json(page))
 }

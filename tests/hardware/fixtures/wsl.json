@@ -293,7 +293,9 @@
       "storage:win0|temp": 41.9,
       "storage:win1|gb": 181.83,
       "storage:win1|temp": 39,
-      "fan:nct6798d:Fan #2|rpm": 641
+      "fan:nct6798d:Fan #2|rpm": 641,
+      "memory:available|gb": 16.22,
+      "swap|gb": 1.59
     }
   }
 ]

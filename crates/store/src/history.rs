@@ -1,5 +1,6 @@
 //! The hardware history's rows (docs/hardware.md, 「History」): one row per machine per minute in
-//! `hardware_samples`, one per half hour in `hardware_rollups`, each its figures as JSON text. What the rows
+//! `hardware_samples`, one per half hour in `hardware_rollups`, each its figures as JSON text; and one row per
+//! machine per minute in `memory_samples`, its sample as JSON text (「Who holds the memory」). What the rows
 //! hold, and when they are written and pruned, is the hardware crate's; the store keeps them.
 
 use rusqlite::params;
@@ -45,6 +46,43 @@ impl Store {
     unit.commit()?;
 
     Ok(())
+  }
+
+  /// The second of a machine's last memory sample, or none where it has none.
+  pub fn last_memory_sample_at(&self, machine: &str) -> Result<Option<i64>> {
+    Ok(self.connection().query_row(
+      "SELECT MAX(at) FROM memory_samples WHERE machine = ?1",
+      [machine],
+      |row| row.get(0),
+    )?)
+  }
+
+  /// Memory samples of one machine written together, each replacing a sample of its second.
+  pub fn put_memory_samples(&self, machine: &str, rows: &[(i64, String)]) -> Result<()> {
+    let mut connection = self.connection();
+    let unit = connection.transaction()?;
+
+    for (at, sample) in rows {
+      unit.execute(
+        "INSERT INTO memory_samples (machine, at, sample) VALUES (?1, ?2, ?3)
+         ON CONFLICT (machine, at) DO UPDATE SET sample = excluded.sample",
+        params![machine, at, sample],
+      )?;
+    }
+
+    unit.commit()?;
+
+    Ok(())
+  }
+
+  /// A machine's memory samples from `from` up to `until`, the oldest first.
+  pub fn memory_samples(&self, machine: &str, from: i64, until: i64) -> Result<Vec<Row>> {
+    self.rows("memory_samples", "sample", machine, from, until)
+  }
+
+  /// Memory samples older than `before` removed; how many went.
+  pub fn prune_memory_samples(&self, before: i64) -> Result<usize> {
+    Ok(self.connection().execute("DELETE FROM memory_samples WHERE at < ?1", [before])?)
   }
 
   /// A machine's minute rows from `from` up to `until`, the oldest first.

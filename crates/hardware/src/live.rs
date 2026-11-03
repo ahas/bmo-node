@@ -17,6 +17,7 @@ use tokio::time::Instant;
 use tokio_util::sync::CancellationToken;
 
 use super::js::number;
+use super::memory::{MemorySample, holders, sample_of};
 use super::probe::{LiveProbe, read_sections};
 use super::roads::{Source, StreamEnd, stream};
 use super::view::{HardwareView, hardware_view};
@@ -61,6 +62,8 @@ pub fn live_script(source: &Source) -> &'static str {
 pub trait Sink: Send + Sync {
   fn reading(&self, machine: &str, at: i64, view: &HardwareView);
   fn failure(&self, machine: &str, at: i64, detail: &str);
+  /// A look at who holds the machine's memory, taken with the reading of the same second.
+  fn memory(&self, _machine: &str, _at: i64, _sample: &MemorySample) {}
 }
 
 pub type Streaming = Pin<Box<dyn Future<Output = StreamEnd> + Send>>;
@@ -219,8 +222,10 @@ impl Machine {
     let view = hardware_view(&snapshot);
     let uptime = whole.get("uptime").and_then(|lines| lines.first()).and_then(|line| number(line));
     let at = self.second(id, uptime);
+    let sample =
+      holders(&whole).map(|(processes, units)| sample_of(&self.name, at, &view, processes, units));
 
-    self.publish(id, &view, at);
+    self.publish(id, &view, sample.as_ref(), at);
   }
 
   /// The second a reading was taken at: counted along the machine's own uptime from the run's anchor,
@@ -245,7 +250,7 @@ impl Machine {
     at
   }
 
-  fn publish(&mut self, id: u64, view: &HardwareView, at: i64) {
+  fn publish(&mut self, id: u64, view: &HardwareView, sample: Option<&MemorySample>, at: i64) {
     if self.next.as_ref().is_some_and(|run| run.id == id) {
       let relieved = self.current.take();
 
@@ -263,6 +268,10 @@ impl Machine {
     run.published = true;
     self.failures = 0;
     self.sink.reading(&self.name, at, view);
+
+    if let Some(sample) = sample {
+      self.sink.memory(&self.name, at, sample);
+    }
   }
 
   fn ended(&mut self, id: u64, end: StreamEnd) {

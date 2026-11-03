@@ -1,7 +1,8 @@
 //! Every machine's hardware read live and kept for a month (docs/hardware.md, 「Live」, 「History」 and
 //! 「Tracking」): one live run of the probe held open per tracked machine, each reading written to the live
 //! record in node's folder, and once a minute the runs kept to the tracked machines, the closed minutes
-//! folded into the store's history, the closed half hours rolled up and what has grown old removed.
+//! folded into the store's history, the closed half hours rolled up and what has grown old removed; and who
+//! holds each machine's memory, kept beside its figures (「Who holds the memory」).
 
 pub mod chips;
 pub mod history;
@@ -9,6 +10,7 @@ pub mod hub_exec;
 pub mod js;
 pub mod live;
 pub mod machine;
+pub mod memory;
 pub mod once;
 pub mod probe;
 pub mod record;
@@ -67,6 +69,10 @@ impl Sink for Recorded {
   fn failure(&self, machine: &str, at: i64, detail: &str) {
     self.writer.failure(machine, at, detail);
   }
+
+  fn memory(&self, machine: &str, at: i64, sample: &memory::MemorySample) {
+    self.writer.memory(machine, at, sample);
+  }
 }
 
 /// The road a listed node is read by, or none where its row lacks a field its kind needs.
@@ -89,6 +95,9 @@ pub fn source_of(node: &Node) -> Option<Source> {
     }),
   }
 }
+
+/// One machine's stretch of the live record: its name, its figures and its looks at who holds its memory.
+type HeldStretch = (String, Vec<record::Sample>, Vec<(i64, String)>);
 
 /// The live runs and the history over node's store.
 pub struct Recorder {
@@ -184,7 +193,7 @@ impl Recorder {
     self.keep()?;
 
     // The record's stretch read whole first: every minute a fold can reach lies within it.
-    let held: Vec<(String, Vec<record::Sample>)> = match Reader::open(&self.record) {
+    let held: Vec<HeldStretch> = match Reader::open(&self.record) {
       None => vec![],
       Some(reader) => reader
         .machines()
@@ -192,25 +201,28 @@ impl Recorder {
           machines
             .into_iter()
             .map(|machine| {
-              let samples =
-                reader.samples(&machine, now - KEEP_SECONDS - history::MINUTE_SECONDS, now + 1)?;
+              let from = now - KEEP_SECONDS - history::MINUTE_SECONDS;
+              let samples = reader.samples(&machine, from, now + 1)?;
+              let looks = reader.memory_samples(&machine, from, now + 1)?;
 
-              Ok((machine, samples))
+              Ok((machine, samples, looks))
             })
             .collect()
         })
         .map_err(|why| why.to_string())?,
     };
 
-    for (machine, samples) in held {
+    for (machine, samples, looks) in held {
       history::fold(&self.store, &machine, now, KEEP_SECONDS, |from, to| {
         samples.into_iter().filter(|one| one.at >= from && one.at < to).collect()
       })
       .map_err(failed)?;
+      memory::fold(&self.store, &machine, now, KEEP_SECONDS, looks).map_err(failed)?;
     }
 
     history::roll_up(&self.store, now, history::ROLLUP_BATCH).map_err(failed)?;
     history::prune(&self.store, now).map_err(failed)?;
+    memory::prune(&self.store, now).map_err(failed)?;
     self.writer.prune(now, KEEP_SECONDS);
 
     Ok(())

@@ -35,6 +35,7 @@ pub fn router(service: Arc<Service>) -> Router {
     .route("/machines", get(machines::list))
     .route("/machines/{machineName}", get(machines::one).patch(machines::change))
     .route("/machines/{machineName}/readings", get(machines::readings))
+    .route("/machines/{machineName}/memory", get(machines::memory))
     .fallback(no_route)
     .method_not_allowed_fallback(no_route)
     .layer(middleware::from_fn_with_state(service.clone(), bearer))

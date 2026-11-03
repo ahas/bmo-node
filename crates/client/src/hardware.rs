@@ -160,6 +160,9 @@ pub struct MemoryView {
   pub swap_used_kb: Option<f64>,
   pub swap_total_kb: Option<f64>,
   pub swap_share: Option<f64>,
+  /// The machine's `Shmem`, which `MemAvailable` does not count as available.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub shmem_kb: Option<f64>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -283,6 +286,12 @@ pub struct CpuFigures {
 pub struct MemoryFigures {
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub used_gb: Option<Band>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub available_gb: Option<Band>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub shmem_gb: Option<Band>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub swap_used_gb: Option<Band>,
 }
 
 /// One GPU's figures over a stretch.
@@ -357,4 +366,65 @@ pub struct ReadingsQuery {
   /// is given.
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub span_ms: Option<i64>,
+}
+
+/// One process in a look at who holds a machine's memory, in binary megabytes.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ProcessMemory {
+  pub pid: i64,
+  pub name: String,
+  /// The unit the process's control group names.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub unit: Option<String>,
+  pub rss_mb: i64,
+  /// Its `RssShmem`: what it has mapped of shared memory now, which may be far less than its unit is charged.
+  pub shmem_mb: i64,
+  pub swap_mb: i64,
+}
+
+/// One unit's control group in a look at who holds a machine's memory, in binary megabytes.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UnitMemory {
+  pub unit: String,
+  pub current_mb: i64,
+  pub anon_mb: i64,
+  /// The shared memory charged to the unit, whether or not a process has it mapped.
+  pub shmem_mb: i64,
+  pub file_mb: i64,
+  pub swap_mb: i64,
+}
+
+/// One look at who held a machine's memory (docs/hardware.md, 「Who holds the memory」).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MemorySample {
+  pub machine_name: String,
+  /// The second the look was taken at, in epoch milliseconds.
+  pub at: i64,
+  pub available_gb: Option<f64>,
+  pub shmem_gb: Option<f64>,
+  pub swap_used_gb: Option<f64>,
+  /// The largest processes by resident memory and swap together.
+  pub processes: Vec<ProcessMemory>,
+  /// The largest units by memory and swap together.
+  pub units: Vec<UnitMemory>,
+}
+
+page!(MemorySamplePage, MemorySample, "A page of a machine's memory samples, oldest first.");
+
+/// Which of a machine's memory samples to read.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MemorySamplesQuery {
+  /// In epoch milliseconds; the seven days' reach where none is given.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub after: Option<i64>,
+  /// In epoch milliseconds; now where none is given.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub before: Option<i64>,
+  /// 500 where none is given.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub limit: Option<u32>,
 }

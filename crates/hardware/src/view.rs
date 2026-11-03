@@ -81,6 +81,7 @@ fn memory_view(memory: Option<&Memory>) -> MemoryView {
     swap_used_kb: swap_used,
     swap_total_kb: swap_total,
     swap_share: share_of(swap_used, swap_total),
+    shmem_kb: memory.and_then(|memory| memory.shmem_kb),
   }
 }
 
@@ -226,6 +227,13 @@ pub fn history_sample(view: &HardwareView) -> Map<String, Value> {
   );
   put("cpu", "mhz", view.cpu.mhz);
   put("memory", "gb", gb_of_kb(view.memory.used_kb));
+  put(
+    "memory:available",
+    "gb",
+    gb_of_kb(view.memory.total_kb.zip(view.memory.used_kb).map(|(total, used)| total - used)),
+  );
+  put("memory:shmem", "gb", gb_of_kb(view.memory.shmem_kb));
+  put("swap", "gb", gb_of_kb(view.memory.swap_used_kb));
 
   for gpu in &view.gpus {
     let device = format!("gpu{}", super::js::shown(gpu.index));

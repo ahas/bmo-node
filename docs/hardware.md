@@ -40,8 +40,8 @@ what this service answers (`docs/api.md`, 「Machines」).
 - What it reads:
   - host name, kernel release, whether the kernel is WSL's, and the distribution's name and version from
     os-release;
-  - `/proc/uptime`, `/proc/loadavg`, the four totals of `/proc/meminfo` the monitor shows (memory and swap,
-    total and available), the CPU model out of `/proc/cpuinfo`;
+  - `/proc/uptime`, `/proc/loadavg`, the five totals of `/proc/meminfo` the monitor keeps (memory and swap,
+    total and available, and the shared memory), the CPU model out of `/proc/cpuinfo`;
   - each logical CPU's package, core, the set of CPUs its L3 is shared with, and its current clock from
     cpufreq;
   - `/proc/stat` twice, which each CPU's use is worked out from: half a second apart in the probe run once,
@@ -57,7 +57,8 @@ what this service answers (`docs/api.md`, 「Machines」).
   - the block devices from `lsblk`, the sysfs device each disk stands on, and from `df` each mounted file
     system a volume can be (「Storage」);
   - on WSL, the Windows side (below);
-  - the running and failed services of systemd, the system's and the account's own.
+  - the running and failed services of systemd, the system's and the account's own;
+  - in a live run, every five readings, who holds the memory (「Who holds the memory」).
 - **A value that cannot be read is null, never nought.** In particular:
   - a CPU's clock is read from cpufreq; where there is none, `/proc/cpuinfo` on a machine that is not WSL,
     and on WSL the Windows side's;
@@ -161,8 +162,8 @@ what this service answers (`docs/api.md`, 「Machines」).
 
 - **Every figure is named by the piece of hardware it belongs to and what it measures,** `<piece>|<metric>`:
   the metric is `use`, `temp`, `watts`, `mhz`, `gb` or `rpm`, and the piece `cpu`, `memory`, `gpu<n>`,
-  `gpu<n>:vram`, `storage:<key>` or `fan:<chip>:<label>`. A figure is kept to a tenth, a store to a
-  hundredth of a gigabyte. The live record and the history use the same names.
+  `memory:available`, `memory:shmem`, `swap`, `gpu<n>:vram`, `storage:<key>` or `fan:<chip>:<label>`. A figure
+  is kept to a tenth, a store to a hundredth of a gigabyte. The live record and the history use the same names.
 - **Every closed minute is folded out of the live record** into `hardware_samples`, once a minute: one row
   per machine per minute holding each figure's lowest, highest, sum and count across that minute's
   readings, under the minute's start. A machine is never read a second time for its history. Each pass
@@ -227,6 +228,34 @@ flowchart TD
 - **How much is kept:** fifteen minutes back, and at most 16 KB for every second of that reach. Each
   minute's pass folds the closed minutes first, then removes the rows older than the reach, then the
   oldest beyond the size.
+
+## Who holds the memory
+
+So that a machine that ran out of memory can be explained afterwards, each machine's figures stand beside who held
+the memory at that moment.
+
+- **A look at the memory's holders** is taken by the live run itself, every five readings, a machine reaching
+  exhaustion in seconds as easily as in hours. It costs the machine a few tens of milliseconds, reads nothing that
+  waits on a process's memory, and holds two lists:
+  - **the processes,** the eight largest by resident memory and swap together, each with its pid, its name, the unit
+    its control group names, its `VmRSS`, its `RssShmem` and its `VmSwap`;
+  - **the units,** the six largest service and scope control groups by memory and swap together, each with its
+    `memory.current`, the `anon`, `shmem` and `file` of its `memory.stat`, and its `memory.swap.current`.
+- **Both lists are needed.** A process's `RssShmem` counts only what it has mapped this moment, and the kernel's
+  reclaim drops the mappings of shared memory it cannot free, so shared memory still resident may be charged to a
+  unit while no process shows it; the unit's `shmem` names its owner.
+- **A machine that cannot say is left out:** a Windows machine has no such lists, and the WSL side of a machine says
+  what the WSL virtual machine holds. A section that does not read leaves a list empty.
+- **A sample** is such a look with the machine's `MemAvailable`, `Shmem` and swap used at the same reading.
+- **The live record keeps every sample for its fifteen minutes** (「Live」), the minute's pass folding each closed minute's
+  worst into `memory_samples`: the sample of the lowest `MemAvailable` in that minute, under its own second. A minute's
+  sample is kept seven days, and each pass removes what has grown older.
+- **It is pulled, never kept on the machine.** The samples stand on this machine from the moment the run prints them,
+  so a machine that freezes or falls over takes none with it, and what it printed up to its last reading stays. While
+  the machine is too starved to run the probe or carry its output nothing is taken, and the gap says so; the
+  machine's five-second samples and its one-second figures show the climb up to it.
+- **A machine's samples are read** by `GET /machines/{machineName}/memory` (`docs/api.md`, 「Machines」), the last
+  fifteen minutes in five-second samples and the rest of the seven days in the minutes' worst.
 
 ## Tracking
 

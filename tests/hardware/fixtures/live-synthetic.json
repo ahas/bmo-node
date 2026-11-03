@@ -135,7 +135,8 @@
       "cpu|watts": 30,
       "cpu|mhz": 3600,
       "memory|gb": 0,
-      "storage:/dev/nvme0n1p2|gb": 0
+      "storage:/dev/nvme0n1p2|gb": 0,
+      "memory:available|gb": 0.0
     }
   },
   null,
@@ -273,7 +274,8 @@
       "cpu|use": 12,
       "cpu|mhz": 2895,
       "memory|gb": 0,
-      "storage:/dev/nvme0n1p2|gb": 0
+      "storage:/dev/nvme0n1p2|gb": 0,
+      "memory:available|gb": 0.0
     }
   },
   {
@@ -410,7 +412,8 @@
       "cpu|use": 20,
       "cpu|mhz": 2895,
       "memory|gb": 0,
-      "storage:/dev/nvme0n1p2|gb": 0
+      "storage:/dev/nvme0n1p2|gb": 0,
+      "memory:available|gb": 0.0
     }
   }
 ]

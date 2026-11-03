@@ -24,6 +24,9 @@ lock waits its turn until the lock is given back, however long it is held.
 - **`hardware_samples`**: one row per machine per minute, `machine`, `at` (the minute's start) and
   `sample`, each figure's lowest, highest, sum and count as JSON; keyed by machine and minute.
 - **`hardware_rollups`**: the same per half hour, `machine`, `at` and `tally`.
+- **`memory_samples`**: one row per machine per minute, `machine`, `at` (the second of that minute's sample with the
+  lowest `MemAvailable`) and `sample`, the sample as `GET /machines/{machineName}/memory` answers it as JSON; keyed by
+  machine and second, kept seven days (`docs/hardware.md`, 「Who holds the memory」).
 - **`settings`**: `key` and `value`, both text:
   - `hardware_tracking:<machine>` and `hardware_cpu_limit:<machine>` (`docs/hardware.md`);
   - `machine_limit:<name>` for each of the three machine limits (`docs/machine.md`);
@@ -37,6 +40,8 @@ together.
 - **`live_latest`**: each machine's latest reading in full as JSON, or the failure its run met, with the
   second it came.
 - **`live_samples`**: one row per machine per second, that reading's figures as JSON.
+- **`live_memory`**: one row per machine per look at who holds its memory, the sample as JSON, kept as long as the
+  record's reach.
 
 ## What the store does not hold
 

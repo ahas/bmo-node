@@ -108,6 +108,23 @@ export interface paths {
         patch: operations["changeMachine"];
         trace?: never;
     };
+    "/machines/{machineName}/memory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Who held a machine's memory, oldest first: every five seconds over the last fifteen minutes, and each minute's sample of the lowest `MemAvailable` for seven days. */
+        get: operations["listMachinesMemorySamples"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/machines/{machineName}/readings": {
         parameters: {
             query?: never;
@@ -552,11 +569,44 @@ export interface components {
         };
         /** @description Memory's figures over a stretch. */
         MemoryFigures: {
+            availableGb?: components["schemas"]["Band"] | null;
+            shmemGb?: components["schemas"]["Band"] | null;
+            swapUsedGb?: components["schemas"]["Band"] | null;
             usedGb?: components["schemas"]["Band"] | null;
+        };
+        /** @description One look at who held a machine's memory (docs/hardware.md, 「Who holds the memory」). */
+        MemorySample: {
+            /**
+             * Format: int64
+             * @description The second the look was taken at, in epoch milliseconds.
+             */
+            at: number;
+            /** Format: double */
+            availableGb: number | null;
+            machineName: string;
+            /** @description The largest processes by resident memory and swap together. */
+            processes: components["schemas"]["ProcessMemory"][];
+            /** Format: double */
+            shmemGb: number | null;
+            /** Format: double */
+            swapUsedGb: number | null;
+            /** @description The largest units by memory and swap together. */
+            units: components["schemas"]["UnitMemory"][];
+        };
+        /** @description A page of a machine's memory samples, oldest first. */
+        MemorySamplePage: {
+            items: components["schemas"]["MemorySample"][];
+            /** @description Whether anything stands past the last item. */
+            more: boolean;
         };
         MemoryView: {
             /** Format: double */
             share: number | null;
+            /**
+             * Format: double
+             * @description The machine's `Shmem`, which `MemAvailable` does not count as available.
+             */
+            shmemKb?: number | null;
             /** Format: double */
             swapShare: number | null;
             /** Format: double */
@@ -686,6 +736,23 @@ export interface components {
             avg300: number;
             /** Format: double */
             avg60: number;
+        };
+        /** @description One process in a look at who holds a machine's memory, in binary megabytes. */
+        ProcessMemory: {
+            name: string;
+            /** Format: int64 */
+            pid: number;
+            /** Format: int64 */
+            rssMb: number;
+            /**
+             * Format: int64
+             * @description Its `RssShmem`: what it has mapped of shared memory now, which may be far less than its unit is charged.
+             */
+            shmemMb: number;
+            /** Format: int64 */
+            swapMb: number;
+            /** @description The unit the process's control group names. */
+            unit?: string | null;
         };
         /** @description One stretch of a machine's recorded figures, one group per piece of hardware. */
         Reading: {
@@ -832,6 +899,23 @@ export interface components {
          * @enum {string}
          */
         Tone: "good" | "bad" | "unknown";
+        /** @description One unit's control group in a look at who holds a machine's memory, in binary megabytes. */
+        UnitMemory: {
+            /** Format: int64 */
+            anonMb: number;
+            /** Format: int64 */
+            currentMb: number;
+            /** Format: int64 */
+            fileMb: number;
+            /**
+             * Format: int64
+             * @description The shared memory charged to the unit, whether or not a process has it mapped.
+             */
+            shmemMb: number;
+            /** Format: int64 */
+            swapMb: number;
+            unit: string;
+        };
         /** @description One mounted volume. */
         VolumeView: {
             /** Format: double */
@@ -1156,6 +1240,40 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["BadField"];
+            500: components["responses"]["Failed"];
+        };
+    };
+    listMachinesMemorySamples: {
+        parameters: {
+            query?: {
+                /** @description In epoch milliseconds; the seven days' reach where none is given. */
+                after?: number;
+                /** @description In epoch milliseconds; now where none is given. */
+                before?: number;
+                /** @description 500 where none is given. */
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                /** @description `local` for the service's own machine, a node's name for a node. */
+                machineName: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Who held a machine's memory, oldest first: every five seconds over the last fifteen minutes, and each minute's sample of the lowest `MemAvailable` for seven days. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemorySamplePage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
             500: components["responses"]["Failed"];
         };
     };

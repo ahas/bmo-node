@@ -73,6 +73,17 @@ DELETE FROM settings WHERE key IN ('machine_limit:launch_memory_full_pct', 'mach
   'machine_limit:launch_load_per_thread', 'machine_pressure_told', 'machine_disk_told');
 "#;
 
+// Who held each machine's memory, one sample per machine per minute.
+const THIRD: &str = r#"
+CREATE TABLE memory_samples (
+  machine TEXT NOT NULL,
+  at INTEGER NOT NULL,
+  sample TEXT NOT NULL,
+  PRIMARY KEY (machine, at)
+);
+CREATE INDEX memory_samples_at ON memory_samples (at);
+"#;
+
 /// Every step not yet run, run, and the version moved to the last.
 pub fn settle(connection: &mut Connection, now: i64) -> rusqlite::Result<()> {
   let version: i64 = connection.pragma_query_value(None, "user_version", |row| row.get(0))?;
@@ -94,6 +105,14 @@ pub fn settle(connection: &mut Connection, now: i64) -> rusqlite::Result<()> {
 
     unit.execute_batch(SECOND)?;
     unit.pragma_update(None, "user_version", 2)?;
+    unit.commit()?;
+  }
+
+  if version < 3 {
+    let unit = connection.transaction()?;
+
+    unit.execute_batch(THIRD)?;
+    unit.pragma_update(None, "user_version", 3)?;
     unit.commit()?;
   }
 

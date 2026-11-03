@@ -427,7 +427,9 @@
       "storage:sda|gb": 256.34,
       "storage:nvme0n1|gb": 492.9,
       "storage:nvme0n1|temp": 44.9,
-      "storage:net:onedrive:|gb": 201
+      "storage:net:onedrive:|gb": 201,
+      "memory:available|gb": 17.8,
+      "swap|gb": 8.56
     }
   },
   {
@@ -857,7 +859,9 @@
       "storage:sda|gb": 256.34,
       "storage:nvme0n1|gb": 492.9,
       "storage:nvme0n1|temp": 44.9,
-      "storage:net:onedrive:|gb": 201
+      "storage:net:onedrive:|gb": 201,
+      "memory:available|gb": 17.77,
+      "swap|gb": 8.56
     }
   },
   {
@@ -1287,7 +1291,9 @@
       "storage:sda|gb": 256.34,
       "storage:nvme0n1|gb": 492.9,
       "storage:nvme0n1|temp": 44.9,
-      "storage:net:onedrive:|gb": 201
+      "storage:net:onedrive:|gb": 201,
+      "memory:available|gb": 17.7,
+      "swap|gb": 8.56
     }
   },
   {
@@ -1717,7 +1723,9 @@
       "storage:sda|gb": 256.34,
       "storage:nvme0n1|gb": 492.9,
       "storage:nvme0n1|temp": 44.9,
-      "storage:net:onedrive:|gb": 201
+      "storage:net:onedrive:|gb": 201,
+      "memory:available|gb": 17.81,
+      "swap|gb": 8.66
     }
   }
 ]

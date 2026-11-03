@@ -10,6 +10,7 @@ use std::sync::mpsc;
 use rusqlite::{Connection, OpenFlags, params};
 use serde_json::{Map, Value};
 
+use super::memory::MemorySample;
 use super::view::{HardwareView, history_sample};
 
 /// How far back the record reaches (docs/hardware.md, 「Live」): the readings of a span under a minute are
@@ -30,7 +31,9 @@ fn open(path: &Path) -> rusqlite::Result<Connection> {
   record.execute_batch(
     "CREATE TABLE IF NOT EXISTS live_latest (machine TEXT PRIMARY KEY, at INTEGER NOT NULL, view TEXT, failure TEXT);
      CREATE TABLE IF NOT EXISTS live_samples (machine TEXT NOT NULL, at INTEGER NOT NULL, sample TEXT NOT NULL, PRIMARY KEY (machine, at));
-     CREATE INDEX IF NOT EXISTS live_samples_at ON live_samples (at);",
+     CREATE INDEX IF NOT EXISTS live_samples_at ON live_samples (at);
+     CREATE TABLE IF NOT EXISTS live_memory (machine TEXT NOT NULL, at INTEGER NOT NULL, sample TEXT NOT NULL, PRIMARY KEY (machine, at));
+     CREATE INDEX IF NOT EXISTS live_memory_at ON live_memory (at);",
   )?;
 
   Ok(record)
@@ -47,6 +50,11 @@ enum Write {
     machine: String,
     at: i64,
     detail: String,
+  },
+  Memory {
+    machine: String,
+    at: i64,
+    sample: String,
   },
   Prune {
     now: i64,
@@ -87,6 +95,16 @@ fn write(record: &mut Connection, write: Write) -> rusqlite::Result<()> {
         params![machine, at, detail],
       )
       .map(drop),
+    Write::Memory {
+      machine,
+      at,
+      sample,
+    } => record
+      .execute(
+        "INSERT OR REPLACE INTO live_memory (machine, at, sample) VALUES (?1, ?2, ?3)",
+        params![machine, at, sample],
+      )
+      .map(drop),
     Write::Written(answer) => {
       let _ = answer.send(());
 
@@ -98,6 +116,7 @@ fn write(record: &mut Connection, write: Write) -> rusqlite::Result<()> {
       most_bytes,
     } => {
       record.execute("DELETE FROM live_samples WHERE at < ?1", params![now - keep_seconds])?;
+      record.execute("DELETE FROM live_memory WHERE at < ?1", params![now - keep_seconds])?;
 
       let cut: Option<i64> = record
         .query_row(
@@ -138,6 +157,7 @@ impl Writer {
           let kind = match &one {
             Write::Reading { .. } => "reading",
             Write::Failure { .. } => "failure",
+            Write::Memory { .. } => "memory",
             Write::Prune { .. } => "prune",
             Write::Written(_) => "written",
           };
@@ -172,6 +192,18 @@ impl Writer {
       machine: machine.to_owned(),
       at,
       detail: detail.to_owned(),
+    });
+  }
+
+  pub fn memory(&self, machine: &str, at: i64, sample: &MemorySample) {
+    let Ok(sample) = serde_json::to_string(sample) else {
+      return;
+    };
+
+    let _ = self.writes.send(Write::Memory {
+      machine: machine.to_owned(),
+      at,
+      sample,
     });
   }
 
@@ -254,6 +286,17 @@ impl Reader {
           sample: serde_json::from_str(&text).unwrap_or_default(),
         })
       })?
+      .collect()
+  }
+
+  /// One machine's memory samples between two seconds, in their order, each as its JSON text.
+  pub fn memory_samples(&self, machine: &str, from: i64, to: i64) -> rusqlite::Result<Vec<(i64, String)>> {
+    let mut asked = self.0.prepare(
+      "SELECT at, sample FROM live_memory WHERE machine = ?1 AND at >= ?2 AND at < ?3 ORDER BY at",
+    )?;
+
+    asked
+      .query_map(params![machine, from, to], |row| Ok((row.get(0)?, row.get(1)?)))?
       .collect()
   }
 

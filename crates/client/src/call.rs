@@ -12,7 +12,7 @@ use sse_stream::SseStream;
 
 use crate::error::WireError;
 use crate::events::{Event, EventPage, EventsQuery};
-use crate::hardware::{ReadingPage, ReadingsQuery};
+use crate::hardware::{MemorySamplePage, MemorySamplesQuery, ReadingPage, ReadingsQuery};
 use crate::machines::{Health, Machine, MachineChanges, MachinePage};
 use crate::nodes::{
   Hub, HubPage, NewHub, NewNode, Node, NodeChanges, NodeCheck, NodeCheckAsk, NodePage, NodesQuery, Target,
@@ -234,6 +234,15 @@ impl NodeClient {
   /// `GET /machines/{machineName}/readings`.
   pub async fn readings(&self, machine_name: &str, query: &ReadingsQuery) -> CallResult<ReadingPage> {
     self.get_query(&["machines", machine_name, "readings"], query).await
+  }
+
+  /// `GET /machines/{machineName}/memory`.
+  pub async fn memory_samples(
+    &self,
+    machine_name: &str,
+    query: &MemorySamplesQuery,
+  ) -> CallResult<MemorySamplePage> {
+    self.get_query(&["machines", machine_name, "memory"], query).await
   }
 
   /// `GET /events` asked as a page, for a caller that polls.

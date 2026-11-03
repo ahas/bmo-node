@@ -7,6 +7,7 @@ mod history;
 mod hub_exec;
 mod js;
 mod live;
+mod memory;
 mod parity;
 mod probe;
 mod recorder;

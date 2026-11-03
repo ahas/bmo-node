@@ -53,6 +53,7 @@ fn snapshot() -> Snapshot {
       available_kb: 250.0,
       swap_total_kb: 100.0,
       swap_free_kb: 75.0,
+      shmem_kb: None,
     }),
     cpu_model: Some("AMD Ryzen 7 5800X 8-Core Processor".into()),
     cpu_usage: Some(0.3),

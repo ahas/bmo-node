@@ -2,7 +2,7 @@
 
 This document states the API of the node service, version **0.1.0-rev.2**: every route and event it
 answers, the clients and the harness plugin it publishes, its configuration and its command. A change to
-anything here changes this document in the same commit and follows the version rule (「Versions」).
+anything here changes this document in the same commit.
 
 The service is an upstream unit (bmo-chat's `docs/conventions.md`, 「Upstream and downstream」): a harness
 can take it as its first entry point through its MCP server, with no other unit running. Routes are
@@ -72,6 +72,7 @@ its own.
   | `node_machines` | `GET /machines` |
   | `node_machine` | `GET /machines/{machineName}` |
   | `node_readings` | `GET /machines/{machineName}/readings` |
+  | `node_memory` | `GET /machines/{machineName}/memory` |
 
   A harness asks `node_target` how to reach a node before it logs in, and `node_machine` how loaded a
   machine is before it starts heavy work there. A tool's input is the route's path and query parameters by
@@ -154,6 +155,7 @@ A hub is `id`, `address`, its control address, `tokenFile`, the file its control
 | `GET /machines/{machineName}` | | the machine, with its latest reading |
 | `PATCH /machines/{machineName}` | any of `tracking` and `cpuLimit`; null clears `cpuLimit` | the machine; the recorder follows a tracking switch at once, and a limit is above 0 °C and below 127 °C |
 | `GET /machines/{machineName}/readings` | query `after?`, `before?`, `limit?`, `spanMs?` | a page of the machine's past readings (below) |
+| `GET /machines/{machineName}/memory` | query `after?`, `before?`, `limit?` | a page of the machine's memory samples, who held its memory and when (below) |
 
 A machine:
 
@@ -191,7 +193,7 @@ caller words both.
 over the stretch, left out where nothing was recorded:
 
 - `cpu`: `usePct?`, `celsius?`, `watts?` and `mhz?`;
-- `memory`: `usedGb?`;
+- `memory`: `usedGb?`, `availableGb?`, `shmemGb?` and `swapUsedGb?`;
 - `gpus`: per GPU, `index` with `usePct?`, `celsius?`, `watts?`, `mhz?` and `vramUsedGb?`;
 - `storage`: per device, `key` with `usedGb?` and `celsius?`;
 - `fans`: per fan, `chip` and `label` with `rpm?`.
@@ -203,6 +205,20 @@ reaches fifteen minutes back; a span of a minute or more is a whole number of mi
 minutes' rows, which reach two days back, and one of a whole number of half hours out of the half hours'
 rows, which reach thirty-one days back (`docs/hardware.md`, 「History」). `after` defaults to the reach and
 is held to it; `before` defaults to now. Any other span is `bad-request`.
+
+**A memory sample** is one look at who held a machine's memory (`docs/hardware.md`, 「Who holds the memory」):
+
+| Field | What it is |
+|---|---|
+| `machineName`, `at` | the machine, and the second the look was taken at |
+| `availableGb?`, `shmemGb?`, `swapUsedGb?` | the machine's `MemAvailable`, `Shmem` and swap used at that reading; null where not read |
+| `processes` | the largest processes by resident memory and swap together: `pid`, `name`, `unit?`, the unit its control group names, `rssMb`, `shmemMb`, its `RssShmem`, and `swapMb` |
+| `units` | the largest service and scope control groups by memory and swap together: `unit`, `currentMb`, `anonMb`, `shmemMb`, `fileMb` and `swapMb` |
+
+The memory route answers the samples taken after `after` and before `before`, oldest first, at most `limit` of them,
+500 where none is given: every five seconds over the last fifteen minutes, and before that each minute's sample of the
+lowest `MemAvailable`, reaching seven days back. `after` defaults to the reach and is held to it; `before` defaults to
+now. A machine read by no such look answers an empty page. The next page is asked with the last item's `at`.
 
 ## Events
 
@@ -293,6 +309,6 @@ Through `bmo`, the same commands are typed as `bmo node …` and `bmo hardware-s
 
 ## Versions
 
-The repository's version is the workspace's, and both clients and the plugin carry it. Until the first
-release it is `0.1.0` with a revision, `0.1.0-rev.<n>`: each change to this document's routes, fields or
-events, or to a table's contract, raises the revision alone.
+The repository's version is the workspace's, and both clients and the plugin carry it. It follows bmo-chat's
+`docs/conventions.md`, 「Versions」: it moves only at a release the owner declares, and until the first release it is
+`0.1.0` with a revision, `0.1.0-rev.<n>`. A commit, a deployment or a change to this document moves no version.

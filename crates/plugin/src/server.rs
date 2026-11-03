@@ -23,8 +23,8 @@ pub const ENTRY: &str = "A harness asks node_target how to reach a node before i
 const INSTRUCTIONS: &str = "Reads the machines reachable from here through one node service. List the nodes \
   with node_nodes and ask node_target how to reach one before logging in: its sshArgs open a batch SSH \
   login ahead of the command. Ask node_machine how loaded a machine is before starting heavy work there, \
-  and node_readings for its past figures. node_check probes nodes now. A refusal comes back as a tool \
-  error carrying the service's status, code and sentence.";
+  node_readings for its past figures and node_memory for who held its memory. node_check probes nodes now. \
+  A refusal comes back as a tool error carrying the service's status, code and sentence.";
 
 /// The server over the service the client reaches.
 pub struct NodeServer {

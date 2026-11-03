@@ -152,10 +152,14 @@ pub fn reading_of(machine: &str, at_ms: i64, span_ms: i64, figures: &BTreeMap<St
       };
 
       *slot = Some(band);
-    } else if piece == "memory" {
-      if metric == "gb" {
-        reading.memory.used_gb = Some(band);
-      }
+    } else if metric == "gb" && piece == "memory" {
+      reading.memory.used_gb = Some(band);
+    } else if metric == "gb" && piece == "memory:available" {
+      reading.memory.available_gb = Some(band);
+    } else if metric == "gb" && piece == "memory:shmem" {
+      reading.memory.shmem_gb = Some(band);
+    } else if metric == "gb" && piece == "swap" {
+      reading.memory.swap_used_gb = Some(band);
     } else if let Some(gpu) = piece.strip_prefix("gpu") {
       let (number, vram) = match gpu.strip_suffix(":vram") {
         Some(number) => (number, true),

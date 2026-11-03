@@ -5,7 +5,7 @@
 use std::future::Future;
 use std::pin::Pin;
 
-use bmo_node_client::hardware::ReadingsQuery;
+use bmo_node_client::hardware::{MemorySamplesQuery, ReadingsQuery};
 use bmo_node_client::nodes::{NodeCheckAsk, NodesQuery};
 use bmo_node_client::{CallError, NodeClient};
 use schemars::generate::SchemaGenerator;
@@ -147,7 +147,16 @@ struct MachineReadings {
   query: ReadingsQuery,
 }
 
-/// The seven tools, in the order docs/api.md lists them.
+/// One machine's memory samples: the machine, and which of them to read.
+#[derive(Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+struct MachineMemory {
+  machine_name: String,
+  #[serde(flatten)]
+  query: MemorySamplesQuery,
+}
+
+/// The eight tools, in the order docs/api.md lists them.
 pub fn tools() -> Vec<NodeTool> {
   vec![
     tool(
@@ -197,6 +206,17 @@ pub fn tools() -> Vec<NodeTool> {
          machine_name,
          query,
        }| async move { client.readings(&machine_name, &query).await },
+    ),
+    tool(
+      "node_memory",
+      "Who held one machine's memory, oldest first: its MemAvailable, Shmem and swap used, its largest processes \
+       and its largest units; every five seconds over the last fifteen minutes, each minute's worst for seven days.",
+      "GET /machines/{machineName}/memory",
+      |client,
+       MachineMemory {
+         machine_name,
+         query,
+       }| async move { client.memory_samples(&machine_name, &query).await },
     ),
   ]
 }

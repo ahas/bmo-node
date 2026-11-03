@@ -65,6 +65,11 @@ past figures, oldest first, each stretch a band of `min`, `max` and `mean`. `spa
 last fifteen minutes; whole minutes reach two days back; whole half hours, a month. Pass the last item's `at`
 as `after` for the next page while `more` is true.
 
+`node_memory` with `{ "machineName": "<name>", "after": <epoch ms> }` answers who held a machine's memory: its
+`MemAvailable`, `Shmem` and swap used, its largest processes with their `rssMb`, `shmemMb` and `swapMb`, and its
+largest units. Every five seconds over the last fifteen minutes, and each minute's worst for seven days. Read the
+`units` as well as the `processes`: shared memory no process has mapped is charged only to its unit.
+
 ## When a tool answers an error
 
 A tool error's text is JSON: `status`, `code` and `error`, the service's English sentence. Match on `code`:

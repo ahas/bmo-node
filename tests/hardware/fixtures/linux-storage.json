@@ -335,7 +335,9 @@
       "storage:/dev/sdz1|gb": 0,
       "storage:net:fileserver:/home/user/repos|gb": 744.77,
       "storage:net:onedrive:|gb": 36.3,
-      "fan:nct6795:fan2|rpm": 812
+      "fan:nct6795:fan2|rpm": 812,
+      "memory:available|gb": 34.43,
+      "swap|gb": 1.59
     }
   }
 ]

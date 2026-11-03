@@ -1266,6 +1266,36 @@
       "MemoryFigures": {
         "description": "Memory's figures over a stretch.",
         "properties": {
+          "availableGb": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Band"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "shmemGb": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Band"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "swapUsedGb": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Band"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "usedGb": {
             "anyOf": [
               {
@@ -1279,9 +1309,95 @@
         },
         "type": "object"
       },
+      "MemorySample": {
+        "description": "One look at who held a machine's memory (docs/hardware.md, 「Who holds the memory」).",
+        "properties": {
+          "at": {
+            "description": "The second the look was taken at, in epoch milliseconds.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "availableGb": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "machineName": {
+            "type": "string"
+          },
+          "processes": {
+            "description": "The largest processes by resident memory and swap together.",
+            "items": {
+              "$ref": "#/components/schemas/ProcessMemory"
+            },
+            "type": "array"
+          },
+          "shmemGb": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "swapUsedGb": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "units": {
+            "description": "The largest units by memory and swap together.",
+            "items": {
+              "$ref": "#/components/schemas/UnitMemory"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "machineName",
+          "at",
+          "availableGb",
+          "shmemGb",
+          "swapUsedGb",
+          "processes",
+          "units"
+        ],
+        "type": "object"
+      },
+      "MemorySamplePage": {
+        "description": "A page of a machine's memory samples, oldest first.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MemorySample"
+            },
+            "type": "array"
+          },
+          "more": {
+            "description": "Whether anything stands past the last item.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "more"
+        ],
+        "type": "object"
+      },
       "MemoryView": {
         "properties": {
           "share": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "shmemKb": {
+            "description": "The machine's `Shmem`, which `MemAvailable` does not count as available.",
             "format": "double",
             "type": [
               "number",
@@ -1673,6 +1789,46 @@
           "avg10",
           "avg60",
           "avg300"
+        ],
+        "type": "object"
+      },
+      "ProcessMemory": {
+        "description": "One process in a look at who holds a machine's memory, in binary megabytes.",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "pid": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "rssMb": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "shmemMb": {
+            "description": "Its `RssShmem`: what it has mapped of shared memory now, which may be far less than its unit is charged.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "swapMb": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "unit": {
+            "description": "The unit the process's control group names.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "pid",
+          "name",
+          "rssMb",
+          "shmemMb",
+          "swapMb"
         ],
         "type": "object"
       },
@@ -2141,6 +2297,44 @@
         ],
         "type": "string"
       },
+      "UnitMemory": {
+        "description": "One unit's control group in a look at who holds a machine's memory, in binary megabytes.",
+        "properties": {
+          "anonMb": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "currentMb": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "fileMb": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "shmemMb": {
+            "description": "The shared memory charged to the unit, whether or not a process has it mapped.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "swapMb": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "unit": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "unit",
+          "currentMb",
+          "anonMb",
+          "shmemMb",
+          "fileMb",
+          "swapMb"
+        ],
+        "type": "object"
+      },
       "VolumeView": {
         "description": "One mounted volume.",
         "properties": {
@@ -2531,6 +2725,81 @@
           }
         },
         "summary": "Change a machine's tracking or CPU limit; null clears the limit.",
+        "tags": [
+          "machines"
+        ]
+      }
+    },
+    "/machines/{machineName}/memory": {
+      "get": {
+        "operationId": "listMachinesMemorySamples",
+        "parameters": [
+          {
+            "description": "`local` for the service's own machine, a node's name for a node.",
+            "in": "path",
+            "name": "machineName",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "In epoch milliseconds; the seven days' reach where none is given.",
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "In epoch milliseconds; now where none is given.",
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "500 where none is given.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "format": "uint32",
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemorySamplePage"
+                }
+              }
+            },
+            "description": "Who held a machine's memory, oldest first: every five seconds over the last fifteen minutes, and each minute's sample of the lowest `MemAvailable` for seven days."
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/Failed"
+          }
+        },
+        "summary": "Who held a machine's memory, oldest first: every five seconds over the last fifteen minutes, and each minute's sample of the lowest `MemAvailable` for seven days.",
         "tags": [
           "machines"
         ]
@@ -3185,6 +3454,51 @@
         "$ref": "#/components/schemas/ReadingPage"
       },
       "route": "GET /machines/{machineName}/readings"
+    },
+    {
+      "description": "Who held one machine's memory, oldest first: its MemAvailable, Shmem and swap used, its largest processes and its largest units; every five seconds over the last fifteen minutes, each minute's worst for seven days.",
+      "input": {
+        "description": "One machine's memory samples: the machine, and which of them to read.",
+        "properties": {
+          "after": {
+            "description": "In epoch milliseconds; the seven days' reach where none is given.",
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "before": {
+            "description": "In epoch milliseconds; now where none is given.",
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "limit": {
+            "description": "500 where none is given.",
+            "format": "uint32",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "machineName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "machineName"
+        ],
+        "type": "object"
+      },
+      "name": "node_memory",
+      "output": {
+        "$ref": "#/components/schemas/MemorySamplePage"
+      },
+      "route": "GET /machines/{machineName}/memory"
     }
   ]
 }

@@ -12,7 +12,7 @@ which job a process serves, whether a launch goes ahead and what the chat agent 
   service answers and its configuration; `docs/inventory.md` is what came from the old repository. Read
   the document covering a change first. A change that would make it wrong repairs the document first,
   stating what is true now, and the code is then written to match. A change to the boundary API changes
-  `docs/api.md` in the same commit and follows the version rule below.
+  `docs/api.md` in the same commit.
 - **No other service's code.** Among other repositories only the base libraries `bmo-chat`,
   `bmo-chat-client` and `bmo-ui` may be depended on or imported; `tests/dependencies.rs` fails on any
   other. Another unit reaches the service through its API, and the service tells a consumer something by
@@ -76,5 +76,5 @@ which job a process serves, whether a launch goes ahead and what the chat agent 
   `cargo clippy --workspace --all-targets -- -D warnings`.
 - The TypeScript client: `bun run check` in `packages/node-client`.
 - Tests: `cargo test --workspace`.
-- The version is the workspace's: `0.1.0` with a revision, `0.1.0-rev.<n>`, until the first release. A change
-  to the boundary API or to a table's contract raises the revision alone; the major, minor and patch stay.
+- The version is the workspace's: `0.1.0` with a revision, `0.1.0-rev.<n>`, until the first release. It moves
+  only at a release the owner declares (`docs/api.md`, 「Versions」).

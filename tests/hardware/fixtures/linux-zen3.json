@@ -448,7 +448,9 @@
       "gpu0|mhz": 210,
       "gpu0:vram|gb": 0.03,
       "storage:nvme0n1|gb": 443.97,
-      "fan:nct6795:fan2|rpm": 812
+      "fan:nct6795:fan2|rpm": 812,
+      "memory:available|gb": 34.43,
+      "swap|gb": 1.59
     }
   }
 ]

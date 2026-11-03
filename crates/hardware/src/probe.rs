@@ -109,6 +109,7 @@ pub struct Memory {
   pub available_kb: f64,
   pub swap_total_kb: f64,
   pub swap_free_kb: f64,
+  pub shmem_kb: Option<f64>,
 }
 
 /// Everything the probe printed, as figures.
@@ -176,6 +177,7 @@ fn read_memory(lines: &[String]) -> Option<Memory> {
     available_kb: *kb.get("MemAvailable")?,
     swap_total_kb: kb.get("SwapTotal").copied().unwrap_or(0.0),
     swap_free_kb: kb.get("SwapFree").copied().unwrap_or(0.0),
+    shmem_kb: kb.get("Shmem").copied(),
   })
 }
 
@@ -676,6 +678,8 @@ pub fn read_sections(found: &Sections) -> Option<Snapshot> {
         available_kb,
         swap_total_kb: swap.0,
         swap_free_kb: swap.1,
+        // The Linux side's shared memory is the WSL virtual machine's, not of this memory.
+        shmem_kb: None,
       }),
     },
     cpu_usage: windows.cpu_usage.or(snapshot.cpu_usage),
@@ -735,6 +739,7 @@ fn read_windows_machine(found: &Sections) -> Snapshot {
         available_kb,
         swap_total_kb,
         swap_free_kb,
+        shmem_kb: None,
       })
     }),
     cpu_model: cpu.map(|cpu| cpu.model),
@@ -825,6 +830,13 @@ impl LiveProbe {
     .into_iter()
     .map(|(name, lines)| (name.to_owned(), lines))
     .collect();
+
+    // Who holds the memory comes with the readings that looked, and stands for them alone.
+    for name in ["procmem", "unitmem"] {
+      if found.contains_key(name) {
+        whole.insert(name.to_owned(), own(name));
+      }
+    }
 
     // A Windows machine's every reading says it is one, and carries the whole machine in its records.
     if found.contains_key("windows") {

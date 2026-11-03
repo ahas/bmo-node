@@ -1,5 +1,5 @@
 //! The harness plugin: `bmo-node mcp --url <url>` starts an MCP server on standard input and output that
-//! lists exactly the document's seven tools, and each call reaches the stood service through the client,
+//! lists exactly the document's eight tools, and each call reaches the stood service through the client,
 //! behind the token, a refusal coming back as a tool error with the service's code. The command runs as its
 //! own process, spoken to over its pipes, and is taken down before the test ends.
 
@@ -132,7 +132,8 @@ async fn the_server_lists_exactly_the_documented_tools_and_each_calls_its_route(
       "node_check",
       "node_machines",
       "node_machine",
-      "node_readings"
+      "node_readings",
+      "node_memory"
     ]
   );
   assert_eq!(names, documented);

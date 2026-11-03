@@ -6,7 +6,9 @@
 use std::collections::BTreeMap;
 
 use bmo_node_client::events::{EventKind, EventPage, EventsQuery};
-use bmo_node_client::hardware::{Reading, ReadingPage, ReadingsQuery};
+use bmo_node_client::hardware::{
+  MemorySamplePage, MemorySamplesQuery, Reading, ReadingPage, ReadingsQuery,
+};
 use bmo_node_client::machines::{Health, Machine, MachineChanges, MachinePage};
 use bmo_node_client::nodes::{
   Hub, HubPage, NewHub, NewNode, Node, NodeChanges, NodeCheck, NodeCheckAsk, NodeKey, NodePage, NodesQuery,
@@ -480,6 +482,18 @@ fn routes(generator: &mut SchemaGenerator) -> Vec<Route> {
     )
     .at::<String>(generator, "machineName", MACHINE)
     .query::<ReadingsQuery>(generator)
+    .refuses(&[NotFound]),
+    Route::new(
+      "get",
+      "/machines/{machineName}/memory",
+      "machines",
+      "listMachinesMemorySamples",
+      "Who held a machine's memory, oldest first: every five seconds over the last fifteen minutes, and each \
+       minute's sample of the lowest `MemAvailable` for seven days.",
+      read::<MemorySamplePage>(generator),
+    )
+    .at::<String>(generator, "machineName", MACHINE)
+    .query::<MemorySamplesQuery>(generator)
     .refuses(&[NotFound]),
   ]
 }

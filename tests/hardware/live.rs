@@ -34,6 +34,14 @@ impl Sink for Seen {
   fn failure(&self, machine: &str, at: i64, detail: &str) {
     self.0.lock().unwrap().push(format!("{machine} {at} failed: {detail}"));
   }
+
+  fn memory(&self, machine: &str, at: i64, sample: &hardware::memory::MemorySample) {
+    self
+      .0
+      .lock()
+      .unwrap()
+      .push(format!("{machine} {at} look of {}", sample.processes.len()));
+  }
 }
 
 struct Stand {
@@ -175,6 +183,22 @@ async fn hands_on_each_reading_from_a_runs_second_on_use_worked_out_against_the_
   stand.say(0, &reading(11, 50, false)).await;
   stand.say(0, &reading(12, 60, false)).await;
   assert_eq!(stand.seen(), ["box 1000 50%", "box 1001 10%"]);
+}
+
+#[tokio::test(start_paused = true)]
+async fn hands_on_a_look_at_the_memory_with_the_reading_that_took_it_and_no_other() {
+  let mut stand = Stand::new();
+  let looking = |uptime: i64, busy: i64| {
+    reading(uptime, busy, false)
+      .replace("@@end", "@@procmem\n2048 0 0 7 a.service a process\n@@unitmem\n@@end")
+  };
+
+  stand.reader.keep(&[local("box")]);
+  settle().await;
+  stand.say(0, &reading(10, 0, true)).await;
+  stand.say(0, &looking(11, 50)).await;
+  stand.say(0, &reading(12, 60, false)).await;
+  assert_eq!(stand.seen(), ["box 1000 50%", "box 1000 look of 1", "box 1001 10%"]);
 }
 
 #[tokio::test(start_paused = true)]
