@@ -111,28 +111,28 @@ async fn lists_and_removes_a_hub_and_checks_a_hub_node_now_through_it_printing_n
   std::fs::write(&token_file, "JAKE_CONTROL_TOKEN=do-not-print-me\n").unwrap();
 
   // A hub address nothing listens on, so the check meets a refused connection at once.
-  let listed = nodes(&store, &machine, args(&["--add-hub", "http://127.0.0.1:1", "--token-file", &token]))
+  let listed = nodes(&store, &machine, args(&["--add-hub", "http://[::1]:1", "--token-file", &token]))
     .await
     .unwrap();
 
-  assert_eq!(listed, [format!("hub 2 http://127.0.0.1:1, token file {token}")]);
+  assert_eq!(listed, [format!("hub 2 http://[::1]:1, token file {token}")]);
   assert!(
-    nodes(&store, &machine, args(&["--add-hub", "http://127.0.0.1:1", "--token-file", &token]))
+    nodes(&store, &machine, args(&["--add-hub", "http://[::1]:1", "--token-file", &token]))
       .await
       .unwrap_err()
       .contains("already listed")
   );
-  store.add_agent("http://127.0.0.1:1", "far_box").unwrap();
+  store.add_agent("http://[::1]:1", "far_box").unwrap();
 
   let checked = nodes(&store, &machine, args(&["--check", "far-box"])).await.unwrap();
 
   assert!(checked[0].contains("unreachable"), "{checked:?}");
   assert!(!checked.concat().contains("do-not-print-me"));
   assert_eq!(store.node("far-box").unwrap().unwrap().state, NodeState::Unreachable);
-  assert!(nodes(&store, &machine, args(&[])).await.unwrap()[0].contains("hub 2 http://127.0.0.1:1"));
+  assert!(nodes(&store, &machine, args(&[])).await.unwrap()[0].contains("hub 2 http://[::1]:1"));
   assert!(
-    nodes(&store, &machine, args(&["--remove-hub", "http://127.0.0.1:1"])).await.unwrap()[0]
-      .contains("removed the hub http://127.0.0.1:1")
+    nodes(&store, &machine, args(&["--remove-hub", "http://[::1]:1"])).await.unwrap()[0]
+      .contains("removed the hub http://[::1]:1")
   );
   assert!(store.node("far-box").unwrap().is_none());
   assert_eq!(
