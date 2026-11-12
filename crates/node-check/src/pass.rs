@@ -51,8 +51,14 @@ pub trait NodeRows {
   fn hubs(&self) -> impl Future<Output = Result<Vec<Hub>, Self::Error>> + Send;
   /// Every node, in the list's order.
   fn list(&self) -> impl Future<Output = Result<Vec<NodeRow>, Self::Error>> + Send;
-  /// The jake node for an agent attached to a hub, added where none stands for it yet.
-  fn add_agent(&self, hub: &str, agent: &str) -> impl Future<Output = Result<(), Self::Error>> + Send;
+  /// The jake node for an agent attached to a hub, added where none stands for it yet, its shell the one the hub
+  /// says its host takes.
+  fn add_agent(
+    &self,
+    hub: &str,
+    agent: &str,
+    shell: &str,
+  ) -> impl Future<Output = Result<(), Self::Error>> + Send;
   /// The jake node for an agent its hub says has departed, removed; whether there was one.
   fn remove_agent(&self, hub: &str, agent: &str) -> impl Future<Output = Result<bool, Self::Error>> + Send;
   fn exists(&self, name: &str) -> impl Future<Output = Result<bool, Self::Error>> + Send;
@@ -114,7 +120,7 @@ pub async fn check_nodes<S: NodeRows>(
   // In the hubs' order and each hub's own, which is the order the new nodes stand in.
   for (hub, answer) in &asked {
     for agent in answer.agents() {
-      store.add_agent(hub, agent).await?;
+      store.add_agent(hub, agent, answer.shell_of(agent)).await?;
     }
 
     // An uninstalled agent's machine is gone, not down, so its node leaves the list.

@@ -13,9 +13,11 @@ what this service answers (`docs/api.md`, 「Machines」).
 - **Every node of the list,** in the list's order, and nothing else. The monitor keeps no list of its own.
   - An ssh node is read by logging in the way its check does (batch mode, the node's key alone, the host
     key held to) and running the probe there, in the language the node's login answers in.
-  - A hub node is read by handing the probe to its hub's `POST /exec?agent=<agent>` as a `linux` shell
-    command, with the control token read out of the hub's token file for that one request. Each agent is a
-    machine of its own; the hub is never read or shown as one.
+  - A hub node is read by handing the probe to its hub's `POST /exec?agent=<agent>`, with the control token
+    read out of the hub's token file for that one request: as a `linux` shell command, or, for a hub node
+    whose shell is `powershell` (a Windows host, `docs/nodes.md`, 「What a row holds」), the PowerShell probe
+    as a `powershell` command, packed as the ssh road packs it, so the command the agent starts stays inside
+    what Windows takes. Each agent is a machine of its own; the hub is never read or shown as one.
 - The same road runs any other shell script the monitor hands a machine; the Windows setup below is one.
 - **A machine is shown once.** A node that is this machine (`docs/nodes.md`, 「This machine」) carries
   `thisMachine`, and a screen folds it into this machine's tile, since the local reading is the same

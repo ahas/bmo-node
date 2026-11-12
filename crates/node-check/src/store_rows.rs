@@ -43,8 +43,9 @@ impl NodeRows for Store {
     Ok(self.nodes()?.iter().map(check_row).collect())
   }
 
-  async fn add_agent(&self, hub: &str, agent: &str) -> Result<(), Self::Error> {
-    Store::add_agent(self, hub, agent).map(drop)
+  async fn add_agent(&self, hub: &str, agent: &str, shell: &str) -> Result<(), Self::Error> {
+    Store::add_agent(self, hub, agent)?;
+    Store::set_agent_shell(self, hub, agent, shell)
   }
 
   async fn remove_agent(&self, hub: &str, agent: &str) -> Result<bool, Self::Error> {

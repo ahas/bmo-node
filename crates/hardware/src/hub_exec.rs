@@ -65,14 +65,17 @@ fn said(body: &Value, field: &str, otherwise: &str) -> String {
 pub struct HubExec {
   pub hub: Hub,
   pub agent: String,
+  /// Whether the agent's host takes a PowerShell command rather than a Linux shell's.
+  pub powershell: bool,
   pub machine: Machine,
 }
 
 impl HubExec {
-  pub fn new(hub: Hub, agent: String) -> Self {
+  pub fn new(hub: Hub, agent: String, powershell: bool) -> Self {
     Self {
       hub,
       agent,
+      powershell,
       machine: Machine::local(),
     }
   }
@@ -103,6 +106,17 @@ impl HubExec {
     }
   }
 
+  /// The exec a script is handed to the hub as: a Linux shell's command, or on a Windows host a PowerShell
+  /// command carrying the script packed, since the agent starts PowerShell on the whole command encoded and
+  /// Windows refuses a command line past its limit.
+  pub fn request(&self, script: &str) -> serde_json::Value {
+    if self.powershell {
+      json!({ "shell": "powershell", "command": crate::windows::packed_script(script), "env": {} })
+    } else {
+      json!({ "shell": "linux", "command": script, "env": {} })
+    }
+  }
+
   async fn exec(&self, script: String, output: mpsc::Sender<Vec<u8>>) -> Ended {
     let token = match hub_token(&self.machine, &self.hub.token_file) {
       Ok(token) => token,
@@ -113,7 +127,7 @@ impl HubExec {
       .http()
       .post(format!("{}/exec?agent={}", self.hub.url, encoded(&self.agent)))
       .bearer_auth(&token)
-      .json(&json!({ "shell": "linux", "command": script, "env": {} }))
+      .json(&self.request(&script))
       .send()
       .await;
     let answer = match asked {

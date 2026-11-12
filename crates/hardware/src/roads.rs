@@ -24,8 +24,16 @@ const DETAIL_MOST: usize = 200;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Source {
   Local,
-  Ssh { target: SshTarget, powershell: bool },
-  Jake { hub: Hub, agent: String },
+  Ssh {
+    target: SshTarget,
+    powershell: bool,
+  },
+  /// A hub node, `powershell` where its agent runs on a Windows host and takes a PowerShell command.
+  Jake {
+    hub: Hub,
+    agent: String,
+    powershell: bool,
+  },
 }
 
 impl Source {
@@ -34,6 +42,9 @@ impl Source {
     matches!(
       self,
       Self::Ssh {
+        powershell: true,
+        ..
+      } | Self::Jake {
         powershell: true,
         ..
       }
@@ -232,9 +243,11 @@ pub async fn stream(
         },
       }
     }
-    Source::Jake { hub, agent } => {
-      stream_through(&HubExec::new(hub.clone(), agent.clone()), script, lines, stop).await
-    }
+    Source::Jake {
+      hub,
+      agent,
+      powershell,
+    } => stream_through(&HubExec::new(hub.clone(), agent.clone(), *powershell), script, lines, stop).await,
   }
 }
 

@@ -45,11 +45,15 @@ const ANCHOR_DRIFT_SECONDS: i64 = 5;
 const LIVE_POSIX: &str = include_str!("../probe-files/live-posix.sh");
 const LIVE_POSIX_HUB: &str = include_str!("../probe-files/live-posix-240.sh");
 const LIVE_POWERSHELL: &str = include_str!("../probe-files/live-powershell.ps1");
+const LIVE_POWERSHELL_HUB: &str = include_str!("../probe-files/live-powershell-240.ps1");
 
 /// The live script a road takes: one that ends itself inside the span the road gives a run, or one that
 /// runs until it is stopped.
 pub fn live_script(source: &Source) -> &'static str {
   match source {
+    Source::Jake {
+      powershell: true, ..
+    } => LIVE_POWERSHELL_HUB,
     Source::Jake { .. } => LIVE_POSIX_HUB,
     Source::Ssh {
       powershell: true, ..

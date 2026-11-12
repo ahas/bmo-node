@@ -36,7 +36,9 @@ service's API (`docs/api.md`); nothing else keeps a list of its own.
   Windows machine」). A node with no key path offers whatever the account's own SSH configuration
   offers.
 - For a hub node: `agent`, the agent's name exactly as the hub knows it, and `hub_url`, the hub it is
-  reached through. The token file is the hub's.
+  reached through. The token file is the hub's. Its `shell` is the language its agent's host runs a command
+  in, read off the shells the hub says the agent offers (its capabilities `exec:<shell>`) on every pass:
+  `powershell` for an agent that offers PowerShell and no Linux shell — a Windows host —, `posix` otherwise.
 - A hub: `id`, its key, `url`, its control address, `token_file`, the environment file whose
   `JAKE_CONTROL_TOKEN` line holds the control token, and `label`, what a person reads, or none.
 - **A credential is never in either table.** A row names where a key or a token is kept, never the key or

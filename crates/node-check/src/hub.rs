@@ -22,6 +22,9 @@ pub enum HubAnswer {
     // A hub that keeps no record of departures names none.
     #[serde(default)]
     departed: Vec<String>,
+    // The attached agents on a Windows host: those offering PowerShell and no Linux shell.
+    #[serde(default)]
+    windows: Vec<String>,
   },
   Failed(Met),
 }
@@ -44,6 +47,15 @@ impl HubAnswer {
     match self {
       Self::Attached { agents, .. } => agents,
       Self::Failed(_) => &[],
+    }
+  }
+
+  /// The shell an attached agent's host takes a command in (docs/nodes.md, 「What a row holds」): `powershell` on a
+  /// Windows host, `posix` otherwise.
+  pub fn shell_of(&self, agent: &str) -> &'static str {
+    match self {
+      Self::Attached { windows, .. } if windows.iter().any(|one| one == agent) => "powershell",
+      _ => "posix",
     }
   }
 
@@ -144,9 +156,22 @@ pub async fn ask(machine: &Machine, hub: &Hub) -> HubAnswer {
       .collect()
   };
   let departed = said.as_ref().and_then(|said| said.get("departed")).and_then(Value::as_array);
+  // A host offering PowerShell and no Linux shell is Windows: its agent takes a PowerShell command.
+  let offers = |agent: &Value, shell: &str| {
+    agent
+      .get("capabilities")
+      .and_then(Value::as_array)
+      .is_some_and(|all| all.iter().any(|one| one.as_str() == Some(&format!("exec:{shell}"))))
+  };
+  let windows = agents
+    .iter()
+    .filter(|agent| offers(agent, "powershell") && !offers(agent, "linux"))
+    .filter_map(|agent| agent.get("name").and_then(Value::as_str).map(str::to_owned))
+    .collect();
 
   HubAnswer::Attached {
     agents: names(agents),
     departed: departed.map(|list| names(list)).unwrap_or_default(),
+    windows,
   }
 }

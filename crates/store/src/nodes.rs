@@ -606,6 +606,16 @@ impl Store {
     Ok(true)
   }
 
+  /// The shell an agent's host takes a command in, as its hub says, written to its hub node where it differs.
+  pub fn set_agent_shell(&self, hub: &str, agent: &str, shell: &str) -> Result<()> {
+    self.connection().execute(
+      "UPDATE nodes SET shell = ?3 WHERE kind = 'hub' AND hub_url = ?1 AND agent = ?2 AND shell IS DISTINCT FROM ?3",
+      params![hub, agent, shell],
+    )?;
+
+    Ok(())
+  }
+
   /// The hub node of an agent its hub says has departed, removed; whether there was one.
   pub fn remove_agent(&self, hub: &str, agent: &str) -> Result<bool> {
     Ok(

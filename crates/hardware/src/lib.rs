@@ -82,6 +82,7 @@ pub fn source_of(node: &Node) -> Option<Source> {
       |((url, token_file), agent)| Source::Jake {
         hub: Hub { url, token_file },
         agent,
+        powershell: node.powershell(),
       },
     ),
     NodeKind::Ssh => node.host.clone().zip(node.user.clone()).map(|(host, user)| Source::Ssh {

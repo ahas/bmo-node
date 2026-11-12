@@ -79,6 +79,7 @@ async fn stood(stream: String) -> (Asked, HubExec, tempfile::TempDir) {
       token_file: "~/hub.env".into(),
     },
     agent: "agent_a".into(),
+    powershell: false,
     machine: Machine::new("ssh", home.path()),
   };
 
@@ -138,4 +139,25 @@ async fn a_command_s_exit_and_a_hub_s_refusal_are_said_as_what_they_mean() {
 
   *asked.status.lock().unwrap() = Some(StatusCode::UNAUTHORIZED);
   assert_eq!(lines_of(&road).await.1.failure, "the hub refused the token (401)");
+}
+
+// A Windows host's agent takes the PowerShell probe packed as a short PowerShell command, so the command the agent
+// starts stays inside what Windows takes; a Linux host's takes the script as it is (docs/hardware.md, 「What is
+// read」).
+#[test]
+fn a_windows_agent_is_handed_the_probe_packed_as_a_powershell_command() {
+  let hub = Hub {
+    url: "http://hub".into(),
+    token_file: "~/hub.env".into(),
+  };
+  let script = include_str!("../../crates/hardware/probe-files/live-powershell-240.ps1");
+  let windows = HubExec::new(hub.clone(), "agent_w".into(), true).request(script);
+  let linux = HubExec::new(hub, "agent_l".into(), false).request("echo hi");
+  let command = windows["command"].as_str().unwrap();
+
+  assert_eq!(windows["shell"], "powershell");
+  assert!(command.contains("GZipStream") && !command.contains("Get-CimInstance"), "{command}");
+  // The agent encodes the command as UTF-16 base64, about 2.7 times its length; it must stay under 32,767.
+  assert!(command.len() * 8 / 3 + 1_000 < 32_767, "{} characters", command.len());
+  assert_eq!(linux, serde_json::json!({ "shell": "linux", "command": "echo hi", "env": {} }));
 }

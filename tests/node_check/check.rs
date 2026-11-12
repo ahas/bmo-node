@@ -304,7 +304,7 @@ async fn a_hub_s_answer_names_its_agents_or_what_its_nodes_met() {
   assert_eq!(answer.agents(), ["agent_a", "alpha"]);
   assert_eq!(
     serde_json::to_value(&answer).unwrap(),
-    json!({ "agents": ["agent_a", "alpha"], "departed": [] })
+    json!({ "agents": ["agent_a", "alpha"], "departed": [], "windows": [] })
   );
   // An answer handed back from another program, which names no departures for a hub without a record.
   assert_eq!(
@@ -336,7 +336,7 @@ impl NodeRows for Rows {
     Ok(self.nodes.lock().unwrap().clone())
   }
 
-  async fn add_agent(&self, hub: &str, agent: &str) -> Result<(), Self::Error> {
+  async fn add_agent(&self, hub: &str, agent: &str, _shell: &str) -> Result<(), Self::Error> {
     let mut nodes = self.nodes.lock().unwrap();
 
     if !nodes.iter().any(|node| node.jake() == Some((hub, agent))) {
@@ -580,4 +580,32 @@ async fn a_leave_names_the_agent_to_its_hub_and_says_the_hub_s_refusal() {
     Err("the hub refused the leave of gone_one: no agent is attached".to_owned())
   );
   assert_eq!(*asked.lock().unwrap(), vec!["attached_one".to_owned(), "gone_one".to_owned()]);
+}
+
+// An agent offering PowerShell and no Linux shell is on a Windows host, and its node takes PowerShell (docs/nodes.md,
+// 「What a row holds」); one offering a Linux shell takes a POSIX one.
+#[tokio::test]
+async fn a_hub_s_agent_offering_powershell_and_no_linux_shell_is_read_as_windows() {
+  let scratch = Scratch::new();
+  let stood = StoodHub::new(&[]).await;
+
+  stood.answer(
+    StatusCode::OK,
+    json!({ "agents": [
+      { "name": "win_a", "capabilities": ["exec:powershell", "exec:wsl", "transfer"] },
+      { "name": "lin_a", "capabilities": ["exec:linux", "transfer"] }
+    ] }),
+  );
+
+  let answer = hub::ask(
+    &scratch.machine(),
+    &Hub {
+      url: stood.url.clone(),
+      token_file: "~/.local/share/jake/hub.env".into(),
+    },
+  )
+  .await;
+
+  assert_eq!(answer.agents(), ["win_a", "lin_a"]);
+  assert_eq!((answer.shell_of("win_a"), answer.shell_of("lin_a")), ("powershell", "posix"));
 }

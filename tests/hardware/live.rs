@@ -169,6 +169,7 @@ fn through_hub() -> Source {
       token_file: "t".into(),
     },
     agent: "a".into(),
+    powershell: false,
   }
 }
 

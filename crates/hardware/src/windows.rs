@@ -328,15 +328,24 @@ pub fn encoded_command(script: &str) -> String {
 /// line stays well inside what Windows takes whatever the script's length, and nothing is written on the
 /// machine.
 pub fn powershell_command(script: &str) -> String {
+  format!(
+    "powershell -NoProfile -NonInteractive -EncodedCommand {}",
+    encoded_command(&packed_script(script))
+  )
+}
+
+/// A script as a short PowerShell command that carries it compressed and runs it unpacked: what a road that
+/// starts Windows PowerShell on a command of its own hands it, so the command line stays well inside what Windows
+/// takes whatever the script's length.
+pub fn packed_script(script: &str) -> String {
   let mut packer = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
   let packed = packer
     .write_all(script.as_bytes())
     .and_then(|()| packer.finish())
     .map(|bytes| STANDARD.encode(bytes))
     .unwrap_or_default();
-  let unpack = format!(
-    "$z = New-Object IO.Compression.GZipStream((New-Object IO.MemoryStream(,[Convert]::FromBase64String('{packed}'))), [IO.Compression.CompressionMode]::Decompress)\n& ([ScriptBlock]::Create((New-Object IO.StreamReader($z, [Text.Encoding]::UTF8)).ReadToEnd()))"
-  );
 
-  format!("powershell -NoProfile -NonInteractive -EncodedCommand {}", encoded_command(&unpack))
+  format!(
+    "$z = New-Object IO.Compression.GZipStream((New-Object IO.MemoryStream(,[Convert]::FromBase64String('{packed}'))), [IO.Compression.CompressionMode]::Decompress)\n& ([ScriptBlock]::Create((New-Object IO.StreamReader($z, [Text.Encoding]::UTF8)).ReadToEnd()))"
+  )
 }
