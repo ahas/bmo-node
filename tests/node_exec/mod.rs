@@ -3,6 +3,7 @@
 
 mod call;
 mod caller;
+mod restart;
 
 use std::collections::HashMap;
 use std::net::{Ipv4Addr, SocketAddr};
@@ -19,10 +20,12 @@ use base64::engine::general_purpose::STANDARD;
 use bmo_node_client::NodeClient;
 use bmo_node_client::nodes::{LoginShell, NodeKind, Target};
 use node_check::Machine;
-use node_exec_tool::Ground;
 use node_exec_tool::caller::{Agency, Session};
+use node_exec_tool::{ENTRY, Ground, Handed};
 use serde_json::{Value, json};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::sync::oneshot;
+use tokio::task::JoinHandle;
 
 /// The hub's control token in the stand-in's token file; no answer may carry it.
 pub const HUB_TOKEN: &str = "hub-secret-token";
@@ -100,18 +103,29 @@ async fn exec(
   ([("content-type", "text/event-stream")], Body::from(stream)).into_response()
 }
 
-/// A hub that answers its exec with the stream's head and `frames`, then closes the connection in the middle
-/// of the stream, as a hub that stops or loses its network does; the address it listens at.
-pub async fn dropping_hub(frames: String) -> String {
+/// A hub standing for one command: it answers the exec with the stream's head and `frames`, says so on
+/// `streaming`, and stops once `stop` is sent or dropped, closing its port and the command's connection in the
+/// middle of the stream, as a hub process stopped there does.
+pub struct HeldHub {
+  pub url: String,
+  pub addr: SocketAddr,
+  pub streaming: oneshot::Receiver<()>,
+  pub stop: oneshot::Sender<()>,
+}
+
+pub async fn held_hub(frames: String) -> HeldHub {
   let listener = tokio::net::TcpListener::bind(SocketAddr::from((Ipv4Addr::LOCALHOST, 0))).await.unwrap();
-  let url = format!("http://{}", listener.local_addr().unwrap());
+  let addr = listener.local_addr().unwrap();
+  let (said, streaming) = oneshot::channel();
+  let (stop, stopped) = oneshot::channel::<()>();
 
   tokio::spawn(async move {
     let (mut socket, _) = listener.accept().await.unwrap();
     let mut asked = Vec::new();
     let mut buffer = [0u8; 4096];
 
-    // The whole request is read first, so closing leaves nothing unread that would reset the connection.
+    // The whole request is read first, so closing leaves nothing unread that would reset the connection
+    // before the frames are read.
     loop {
       let read = socket.read(&mut buffer).await.unwrap();
 
@@ -143,10 +157,18 @@ pub async fn dropping_hub(frames: String) -> String {
 
     socket.write_all(format!("{head}{chunk}").as_bytes()).await.unwrap();
     socket.flush().await.unwrap();
-    socket.shutdown().await.unwrap();
+    let _ = said.send(());
+    let _ = stopped.await;
+    drop(socket);
+    drop(listener);
   });
 
-  url
+  HeldHub {
+    url: format!("http://{addr}"),
+    addr,
+    streaming,
+    stop,
+  }
 }
 
 /// A hub node's target, reached through the stand-in's hub at `url` as the agent `agent`.
@@ -177,8 +199,9 @@ pub struct Stood {
   _home: tempfile::TempDir,
 }
 
-pub async fn stood() -> Stood {
-  let world = World::default();
+/// The stand-in of agency, the node service and the hub over `world`, listening at `addr`, a port of 0 taking
+/// a free one; the address it listens at, and its task, whose abort stops it and closes its port.
+pub async fn serve_at(world: &World, addr: SocketAddr) -> (SocketAddr, JoinHandle<()>) {
   let app = Router::new()
     .route("/supervisors/{name}", get(supervisor))
     .route("/role-agents", get(role_agents))
@@ -186,11 +209,18 @@ pub async fn stood() -> Stood {
     .route("/nodes/{name}/target", get(target))
     .route("/exec", post(exec))
     .with_state(world.clone());
-  let listener = tokio::net::TcpListener::bind(SocketAddr::from((Ipv4Addr::LOCALHOST, 0))).await.unwrap();
-  let url = format!("http://{}", listener.local_addr().unwrap());
+  let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+  let addr = listener.local_addr().unwrap();
+
+  (addr, tokio::spawn(async move { axum::serve(listener, app).await.unwrap() }))
+}
+
+pub async fn stood() -> Stood {
+  let world = World::default();
+  let (addr, _) = serve_at(&world, SocketAddr::from((Ipv4Addr::LOCALHOST, 0))).await;
+  let url = format!("http://{addr}");
   let home = tempfile::tempdir().unwrap();
 
-  tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
   std::fs::write(home.path().join("hub.env"), format!("JAKE_CONTROL_TOKEN={HUB_TOKEN}\n")).unwrap();
 
   let ground = Ground {
@@ -215,4 +245,30 @@ pub fn session(holder: &str, grants: &[&str]) -> Session {
     "labels": {},
   }))
   .unwrap()
+}
+
+/// A call of the tool's entry by a session held by `holder`, with the grants named.
+pub fn handed(holder: &str, grants: &[&str], arguments: Value) -> Handed {
+  Handed {
+    entry: ENTRY.into(),
+    arguments,
+    session: session(holder, grants),
+  }
+}
+
+/// The stand-in with the node `pc-four`, account 4's, on a Windows host behind the agent `agent_w`, and the
+/// supervisor `pc-agent` of account 4.
+pub async fn owned() -> Stood {
+  let stood = stood().await;
+  let target = hub_target("pc-four", &stood.url, "agent_w", LoginShell::Powershell);
+
+  stood.world.targets.lock().unwrap().insert("pc-four".into(), target);
+  stood.world.supervisors.lock().unwrap().insert("pc-agent".into(), json!(4));
+  stood
+    .world
+    .person_nodes
+    .lock()
+    .unwrap()
+    .push(json!({ "ownerAccount": "4", "node": "pc-four", "setAt": 1 }));
+  stood
 }

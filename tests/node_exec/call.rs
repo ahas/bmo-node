@@ -4,36 +4,11 @@
 
 use bmo_node_client::nodes::{LoginShell, NodeKind};
 use node_exec_tool::command::KEPT_BYTES;
-use node_exec_tool::{Answer, ENTRY, Handed, answer};
+use node_exec_tool::{Answer, ENTRY, answer};
 use serde_json::{Value, json};
 
-use super::{HUB_TOKEN, Stood, dropping_hub, frame, hub_target, out, session, stood};
+use super::{HUB_TOKEN, frame, handed, held_hub, hub_target, out, owned};
 use crate::support::binary::built;
-
-fn handed(holder: &str, grants: &[&str], arguments: Value) -> Handed {
-  Handed {
-    entry: ENTRY.into(),
-    arguments,
-    session: session(holder, grants),
-  }
-}
-
-/// The stand-in with the node `pc-four`, account 4's, on a Windows host behind the agent `agent_w`, and the
-/// supervisor `pc-agent` of account 4.
-async fn owned() -> Stood {
-  let stood = stood().await;
-  let target = hub_target("pc-four", &stood.url, "agent_w", LoginShell::Powershell);
-
-  stood.world.targets.lock().unwrap().insert("pc-four".into(), target);
-  stood.world.supervisors.lock().unwrap().insert("pc-agent".into(), json!(4));
-  stood
-    .world
-    .person_nodes
-    .lock()
-    .unwrap()
-    .push(json!({ "ownerAccount": "4", "node": "pc-four", "setAt": 1 }));
-  stood
-}
 
 fn holds_to_the_output_schema(answer: &Answer) {
   let schema: Value = serde_json::from_str(include_str!("../../tools/node-exec/output.json")).unwrap();
@@ -153,14 +128,17 @@ async fn an_ssh_node_and_a_node_not_listed_are_refused_by_name() {
 async fn a_hub_that_drops_the_run_midway_is_said_with_the_output_before_it() {
   let stood = owned().await;
   let frames = frame("started", json!({ "id": "c2" })) + &out("stdout", b"step one\n", 0);
-  let hub = dropping_hub(frames).await;
+  let hub = held_hub(frames).await;
+
+  // The hub stops as soon as it has said the frames.
+  drop(hub.stop);
 
   stood
     .world
     .targets
     .lock()
     .unwrap()
-    .insert("pc-four".into(), hub_target("pc-four", &hub, "agent_w", LoginShell::Powershell));
+    .insert("pc-four".into(), hub_target("pc-four", &hub.url, "agent_w", LoginShell::Powershell));
 
   let answered =
     answer(&handed("pc-agent", &[], json!({ "node": "pc-four", "command": "long" })), &stood.ground).await;
