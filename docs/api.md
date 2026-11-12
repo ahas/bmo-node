@@ -78,6 +78,10 @@ its own.
   machine is before it starts heavy work there. A tool's input is the route's path and query parameters by
   name, and `body` for a route that takes one; a refusal comes back as a tool error whose text is the
   status, `code` and `error`.
+- **The hosted tool, `node-exec`** (`tools/node-exec`, `docs/tools.md`): the tool host's entry `bmo/node_exec`,
+  which runs one command on a hub node through its hub for a caller whose account owns the node, or that holds
+  the administrator's grant, and answers its exit code and output. It is not among the plugin's tools, which know
+  no caller.
 - This document is the canonical statement: where the document, the code and the clients disagree, the
   code is repaired and both clients generated again.
 
@@ -276,6 +280,10 @@ The node service calls no other unit. It reaches the machines themselves:
 - **a hub,** an outside program an agent attaches to, over its HTTP control address with the token read
   from the hub's token file for each request: `GET /status` for the agents attached and departed, and
   `POST /exec?agent=<agent>` to run a command on an agent's machine.
+
+The hosted tool is no part of the service and makes calls of its own (`docs/tools.md`): the service's
+`GET /nodes/{nodeName}/target`, a hub's `POST /exec?agent=<agent>`, and agency's `GET /supervisors/{supervisorName}`,
+`GET /role-agents` and `GET /person-nodes` to know whose node it is and whose the caller is.
 
 ## The command
 

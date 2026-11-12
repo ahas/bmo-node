@@ -2,3 +2,4 @@
 /packages/node-client/node_modules
 .graph/*
 !.graph/settings.toml
+.placed/

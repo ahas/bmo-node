@@ -11,6 +11,7 @@ mod literals;
 mod llm_bridge;
 mod machine;
 mod node_check;
+mod node_exec;
 mod openapi;
 mod personal_data;
 mod policy;

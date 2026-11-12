@@ -1,0 +1,32 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["node", "command"],
+  "properties": {
+    "node": {
+      "type": "string",
+      "description": "The node's name, as the node service lists it."
+    },
+    "command": {
+      "type": "string",
+      "description": "The command's text, run whole by the shell."
+    },
+    "shell": {
+      "enum": ["powershell", "wsl", "linux"],
+      "description": "The shell the agent runs the command in; the node's own where none is named: powershell on a Windows host, linux otherwise."
+    },
+    "cwd": {
+      "type": "string",
+      "description": "The folder the command runs in; the agent's own where none is named."
+    },
+    "env": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "Variables laid over the agent's environment for this command."
+    },
+    "distro": {
+      "type": "string",
+      "description": "The WSL distribution a wsl command runs in; the default one where none is named."
+    }
+  }
+}

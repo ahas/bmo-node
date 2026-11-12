@@ -1,0 +1,15 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["node", "shell", "exitCode", "signal", "stdout", "stderr", "stdoutCut", "stderrCut"],
+  "properties": {
+    "node": { "type": "string", "description": "The node the command ran on." },
+    "shell": { "enum": ["powershell", "wsl", "linux"], "description": "The shell it ran in." },
+    "exitCode": { "type": ["integer", "null"], "description": "The command's exit code; null where the hub reports none." },
+    "signal": { "type": ["string", "null"], "description": "The signal that ended it, or null." },
+    "stdout": { "type": "string", "description": "Its standard output as text, its last 64 KiB." },
+    "stderr": { "type": "string", "description": "Its standard error as text, its last 64 KiB." },
+    "stdoutCut": { "type": "boolean", "description": "Whether more standard output came than is kept." },
+    "stderrCut": { "type": "boolean", "description": "Whether more standard error came than is kept." }
+  }
+}

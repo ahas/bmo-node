@@ -8,6 +8,10 @@ name = "node"
 # `packages/node-client`, beside its own lockfile.
 languages = ["cargo", "bun"]
 
+[tools]
+# The hosted tool, checked by the command its tool.toml names (docs/tools.md).
+dir = "tools"
+
 [check]
 quick = ["layout", "dependencies", "cargo-profile", "shared-versions"]
 base_libraries = ["bmo-chat", "bmo-chat-client", "bmo-ui"]
@@ -36,8 +40,8 @@ id = "node-client"
 command = "bun install --cwd packages/node-client --frozen-lockfile && bun run --cwd packages/node-client check"
 
 [build]
-# The service and its command, the node check's own binary, and the tunnel door.
-binaries = ["bmo-node", "node-check", "llm-bridge"]
+# The service and its command, the node check's own binary, the tunnel door, and the hosted tool's executable.
+binaries = ["bmo-node", "node-check", "llm-bridge", "node-exec-tool"]
 
 # The node service's own deploy tree, and the shared data root its configuration and its own folder stand
 # under (docs/api.md, 「Configuration」; docs/store.md).
@@ -50,3 +54,25 @@ env_links = [{ link = "node.toml", target = "env/node.toml" }]
 units = ["deploy/*.service"]
 # Answers 0 once the service the deployed configuration names answers ready (docs/api.md, 「Health」).
 health = "~/.local/share/bmo-node/deploy/bin/bmo-node --config ~/.local/share/bmo-node/deploy/node.toml health"
+
+# The hosted tool is placed in its folder's .placed/: the executable the release's bin/ holds, its manifest, the
+# schemas and the manual beside it (docs/tools.md).
+[[deploy.step]]
+id = "place-tools"
+phase = "before-flip"
+command = '''
+set -eu
+rm -rf tools/node-exec/.placed
+mkdir -p tools/node-exec/.placed
+cp bin/node-exec-tool tools/node-exec/tool.toml tools/node-exec/*.json tools/node-exec/manual.md tools/node-exec/.placed/
+'''
+
+# The tool is registered with the tool host once the service answers ready, as this service's own, so a supervisor
+# reaches it with `bmo use bmo/node_exec`.
+[[deploy.step]]
+id = "register-tools"
+phase = "after-health"
+command = '''
+set -eu
+bmo pocket put tools/node-exec/.placed --placed --service bmo-node --allow room.tools
+'''

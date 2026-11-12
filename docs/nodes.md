@@ -167,6 +167,11 @@ routes do the same (`docs/api.md`).
   over that same road.
 - **A service kept on a node is built, fed and asked over the node's own login by the unit that keeps it,**
   with the node's target from `GET /nodes/{nodeName}/target` (`docs/api.md`), whose `sshArgs` open its
-  batch login. The node service carries no general shell for other units and no file transfer.
+  batch login. The node service's routes carry no general shell for other units and no file transfer.
+- **An agent runs a command on a hub node through the hosted tool `bmo/node_exec` alone** (`docs/tools.md`): the
+  hub's exec aimed at the node's agent, with the hub's control token read by the tool and handed to no session,
+  and only for a caller whose account owns the node or that holds the administrator's grant. A hub's own exec checks
+  no owner, since any holder of its control token runs a command on any agent attached to it, so the tool is the
+  one road an agent is given to a hub node.
 - **A node that cannot be reached is told apart from a script that failed:** a login that never happens, a
   hub that refuses or an agent that is gone is the node out of reach; a script that ran is its exit code.

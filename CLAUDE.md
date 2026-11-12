@@ -9,8 +9,8 @@ which job a process serves, whether a launch goes ahead and what the chat agent 
 ## Rules
 
 - **`docs/` is canonical.** `docs/api.md` is the boundary contract, every route, event and command the
-  service answers and its configuration; `docs/inventory.md` is what came from the old repository. Read
-  the document covering a change first. A change that would make it wrong repairs the document first,
+  service answers and its configuration; `docs/tools.md` is the hosted tool; `docs/inventory.md` is what
+  came from the old repository. Read the document covering a change first. A change that would make it wrong repairs the document first,
   stating what is true now, and the code is then written to match. A change to the boundary API changes
   `docs/api.md` in the same commit.
 - **No other service's code.** Among other repositories only the base libraries `bmo-chat`,
@@ -60,6 +60,8 @@ which job a process serves, whether a launch goes ahead and what the chat agent 
 - `packages/node-client`: the TypeScript client, generated from `docs/openapi.json`.
 - `docs/`: the canonical documents, and `openapi.json`, the contract the clients are generated from.
 - `deploy/`: the service units, `bmo-node.service` and `bmo-llm-bridge.service`.
+- `tools/node-exec`: the hosted tool, its manifest, schemas and manual beside `node-exec-tool`, the crate of its
+  executable (`docs/tools.md`).
 - `.graph/`: the code dependency graph in bmo-graph's format, one node per feature in five areas (`core`,
   `nodes`, `hardware`, `server`, `api`), each with its files and the features it needs, and a boundary node for
   each API the repository exposes. It is written only by `bmo-graph` run in this checkout, and a change that

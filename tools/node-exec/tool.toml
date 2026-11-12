@@ -1,0 +1,22 @@
+# The node service's hosted tool (docs/tools.md): one entry, `bmo/node_exec`, which runs a command on a hub node
+# through the node's jake hub for a caller whose account owns the node, or that holds the administrator's grant,
+# and answers the command's exit code and output. The hub's control token is read by the executable alone.
+
+[tool]
+name = "node-exec"
+protocol = 1
+language = "rust"
+build = 'cargo build --release -p node-exec-tool && cp "$BMO_CARGO_TARGET/release/node-exec-tool" "$BMO_TOOL_OUT/"'
+check = 'cargo test -p node-checks --test main node_exec::'
+run = ["node-exec-tool"]
+
+[[entry]]
+namespace = "bmo"
+name = "node_exec"
+title = "Run a command on a node"
+description = "Run one command on a hub node (a person's PC attached through jake) and answer its exit code and output; only on a node your account owns, unless you hold the administrator's grant."
+manual = "manual.md"
+input = "input.json"
+output = "output.json"
+hints = { read_only = false, destructive = true, open_world = true }
+capabilities = ["room.tools"]

@@ -10,10 +10,8 @@ publish = false
 base64.workspace = true
 bmo-node-client = { path = "../client" }
 flate2.workspace = true
-futures-util.workspace = true
 libc.workspace = true
 node-check = { path = "../node-check" }
-percent-encoding.workspace = true
 policy = { path = "../policy" }
 regex.workspace = true
 reqwest.workspace = true
@@ -21,7 +19,6 @@ roxmltree.workspace = true
 rusqlite.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-sse-stream.workspace = true
 store = { path = "../store" }
 tokio.workspace = true
 tokio-util.workspace = true

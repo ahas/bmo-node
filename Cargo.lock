@@ -812,10 +812,8 @@ dependencies = [
  "base64 0.22.1",
  "bmo-node-client",
  "flate2",
- "futures-util",
  "libc",
  "node-check",
- "percent-encoding",
  "policy",
  "regex",
  "reqwest",
@@ -823,7 +821,6 @@ dependencies = [
  "rusqlite",
  "serde",
  "serde_json",
- "sse-stream",
  "store",
  "tokio",
  "tokio-util",
@@ -1386,13 +1383,16 @@ checksum = "743fb55ba31b18fb1ecef6bdc9aa2743314978ac084044301a7eee33fb99a20d"
 name = "node-check"
 version = "0.1.0-rev.2"
 dependencies = [
+ "base64 0.22.1",
  "clap",
  "dotenvy",
  "futures",
+ "percent-encoding",
  "policy",
  "reqwest",
  "serde",
  "serde_json",
+ "sse-stream",
  "store",
  "tokio",
 ]
@@ -1416,6 +1416,7 @@ dependencies = [
  "libc",
  "llm-bridge",
  "node-check",
+ "node-exec-tool",
  "node-server",
  "policy",
  "regex",
@@ -1428,6 +1429,21 @@ dependencies = [
  "tokio",
  "tokio-tungstenite",
  "tokio-util",
+]
+
+[[package]]
+name = "node-exec-tool"
+version = "0.1.0-rev.2"
+dependencies = [
+ "bmo-node-client",
+ "dotenvy",
+ "node-check",
+ "node-server",
+ "percent-encoding",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]

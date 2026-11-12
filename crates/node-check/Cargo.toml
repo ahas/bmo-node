@@ -12,12 +12,15 @@ path = "src/main.rs"
 test = false
 
 [dependencies]
+base64.workspace = true
 clap.workspace = true
 dotenvy.workspace = true
 futures.workspace = true
+percent-encoding.workspace = true
 policy = { path = "../policy" }
 reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+sse-stream.workspace = true
 store = { path = "../store" }
 tokio.workspace = true

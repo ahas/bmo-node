@@ -4,6 +4,7 @@
 //! read for the one request that needs it and is never part of what a check answers.
 
 pub mod hub;
+pub mod hub_exec;
 pub mod pass;
 pub mod rows;
 pub mod ssh;

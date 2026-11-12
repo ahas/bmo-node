@@ -2,15 +2,10 @@
 //! at the node's own agent, its output handed on as it comes and its ending told apart. The control token
 //! is read out of the hub's token file for the one request that needs it and is part of no answer.
 
-use base64::Engine;
-use base64::engine::general_purpose::STANDARD;
-use futures_util::StreamExt;
 use node_check::Machine;
-use node_check::hub::hub_token;
+use node_check::hub_exec::{ExecBody, Said, start};
 use node_check::rows::Hub;
-use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
-use serde_json::{Value, json};
-use sse_stream::SseStream;
+use serde_json::Value;
 use tokio::sync::{mpsc, oneshot};
 
 /// How a script run through the hub ended.
@@ -43,23 +38,6 @@ fn last_line(text: &str) -> String {
     .unwrap_or_default()
 }
 
-fn encoded(value: &str) -> String {
-  utf8_percent_encode(value, NON_ALPHANUMERIC).to_string()
-}
-
-/// The JSON an event carries, where it carries any.
-fn data(event: &sse_stream::Sse) -> Value {
-  event
-    .data
-    .as_deref()
-    .and_then(|data| serde_json::from_str(data).ok())
-    .unwrap_or(Value::Null)
-}
-
-fn said(body: &Value, field: &str, otherwise: &str) -> String {
-  body.get(field).and_then(Value::as_str).unwrap_or(otherwise).to_owned()
-}
-
 /// A jake node's road: its hub's exec aimed at its own agent, the token read on the machine given.
 #[derive(Clone)]
 pub struct HubExec {
@@ -77,16 +55,6 @@ impl HubExec {
       agent,
       powershell,
       machine: Machine::local(),
-    }
-  }
-
-  /// What a hub's answer status says where it is not the stream asked for.
-  pub fn refused_status(&self, status: u16) -> Option<String> {
-    match status {
-      200 => None,
-      401 | 403 => Some(format!("the hub refused the token ({status})")),
-      404 | 409 => Some(format!("the agent {} is not attached to its hub", self.agent)),
-      other => Some(format!("the hub answered {other}")),
     }
   }
 
@@ -109,91 +77,44 @@ impl HubExec {
   /// The exec a script is handed to the hub as: a Linux shell's command, or on a Windows host a PowerShell
   /// command carrying the script packed, since the agent starts PowerShell on the whole command encoded and
   /// Windows refuses a command line past its limit.
-  pub fn request(&self, script: &str) -> serde_json::Value {
+  pub fn body(&self, script: &str) -> ExecBody {
     if self.powershell {
-      json!({ "shell": "powershell", "command": crate::windows::packed_script(script), "env": {} })
+      ExecBody::plain("powershell", crate::windows::packed_script(script))
     } else {
-      json!({ "shell": "linux", "command": script, "env": {} })
+      ExecBody::plain("linux", script)
     }
   }
 
+  /// The same exec as the JSON the hub is handed.
+  pub fn request(&self, script: &str) -> Value {
+    serde_json::to_value(self.body(script)).expect("an exec's body always renders as JSON")
+  }
+
   async fn exec(&self, script: String, output: mpsc::Sender<Vec<u8>>) -> Ended {
-    let token = match hub_token(&self.machine, &self.hub.token_file) {
-      Ok(token) => token,
+    let mut run = match start(&self.machine, &self.hub, &self.agent, &self.body(&script)).await {
+      Ok(run) => run,
       Err(why) => return Ended::Failed(why),
     };
-    let asked = self
-      .machine
-      .http()
-      .post(format!("{}/exec?agent={}", self.hub.url, encoded(&self.agent)))
-      .bearer_auth(&token)
-      .json(&self.request(&script))
-      .send()
-      .await;
-    let answer = match asked {
-      Ok(answer) => answer,
-      Err(why) => return Ended::Failed(format!("the hub did not answer: {}", last_line(&why.to_string()))),
-    };
-
-    if let Some(why) = self.refused_status(answer.status().as_u16()) {
-      return Ended::Failed(why);
-    }
-
-    let mut events = SseStream::from_bytes_stream(answer.bytes_stream());
-    let mut id: Option<String> = None;
     let mut stderr = String::new();
 
-    while let Some(event) = events.next().await {
-      let Ok(event) = event else {
-        return Ended::Failed("the hub's stream broke off".into());
-      };
-      let body = data(&event);
-
-      match event.event.as_deref() {
-        Some("started") => id = body.get("id").and_then(Value::as_str).map(str::to_owned),
-        Some("stdout" | "stderr") => {
-          let Some(bytes) = body
-            .pointer("/chunk/base64")
-            .and_then(Value::as_str)
-            .and_then(|chunk| STANDARD.decode(chunk).ok())
-          else {
-            continue;
-          };
-
-          if event.event.as_deref() == Some("stderr") {
-            stderr.push_str(&String::from_utf8_lossy(&bytes));
-          } else if output.send(bytes).await.is_err() {
-            if let Some(id) = &id {
-              self.cancel(&token, id).await;
-            }
+    loop {
+      match run.next().await {
+        Ok(Said::Started(_)) => {}
+        Ok(Said::Stdout(bytes)) => {
+          if output.send(bytes).await.is_err() {
+            run.cancel().await;
 
             return Ended::Failed("nobody listened".into());
           }
         }
-        Some("exit") => {
-          let code = body.get("code").and_then(Value::as_i64).and_then(|code| i32::try_from(code).ok());
+        Ok(Said::Stderr(bytes)) => stderr.push_str(&String::from_utf8_lossy(&bytes)),
+        Ok(Said::Exit { code, .. }) => {
+          let code = code.and_then(|code| i32::try_from(code).ok()).unwrap_or(-1);
 
-          return Ended::Code(code.unwrap_or(-1), last_line(&stderr));
+          return Ended::Code(code, last_line(&stderr));
         }
-        Some("error") => return Ended::Failed(said(&body, "message", "the hub reported an error")),
-        Some("ended") => {
-          return Ended::Failed(format!("the run ended: {}", said(&body, "reason", "no reason given")));
-        }
-        _ => {}
+        Err(why) => return Ended::Failed(why),
       }
     }
-
-    Ended::Failed("the hub's stream closed without the command's end".into())
-  }
-
-  async fn cancel(&self, token: &str, id: &str) {
-    let _ = self
-      .machine
-      .http()
-      .post(format!("{}/cancel", self.hub.url))
-      .bearer_auth(token)
-      .json(&json!({ "id": id }))
-      .send()
-      .await;
   }
 }

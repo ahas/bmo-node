@@ -1,0 +1,26 @@
+[package]
+name = "node-exec-tool"
+description = "The hosted tool that runs a command on a hub node for a caller whose account owns it (docs/tools.md)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "node-exec-tool"
+path = "src/main.rs"
+test = false
+
+[dependencies]
+bmo-node-client = { path = "../../crates/client" }
+dotenvy.workspace = true
+node-check = { path = "../../crates/node-check" }
+node-server = { path = "../../crates/server" }
+percent-encoding.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true

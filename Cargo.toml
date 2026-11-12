@@ -12,6 +12,7 @@ members = [
   "crates/hardware",
   "crates/llm-bridge",
   "crates/server",
+  "tools/node-exec",
 ]
 resolver = "3"
 
@@ -79,6 +80,7 @@ jsonschema.workspace = true
 libc.workspace = true
 llm-bridge = { path = "crates/llm-bridge" }
 node-check = { path = "crates/node-check" }
+node-exec-tool = { path = "tools/node-exec" }
 node-server = { path = "crates/server" }
 policy = { path = "crates/policy" }
 reqwest.workspace = true
