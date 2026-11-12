@@ -170,7 +170,7 @@ impl Stand {
   }
 }
 
-fn make_pipe(path: &Path) {
+pub fn make_pipe(path: &Path) {
   let named = CString::new(path.as_os_str().as_bytes()).unwrap();
 
   // SAFETY: `named` is a NUL-terminated path that outlives the call.

@@ -2,8 +2,11 @@
 //! the service's life.
 
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use serde::Deserialize;
+
+use crate::stop::DRAIN;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -20,6 +23,9 @@ pub struct Config {
   /// The environment variable a process's scope is read from; where none is set, no process has a scope.
   #[serde(default)]
   pub scope_variable: Option<String>,
+  /// How long a call under way is given to finish once the service is told to stop, in milliseconds.
+  #[serde(default)]
+  pub drain_ms: Option<u64>,
 }
 
 impl Config {
@@ -30,6 +36,11 @@ impl Config {
 
     toml::from_str(&text)
       .map_err(|why| format!("the configuration {} does not read: {why}", path.display()))
+  }
+
+  /// How long a call under way is given to finish once the service is told to stop.
+  pub fn drain(&self) -> Duration {
+    self.drain_ms.map_or(DRAIN, Duration::from_millis)
   }
 
   /// The data root, `~/` standing for the home.

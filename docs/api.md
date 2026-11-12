@@ -267,9 +267,10 @@ from a terminal. It drains before it ends:
   refused and asks the next run.
 - **Every event stream ends,** so no reader holds the stop open. The reader connects to the next run, where
   a resume from this run's numbers is answered 410 `gone` and it reads the collections again (「Events」).
-- **A call under way is given thirty seconds to finish,** and answers as it would have, with whatever it
-  wrote kept. A connection with no call under way closes. A call still running when the thirty seconds are
-  out is cut as the process ends: its caller sees the connection drop and asks the next run.
+- **A call under way is given the drain to finish,** thirty seconds unless the configuration sets another,
+  and answers as it would have, with whatever it wrote kept. A connection with no call under way closes. A
+  call still running when the drain is out is cut as the process ends, having written nothing more: its
+  caller sees the connection drop and asks the next run.
 - **The loops end with the process.** A node check pass, a recorder run or a machine look cut midway writes
   nothing more, and the next run starts each loop's first pass at once.
 - **The signal reaches the service alone.** The unit sends SIGTERM to the service's own process and not to
@@ -289,6 +290,7 @@ each release links to it as `node.toml`; the unit does not start where the data 
 | data root | `data_root` | the shared data root; node's own files stand in its `node/` folder (`docs/store.md`) |
 | this machine's name | `machine_label` | how this machine is shown, where none is set the system's host name |
 | scope variable | `scope_variable` | the environment variable a process's scope is read from (`docs/machine.md`, 「What is read」); where none is set, no process has a scope |
+| drain | `drain_ms` | how long a call under way is given to finish once the service is told to stop, in milliseconds (「Stopping」); where none is set, thirty seconds |
 
 ## Calls the node service makes
 

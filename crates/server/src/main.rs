@@ -10,7 +10,7 @@ use clap::{Parser, Subcommand};
 use node_check::Machine;
 use node_server::cli::{NodesArgs, hardware_setup, nodes};
 use node_server::config::Config;
-use node_server::stop::{self, DRAIN, Drained, told_to_stop};
+use node_server::stop::{self, Drained, told_to_stop};
 use node_server::{Service, start};
 use rmcp::ServiceExt;
 use rmcp::transport::stdio;
@@ -193,9 +193,13 @@ async fn serve(config: Config) -> Result<(), String> {
   let stop = told_to_stop().map_err(|why| format!("could not take the stop signals: {why}"))?;
   let _loops = start(service.clone())?;
 
-  match stop::serve(listener, service, stop, DRAIN).await.map_err(|why| why.to_string())? {
+  let drain = config.drain();
+
+  match stop::serve(listener, service, stop, drain).await.map_err(|why| why.to_string())? {
     Drained::Finished => println!("bmo-node: stopped, every call finished"),
-    Drained::Cut => println!("bmo-node: stopped, the calls still under way cut after {}s", DRAIN.as_secs()),
+    Drained::Cut => {
+      println!("bmo-node: stopped, the calls still under way cut after {} ms", drain.as_millis())
+    }
   }
 
   Ok(())

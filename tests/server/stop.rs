@@ -49,7 +49,7 @@ async fn checking(drain: Duration) -> (Stood, tokio::task::JoinHandle<serde_json
 }
 
 /// Whether the service's address refuses a new connection, asked until it does or the bound runs out.
-async fn refuses(base: &str) -> bool {
+pub async fn refuses(base: &str) -> bool {
   let address = base.trim_start_matches("http://").to_owned();
 
   for _ in 0..1_000 {
