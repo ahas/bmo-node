@@ -16,7 +16,10 @@ Environment=BMO_DATA_DIR=%h/.local/share/bmo/data
 Environment=PATH=%h/.local/bin:%h/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 Restart=always
 RestartSec=2
-# The service, its logins and its probes all end on SIGTERM, so a stop waits for them to end.
+# SIGTERM goes to the service alone, which drains its calls for at most thirty seconds and ends; the logins and
+# probes it started are killed once it has ended, so none is cut under a call still finishing (docs/api.md,
+# 「Stopping」). The service bounds its own drain, so a stop waits for it to end.
+KillMode=mixed
 TimeoutStopSec=infinity
 
 [Install]

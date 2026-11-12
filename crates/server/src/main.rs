@@ -10,7 +10,8 @@ use clap::{Parser, Subcommand};
 use node_check::Machine;
 use node_server::cli::{NodesArgs, hardware_setup, nodes};
 use node_server::config::Config;
-use node_server::{Service, app, start};
+use node_server::stop::{self, DRAIN, Drained, told_to_stop};
+use node_server::{Service, start};
 use rmcp::ServiceExt;
 use rmcp::transport::stdio;
 use store::Store;
@@ -189,9 +190,15 @@ async fn serve(config: Config) -> Result<(), String> {
     Err(_) => println!("bmo-node: listening on {}", config.listen),
   }
 
+  let stop = told_to_stop().map_err(|why| format!("could not take the stop signals: {why}"))?;
   let _loops = start(service.clone())?;
 
-  axum::serve(listener, app(service)).await.map_err(|why| why.to_string())
+  match stop::serve(listener, service, stop, DRAIN).await.map_err(|why| why.to_string())? {
+    Drained::Finished => println!("bmo-node: stopped, every call finished"),
+    Drained::Cut => println!("bmo-node: stopped, the calls still under way cut after {}s", DRAIN.as_secs()),
+  }
+
+  Ok(())
 }
 
 async fn health(config: Config) -> Result<(), String> {

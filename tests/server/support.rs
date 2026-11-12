@@ -1,19 +1,27 @@
-//! A node service of the test's own: a scratch data root, an OpenSSH that ends as it is told, a proc root
-//! the test writes, a road that prints the readings it is handed, and the routes served on a free port.
+//! A node service of the test's own: a scratch data root, an OpenSSH that ends as it is told, where asked
+//! once the test opens its gate, a proc root the test writes, a road that prints the readings it is handed,
+//! and the routes served on a free port and drained as the service drains once the test stops it.
 //! Every answer a test reads is held to the committed OpenAPI document: its status is one the route
 //! states, and its body the schema stated for that status.
 
+use std::ffi::CString;
+use std::fs::File;
+use std::os::unix::ffi::OsStrExt;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, LazyLock};
+use std::time::Duration;
 
 use hardware::live::Road;
 use hardware::roads::StreamEnd;
+use node_server::Service;
+use node_server::stop::{self, DRAIN, Drained};
 use node_server::this_machine::ThisMachine;
-use node_server::{Service, app};
 use reqwest::{Method, StatusCode};
 use serde_json::{Value, json};
 use store::Store;
+use tokio::sync::oneshot;
+use tokio::task::JoinHandle;
 
 pub const TOKEN: &str = "test-token";
 
@@ -86,11 +94,19 @@ pub struct Stood {
   pub service: Arc<Service>,
   pub base: String,
   pub client: reqwest::Client,
+  /// The serving, which ends with how its drain ended once the service is stopped.
+  pub served: JoinHandle<std::io::Result<Drained>>,
+  /// Sent, or dropped with the stood service, to stop it.
+  stop: Option<oneshot::Sender<()>>,
 }
 
 pub struct Stand {
   pub road: Road,
   pub ssh_code: i32,
+  /// Whether each login waits at the gate until the test opens it (`Stood::login_at_gate`).
+  pub ssh_gated: bool,
+  /// How long the calls under way are given once the service is stopped.
+  pub drain: Duration,
 }
 
 impl Default for Stand {
@@ -98,6 +114,8 @@ impl Default for Stand {
     Self {
       road: reading_road(),
       ssh_code: 0,
+      ssh_gated: false,
+      drain: DRAIN,
     }
   }
 }
@@ -112,7 +130,15 @@ impl Stand {
       Service::new(store, TOKEN, data, Some("Lab machine".into())).with_scope_variable(Some(SCOPE.into()));
     let ssh = dir.path().join("ssh");
 
-    std::fs::write(&ssh, format!("#!/bin/sh\nexit {}\n", self.ssh_code)).unwrap();
+    // A gated login reads the gate, a named pipe, which holds it until the test opens the pipe's other end.
+    let waits = if self.ssh_gated {
+      make_pipe(&dir.path().join("gate"));
+      "cat \"$(dirname \"$0\")/gate\" >/dev/null\n"
+    } else {
+      ""
+    };
+
+    std::fs::write(&ssh, format!("#!/bin/sh\n{waits}exit {}\n", self.ssh_code)).unwrap();
     std::fs::set_permissions(&ssh, std::fs::Permissions::from_mode(0o755)).unwrap();
     service.machine = node_check::Machine::new(&ssh, dir.path());
     service.road = self.road;
@@ -123,17 +149,32 @@ impl Stand {
     let service = Arc::new(service);
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let base = format!("http://{}", listener.local_addr().unwrap());
-    let routes = app(service.clone());
-
-    tokio::spawn(async move { axum::serve(listener, routes).await.unwrap() });
+    let (stop, stopped) = oneshot::channel::<()>();
+    let served = tokio::spawn(stop::serve(
+      listener,
+      service.clone(),
+      async move {
+        let _ = stopped.await;
+      },
+      self.drain,
+    ));
 
     Stood {
       dir,
       service,
       base,
       client: reqwest::Client::new(),
+      served,
+      stop: Some(stop),
     }
   }
+}
+
+fn make_pipe(path: &Path) {
+  let named = CString::new(path.as_os_str().as_bytes()).unwrap();
+
+  // SAFETY: `named` is a NUL-terminated path that outlives the call.
+  assert_eq!(unsafe { libc::mkfifo(named.as_ptr(), 0o600) }, 0, "{}", path.display());
 }
 
 /// A proc root of the test's own: load, threads, memory and memory pressure as the kernel words them.
@@ -305,5 +346,22 @@ impl Stood {
 
   pub fn home(&self) -> PathBuf {
     self.dir.path().to_path_buf()
+  }
+
+  /// Told to stop, as the signal tells the service.
+  pub fn stop(&mut self) {
+    if let Some(stop) = self.stop.take() {
+      let _ = stop.send(());
+    }
+  }
+
+  /// The gate's open end, once a gated login waits at it: the login ends as soon as it is dropped.
+  pub async fn login_at_gate(&self) -> File {
+    let gate = self.dir.path().join("gate");
+
+    // Opening a named pipe to write waits until a reader has it open.
+    tokio::task::spawn_blocking(move || File::options().write(true).open(gate).unwrap())
+      .await
+      .unwrap()
   }
 }

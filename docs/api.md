@@ -258,6 +258,24 @@ A change made by the command, which writes the store itself, is published by the
   and ends 0 where it answers ready; a service not listening refuses the connection and ends it at once.
   The deployment waits on it.
 
+## Stopping
+
+The service stops on SIGTERM, which a deployment or systemd sends when its unit is stopped, and on SIGINT
+from a terminal. It drains before it ends:
+
+- **It stops accepting at once.** The listening socket closes, so a caller connecting after the signal is
+  refused and asks the next run.
+- **Every event stream ends,** so no reader holds the stop open. The reader connects to the next run, where
+  a resume from this run's numbers is answered 410 `gone` and it reads the collections again (「Events」).
+- **A call under way is given thirty seconds to finish,** and answers as it would have, with whatever it
+  wrote kept. A connection with no call under way closes. A call still running when the thirty seconds are
+  out is cut as the process ends: its caller sees the connection drop and asks the next run.
+- **The loops end with the process.** A node check pass, a recorder run or a machine look cut midway writes
+  nothing more, and the next run starts each loop's first pass at once.
+- **The signal reaches the service alone.** The unit sends SIGTERM to the service's own process and not to
+  the logins and probes it started, so a call under way is not cut by its own login ending under it;
+  whatever the service started that still runs when it ends is killed with it.
+
 ## Configuration
 
 The service's binary, `bmo-node`, reads its configuration from the TOML file its `--config` names, at

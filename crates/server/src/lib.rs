@@ -7,6 +7,7 @@ mod loops;
 pub mod machines;
 pub mod reply;
 mod routes;
+pub mod stop;
 pub mod this_machine;
 pub mod views;
 
@@ -22,6 +23,7 @@ use bmo_node_client::nodes::{Node as NodeView, NodeKey};
 use hardware::live::{Hands, Road};
 use store::Store;
 use tokio::sync::OnceCell;
+use tokio_util::sync::CancellationToken;
 
 pub use loops::{machine_look, node_pass, start};
 
@@ -52,6 +54,8 @@ pub struct Service {
   pub road: Road,
   pub here: ThisMachine,
   pub events: Events,
+  /// Cancelled once the service is told to stop, which ends every event stream (docs/api.md, 「Stopping」).
+  pub(crate) stopping: CancellationToken,
   ready: AtomicBool,
   once: Mutex<HashMap<String, (i64, Once)>>,
   /// Every node as its events last told it, which the next settling is told against.
@@ -83,6 +87,7 @@ impl Service {
       data_root,
       here,
       events: Events::default(),
+      stopping: CancellationToken::new(),
       ready: AtomicBool::new(false),
       once: Mutex::new(HashMap::new()),
       seen,

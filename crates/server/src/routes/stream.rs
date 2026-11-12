@@ -119,7 +119,10 @@ pub async fn events(service: Shared, uri: Uri, headers: HeaderMap) -> Response {
     }
   });
 
-  Sse::new(kept.chain(live))
+  // Every stream ends once the service is told to stop, so none holds the drain open.
+  let until_stopped = service.stopping.clone().cancelled_owned();
+
+  Sse::new(kept.chain(live).take_until(until_stopped))
     .keep_alive(KeepAlive::new().interval(KEEP_OPEN))
     .into_response()
 }
