@@ -188,7 +188,7 @@ export interface paths {
         get: operations["getNode"];
         put?: never;
         post?: never;
-        /** Remove a node. */
+        /** Remove a node; with `leave`, a hub node's agent is sent a leave through its hub first, and the node stays where the hub does not take it. */
         delete: operations["deleteNode"];
         options?: never;
         head?: never;
@@ -1439,7 +1439,13 @@ export interface operations {
     };
     deleteNode: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Whether a hub node's agent is sent a leave through its hub first, so it uninstalls itself and departs; the
+                 *     node is removed only once its hub took the leave.
+                 */
+                leave?: boolean;
+            };
             header?: never;
             path: {
                 /** @description The node's name. */
@@ -1456,8 +1462,10 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             500: components["responses"]["Failed"];
         };
     };

@@ -3047,11 +3047,23 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "description": "Whether a hub node's agent is sent a leave through its hub first, so it uninstalls itself and departs; the\nnode is removed only once its hub took the leave.",
+            "in": "query",
+            "name": "leave",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
           "204": {
             "description": "Done."
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
@@ -3059,11 +3071,14 @@
           "404": {
             "$ref": "#/components/responses/NotFound"
           },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
           "500": {
             "$ref": "#/components/responses/Failed"
           }
         },
-        "summary": "Remove a node.",
+        "summary": "Remove a node; with `leave`, a hub node's agent is sent a leave through its hub first, and the node stays where the hub does not take it.",
         "tags": [
           "nodes"
         ]

@@ -138,7 +138,12 @@ routes do the same (`docs/api.md`).
   fields; `--key none` clears the key path and `--role none` the role. A hub node takes `--label` and
   `--role` alone. A changed address, port, account, key or shell clears the last check, since it was a
   check of something else.
-- `--remove <name>` removes a node.
+- `--remove <name>` removes a node. A hub node whose agent is still attached comes back on the next pass,
+  so `DELETE /nodes/{nodeName}` with `leave=true` first sends the agent a leave through its hub — the hub's
+  `POST /leave`, which has the agent uninstall itself and depart — and removes the node once the hub took
+  it; a hub that refuses, as it does for an agent not attached, or cannot be reached, leaves the node listed
+  and says why. Without a leave a hub node is removed alone, which holds for good only once its agent is
+  gone. An ssh node takes no leave.
 - `--check [<name>]` checks every node, or one, now.
 - `--target <name>` prints the one node's target as JSON, as `GET /nodes/{nodeName}/target` answers it, for
   a tool outside the service that reaches a node by its registered name: its connection type with the

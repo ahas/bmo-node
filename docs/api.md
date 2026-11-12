@@ -89,7 +89,7 @@ its own.
 | `POST /nodes` | `name`, `host`, `user`, `port?`, `keyPath?`, `shell?`, `label?`, `role?` | 201 and the new ssh node; it goes last |
 | `GET /nodes/{nodeName}` | | the node |
 | `PATCH /nodes/{nodeName}` | any of `label`, `role`, `host`, `user`, `port`, `keyPath`, `shell`; null clears `keyPath` and `role` | the node; a changed address, port, account, key or shell clears the last check |
-| `DELETE /nodes/{nodeName}` | | 204 |
+| `DELETE /nodes/{nodeName}` | query `leave?`, `true` to send a hub node's agent a leave first | 204; a leave the hub refuses or cannot be sent is `conflict` with the hub's reason, and nothing is removed |
 | `GET /nodes/{nodeName}/target` | | how to reach the node (below) |
 
 A node holds no credential, only where one is kept:

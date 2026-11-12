@@ -175,6 +175,15 @@ pub struct NodesQuery {
   pub limit: Option<u32>,
 }
 
+/// What a node's removal asks beside the removal.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct NodeRemoveQuery {
+  /// Whether a hub node's agent is sent a leave through its hub first, so it uninstalls itself and departs; the
+  /// node is removed only once its hub took the leave.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub leave: Option<bool>,
+}
+
 /// A removed node, by its key.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct NodeKey {

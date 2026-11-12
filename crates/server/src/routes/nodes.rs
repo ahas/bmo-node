@@ -6,7 +6,7 @@ use axum::body::Bytes;
 use axum::extract::Path;
 use axum::http::{StatusCode, Uri};
 use bmo_node_client::nodes::{
-  NewNode, Node, NodeChanges, NodeCheck, NodeCheckAsk, NodePage, NodesQuery, Target,
+  NewNode, Node, NodeChanges, NodeCheck, NodeCheckAsk, NodePage, NodeRemoveQuery, NodesQuery, Target,
 };
 use node_check::pass::check_nodes;
 use store::nodes::{DEFAULT_LOGIN_SHELL, DEFAULT_SSH_PORT, NodeChanges as StoreChanges, SshLogin};
@@ -15,6 +15,7 @@ use super::{Shared, node, settle};
 use crate::Service;
 use crate::reply::{Answer, Done, Made, Reply, body, query};
 use crate::views;
+use bmo_node_client::ErrorCode;
 
 /// Every node as the routes answer it, in the list's order.
 fn all(service: &Service) -> Result<Vec<Node>, Reply> {
@@ -104,7 +105,34 @@ pub async fn change(service: Shared, Path(name): Path<String>, bytes: Bytes) -> 
   Ok(Json(views::view(&node, &service.here, store::now_seconds())))
 }
 
-pub async fn remove(service: Shared, Path(name): Path<String>) -> Done {
+pub async fn remove(service: Shared, Path(name): Path<String>, uri: Uri) -> Done {
+  let asked: NodeRemoveQuery = query(&uri)?;
+
+  // A hub node whose agent is still attached would come back on the next pass, so its agent is sent a leave
+  // through its hub first, and nothing is removed where the hub does not take it (docs/nodes.md).
+  if asked.leave == Some(true) {
+    let Some(node) = service.store.node(&name)? else {
+      return Err(Reply::no_node(&name));
+    };
+
+    if let (Some(agent), Some(url)) = (node.agent.as_deref(), node.hub_url.as_deref()) {
+      let hub = service
+        .store
+        .hubs()?
+        .into_iter()
+        .find(|hub| hub.url == url)
+        .ok_or_else(|| Reply::new(ErrorCode::Conflict, format!("no listed hub is at {url}")))?;
+      let target = node_check::rows::Hub {
+        url: hub.url,
+        token_file: hub.token_file,
+      };
+
+      node_check::hub::leave(&service.machine, &target, agent)
+        .await
+        .map_err(|why| Reply::new(ErrorCode::Conflict, why))?;
+    }
+  }
+
   if !service.store.remove_node(&name)? {
     return Err(Reply::no_node(&name));
   }

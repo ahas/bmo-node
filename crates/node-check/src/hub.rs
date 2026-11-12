@@ -75,6 +75,36 @@ pub fn hub_token(machine: &Machine, token_file: &str) -> Result<String, String> 
     .ok_or_else(|| format!("the token file {token_file} holds no {TOKEN_KEY}"))
 }
 
+/// Tells a hub to send its attached agent `agent` a leave: the agent uninstalls itself and departs (the hub's
+/// `POST /leave`). The hub's own reason where it refuses, as it does for an agent not attached.
+pub async fn leave(machine: &Machine, hub: &Hub, agent: &str) -> Result<(), String> {
+  let token = hub_token(machine, &hub.token_file)?;
+  let answer = machine
+    .http
+    .post(format!("{}/leave", hub.url))
+    .query(&[("agent", agent)])
+    .bearer_auth(token)
+    .send()
+    .await
+    .map_err(|error| {
+      format!(
+        "the hub at {} did not answer: {}",
+        hub.url,
+        last_line(&error.to_string()).unwrap_or_default()
+      )
+    })?;
+  let status = answer.status();
+
+  if status.is_success() {
+    return Ok(());
+  }
+
+  let said: serde_json::Value = answer.json().await.unwrap_or_default();
+  let reason = said["reason"].as_str().map_or_else(|| status.to_string(), str::to_owned);
+
+  Err(format!("the hub refused the leave of {agent}: {reason}"))
+}
+
 /// Asks a hub which agents are attached to it.
 pub async fn ask(machine: &Machine, hub: &Hub) -> HubAnswer {
   let failed = |state, detail: String| HubAnswer::Failed(Met::new(state, detail));

@@ -526,3 +526,58 @@ async fn a_pass_over_node_s_own_store_adds_the_hub_s_agents_and_writes_every_che
     }
   );
 }
+
+// A hub node's agent sent a leave through its hub (docs/nodes.md, 「Registering and changing a node」): the hub's
+// `POST /leave` names the agent and carries the hub's token, and a refusal is said in the hub's own words.
+#[tokio::test]
+async fn a_leave_names_the_agent_to_its_hub_and_says_the_hub_s_refusal() {
+  use axum::extract::Query;
+  use axum::routing::post;
+
+  let scratch = Scratch::new();
+  let asked: Arc<Mutex<Vec<String>>> = Arc::default();
+  let heard = asked.clone();
+  let app = Router::new().route(
+    "/leave",
+    post(
+      move |headers: HeaderMap, Query(query): Query<std::collections::HashMap<String, String>>| async move {
+        let agent = query.get("agent").cloned().unwrap_or_default();
+
+        heard.lock().unwrap().push(agent.clone());
+
+        if headers.get("authorization").and_then(|value| value.to_str().ok())
+          != Some(&format!("Bearer {TOKEN}"))
+        {
+          return (StatusCode::UNAUTHORIZED, axum::Json(json!({ "error": "unauthorized" })))
+            .into_response();
+        }
+
+        if agent == "attached_one" {
+          (StatusCode::OK, axum::Json(json!({ "ok": true, "agent": agent }))).into_response()
+        } else {
+          (
+            StatusCode::CONFLICT,
+            axum::Json(json!({ "ok": false, "reason": "no agent is attached" })),
+          )
+            .into_response()
+        }
+      },
+    ),
+  );
+  let listener = tokio::net::TcpListener::bind(SocketAddr::from((Ipv4Addr::LOCALHOST, 0))).await.unwrap();
+  let url = format!("http://{}", listener.local_addr().unwrap());
+
+  tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+
+  let target = Hub {
+    url: url.clone(),
+    token_file: "~/.local/share/jake/hub.env".into(),
+  };
+
+  assert_eq!(hub::leave(&scratch.machine(), &target, "attached_one").await, Ok(()));
+  assert_eq!(
+    hub::leave(&scratch.machine(), &target, "gone_one").await,
+    Err("the hub refused the leave of gone_one: no agent is attached".to_owned())
+  );
+  assert_eq!(*asked.lock().unwrap(), vec!["attached_one".to_owned(), "gone_one".to_owned()]);
+}

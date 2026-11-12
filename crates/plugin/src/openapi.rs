@@ -11,8 +11,8 @@ use bmo_node_client::hardware::{
 };
 use bmo_node_client::machines::{Health, Machine, MachineChanges, MachinePage};
 use bmo_node_client::nodes::{
-  Hub, HubPage, NewHub, NewNode, Node, NodeChanges, NodeCheck, NodeCheckAsk, NodeKey, NodePage, NodesQuery,
-  Target,
+  Hub, HubPage, NewHub, NewNode, Node, NodeChanges, NodeCheck, NodeCheckAsk, NodeKey, NodePage,
+  NodeRemoveQuery, NodesQuery, Target,
 };
 use bmo_node_client::{ErrorCode, WireError};
 use schemars::generate::{SchemaGenerator, SchemaSettings};
@@ -405,9 +405,18 @@ fn routes(generator: &mut SchemaGenerator) -> Vec<Route> {
     .at::<String>(generator, "nodeName", NODE)
     .body::<NodeChanges>(generator)
     .refuses(&[NotFound, BadField]),
-    Route::new("delete", "/nodes/{nodeName}", "nodes", "deleteNode", "Remove a node.", Answer::Nothing)
-      .at::<String>(generator, "nodeName", NODE)
-      .refuses(&[NotFound]),
+    Route::new(
+      "delete",
+      "/nodes/{nodeName}",
+      "nodes",
+      "deleteNode",
+      "Remove a node; with `leave`, a hub node's agent is sent a leave through its hub first, and the node stays \
+       where the hub does not take it.",
+      Answer::Nothing,
+    )
+    .at::<String>(generator, "nodeName", NODE)
+    .query::<NodeRemoveQuery>(generator)
+    .refuses(&[NotFound, Conflict]),
     Route::new(
       "get",
       "/nodes/{nodeName}/target",
