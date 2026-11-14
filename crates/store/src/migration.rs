@@ -84,6 +84,9 @@ CREATE TABLE memory_samples (
 CREATE INDEX memory_samples_at ON memory_samples (at);
 "#;
 
+// The callers a node lets make a run on it, joined by `+`; none until the owner writes them.
+const FOURTH: &str = "ALTER TABLE nodes ADD COLUMN callers TEXT;";
+
 /// Every step not yet run, run, and the version moved to the last.
 pub fn settle(connection: &mut Connection, now: i64) -> rusqlite::Result<()> {
   let version: i64 = connection.pragma_query_value(None, "user_version", |row| row.get(0))?;
@@ -113,6 +116,14 @@ pub fn settle(connection: &mut Connection, now: i64) -> rusqlite::Result<()> {
 
     unit.execute_batch(THIRD)?;
     unit.pragma_update(None, "user_version", 3)?;
+    unit.commit()?;
+  }
+
+  if version < 4 {
+    let unit = connection.transaction()?;
+
+    unit.execute_batch(FOURTH)?;
+    unit.pragma_update(None, "user_version", 4)?;
     unit.commit()?;
   }
 

@@ -1,14 +1,16 @@
-//! Every route of docs/api.md, grouped by the resource it acts on, each behind the bearer token.
+//! Every route of docs/api.md, grouped by the resource it acts on: a run behind a caller's own token, and
+//! every other route behind the service's.
 
 mod hubs;
 mod machines;
 mod nodes;
+mod runs;
 mod stream;
 
 use std::sync::Arc;
 
 use axum::Router;
-use axum::extract::{Request, State};
+use axum::extract::{MatchedPath, Request, State};
 use axum::http::header;
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
@@ -19,8 +21,12 @@ use subtle::ConstantTimeEq;
 
 use crate::Service;
 use crate::reply::Reply;
+use crate::routes::runs::RunCaller;
 
 pub type Shared = State<Arc<Service>>;
+
+/// The one route a caller calls as itself, with its own token.
+const RUNS: &str = "/nodes/{nodeName}/runs";
 
 pub fn router(service: Arc<Service>) -> Router {
   Router::new()
@@ -29,6 +35,7 @@ pub fn router(service: Arc<Service>) -> Router {
     .route("/nodes", get(nodes::list).post(nodes::create))
     .route("/nodes/{nodeName}", get(nodes::one).patch(nodes::change).delete(nodes::remove))
     .route("/nodes/{nodeName}/target", get(nodes::target))
+    .route(RUNS, post(runs::run))
     .route("/node-checks", post(nodes::check))
     .route("/hubs", get(hubs::list).post(hubs::create))
     .route("/hubs/{hubId}", delete(hubs::remove))
@@ -46,16 +53,55 @@ async fn no_route() -> Reply {
   Reply::new(ErrorCode::NoRoute, "no route at this method and path")
 }
 
-/// Every route needs the configured token.
-async fn bearer(State(service): Shared, request: Request, next: Next) -> Response {
+/// Who a token names: the service's own token names no caller, and a caller's names that caller.
+enum Bearer {
+  Service,
+  Caller(String),
+}
+
+/// Every route needs a token: a run a caller's own, and every other route the service's (docs/api.md,
+/// 「Wire format」). A path no route answers is let on to the answer saying so.
+async fn bearer(State(service): Shared, mut request: Request, next: Next) -> Response {
   let given = request
     .headers()
     .get(header::AUTHORIZATION)
     .and_then(|value| value.to_str().ok())
     .and_then(|value| value.strip_prefix("Bearer "));
+  let bearer = given.and_then(|given| {
+    if same(given, &service.token) {
+      return Some(Bearer::Service);
+    }
 
-  if !given.is_some_and(|given| same(given, &service.token)) {
+    service
+      .callers
+      .iter()
+      .find(|caller| same(given, &caller.token))
+      .map(|caller| Bearer::Caller(caller.name.clone()))
+  });
+  let Some(bearer) = bearer else {
     return Reply::new(ErrorCode::Unauthorized, "the token is missing or wrong").into_response();
+  };
+  let route = request.extensions().get::<MatchedPath>().map(|path| path.as_str().to_owned());
+
+  match (route.as_deref(), bearer) {
+    (Some(RUNS), Bearer::Caller(name)) => {
+      request.extensions_mut().insert(RunCaller(name));
+    }
+    (Some(RUNS), Bearer::Service) => {
+      return Reply::new(
+        ErrorCode::Forbidden,
+        "the service's own token names no caller; a run is made with a caller's own token",
+      )
+      .into_response();
+    }
+    (Some(_), Bearer::Caller(name)) => {
+      return Reply::new(
+        ErrorCode::Forbidden,
+        format!("the caller {name}'s token makes a run and calls no other route"),
+      )
+      .into_response();
+    }
+    (_, _) => {}
   }
 
   next.run(request).await

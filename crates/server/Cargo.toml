@@ -20,6 +20,7 @@ clap.workspace = true
 futures-util.workspace = true
 hardware = { path = "../hardware" }
 node-check = { path = "../node-check" }
+percent-encoding.workspace = true
 policy = { path = "../policy" }
 reqwest.workspace = true
 rmcp.workspace = true

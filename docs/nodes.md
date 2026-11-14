@@ -45,6 +45,7 @@ service's API (`docs/api.md`); nothing else keeps a list of its own.
   the token; the token is read out of its file for the one request that needs it and goes nowhere else:
   not into a row, a log line, an event or an answer.
 - `role`: the services the node is reserved for, joined by `+`, or none (「A node's role」).
+- `callers`: the callers the node lets make a run on it, joined by `+`, or none (「A node's callers」).
 - `position`: the order the list is shown in. A new node goes last.
 - The last check: `state`, `detail` (one line saying what the check met), `checked_at`, and
   `connected_at`, the last moment the node was found connected, kept when a later check fails.
@@ -57,6 +58,32 @@ service's API (`docs/api.md`); nothing else keeps a list of its own.
   list of them or reads any one of them: what a role means for a placement is the caller's.
 - **The role is written by whatever places services on nodes,** through the registry's change, and read by
   every installer and placement that must refuse a node reserved for another service.
+
+## A node's callers
+
+- **A node lets a caller make a run on it only where its own `callers` name that caller** (`docs/api.md`,
+  「Runs」). A node naming none, as every node does until the owner writes one, takes no caller's run.
+- **A caller is a name the configuration gives a token of its own** (`docs/api.md`, 「Configuration」),
+  lowercase letters, digits and hyphens: a unit of the deployment that is not a session, such as a service
+  driving a program on a person's PC. Nothing here keeps a list of them or reads any one of them.
+- **The owner writes it, with the command alone:** `bmo-node node --set <name> --callers <caller>[+<caller>…]`
+  sets the whole list, and `--callers none` clears it. No route writes it, so a caller holding the service's
+  token cannot let itself onto a node; every route and event shows it.
+- **A node's callers do not pass a run on their own:** the node must also be the person's own node the run is
+  made for (「A person's node」).
+
+## A person's node
+
+- **A run is made for one person,** named by the account it is for, and only on that person's own node: a node
+  whose owners hold the account. A node another person owns, or no one owns, is refused.
+- **Whose node it is, is read and not kept here.** The service asks the owners' read its configuration names
+  (`docs/api.md`, 「Calls the node service makes」) for each run, and holds nothing of what it answers.
+- **Deployed, the owners are agency's:** its access read answers the accounts whose record of a person's node
+  names the node, and for an isolation node the account it is named for (agency's `docs/person-nodes.md`,
+  「Which node is a person's」). A person's PC is their node once agency's record binds their account to it,
+  set by the service that binds an account to its machine, or by the owner with `bmo node person <account>
+  <node>`.
+- **Where no owners' read is configured,** no node is anyone's and no run is let through.
 
 ## How a node's state is known
 
@@ -136,10 +163,11 @@ routes do the same (`docs/api.md`).
 - A hub node is never registered by hand: it is added when its agent attaches to a listed hub.
 - `--add-hub <control url> --token-file <path>` lists a hub; `--remove-hub <control url>` removes it with
   every hub node reached through it.
-- `--set <name>` with any of `--label`, `--role`, `--ssh`, `--port`, `--key`, `--shell` changes those
-  fields; `--key none` clears the key path and `--role none` the role. A hub node takes `--label` and
-  `--role` alone. A changed address, port, account, key or shell clears the last check, since it was a
-  check of something else.
+- `--set <name>` with any of `--label`, `--role`, `--callers`, `--ssh`, `--port`, `--key`, `--shell` changes
+  those fields; `--key none` clears the key path, `--role none` the role and `--callers none` the callers. A
+  hub node takes `--label`, `--role` and `--callers` alone. A changed address, port, account, key or shell
+  clears the last check, since it was a check of something else. `--callers` is this command's alone
+  (「A node's callers」).
 - `--remove <name>` removes a node. A hub node whose agent is still attached comes back on the next pass,
   so `DELETE /nodes/{nodeName}` with `leave=true` first sends the agent a leave through its hub — the hub's
   `POST /leave`, which has the agent uninstall itself and depart — and removes the node once the hub took
@@ -161,13 +189,17 @@ routes do the same (`docs/api.md`).
 
 ## Reaching a node
 
-- **The service reaches a node in two ways and no others:** the check's own login or hub status
-  (「How a node's state is known」), and the hardware monitor's road, which runs a script on the node and
-  hands its output on as it comes (`docs/hardware.md`, 「Which machines」). The Windows sensor setup runs
-  over that same road.
+- **The service reaches a node in three ways and no others:** the check's own login or hub status
+  (「How a node's state is known」); the hardware monitor's road, which runs a script on the node and
+  hands its output on as it comes (`docs/hardware.md`, 「Which machines」), over which the Windows sensor
+  setup runs too; and a run, the hub's exec aimed at the node's agent for a caller (below).
 - **A service kept on a node is built, fed and asked over the node's own login by the unit that keeps it,**
   with the node's target from `GET /nodes/{nodeName}/target` (`docs/api.md`), whose `sshArgs` open its
-  batch login. The node service's routes carry no general shell for other units and no file transfer.
+  batch login. The node service's routes carry no file transfer.
+- **A unit that is not a session runs a command on a hub node through a run alone** (`docs/api.md`, 「Runs」):
+  as itself, with a token of its own, on a node whose `callers` name it (「A node's callers」), for a person
+  whose own node it is (「A person's node」). The hub's control token is read by the service for that one
+  request and handed to no caller.
 - **An agent runs a command on a hub node through the hosted tool `bmo/node_exec` alone** (`docs/tools.md`): the
   hub's exec aimed at the node's agent, with the hub's control token read by the tool and handed to no session,
   and only for a caller whose account owns the node or that holds the administrator's grant. A hub's own exec checks

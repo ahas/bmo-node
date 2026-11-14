@@ -14,6 +14,7 @@ use bmo_node_client::nodes::{
   Hub, HubPage, NewHub, NewNode, Node, NodeChanges, NodeCheck, NodeCheckAsk, NodeKey, NodePage,
   NodeRemoveQuery, NodesQuery, Target,
 };
+use bmo_node_client::runs::{Run, RunAsk};
 use bmo_node_client::{ErrorCode, WireError};
 use schemars::generate::{SchemaGenerator, SchemaSettings};
 use schemars::{JsonSchema, Schema};
@@ -29,7 +30,7 @@ const DESCRIPTION: &str = "The node service: the machines reachable from here an
   Nodes and hubs, how to reach a node, checking whether each answers, and each machine's hardware readings. \
   A machine carries its readings, tracking and CPU limit; whether a launch may start on it is the caller's \
   own policy, read from these fields. Bodies are JSON with camelCase keys, and times are integers of epoch \
-  milliseconds. Every route needs the service's bearer token. Every failure and refusal is a non-2xx status \
+  milliseconds. Every route needs the service's bearer token, but a run, which needs a caller's own token. Every failure and refusal is a non-2xx status \
   with a body of `code` and `error`. A page is `items` and `more`. Any other method and path is answered \
   404 `no-route`.";
 
@@ -116,7 +117,7 @@ pub fn openapi() -> Value {
         "bearer": {
           "type": "http",
           "scheme": "bearer",
-          "description": "The service's token, from the caller's own configuration.",
+          "description": "The service's token, from the caller's own configuration; on a run, the caller's own token.",
         },
       },
     },
@@ -276,7 +277,10 @@ impl Route {
       codes.push(ErrorCode::BadRequest);
     }
 
+    // Every route refuses a token that names a caller where the route takes the other kind (docs/api.md,
+    // 「Wire format」).
     codes.push(ErrorCode::Unauthorized);
+    codes.push(ErrorCode::Forbidden);
 
     if self.can_fail {
       codes.push(ErrorCode::Failed);
@@ -365,7 +369,7 @@ fn made<T: JsonSchema>(generator: &mut SchemaGenerator) -> Answer {
 
 /// Every route of docs/api.md.
 fn routes(generator: &mut SchemaGenerator) -> Vec<Route> {
-  use ErrorCode::{BadField, Conflict, Gone, Incomplete, NameRule, NotFound};
+  use ErrorCode::{BadField, Conflict, Gone, Incomplete, NameRule, NotAHubNode, NotFound, UpstreamFailed};
 
   const NODE: &str = "The node's name.";
   const HUB: &str = "The hub's id.";
@@ -428,6 +432,19 @@ fn routes(generator: &mut SchemaGenerator) -> Vec<Route> {
     )
     .at::<String>(generator, "nodeName", NODE)
     .refuses(&[NotFound, Incomplete]),
+    Route::new(
+      "post",
+      "/nodes/{nodeName}/runs",
+      "nodes",
+      "createNodesRuns",
+      "Run one command on a hub node through its hub, as the caller its own token names, for the person whose \
+       account is named: the node's callers must name the caller and the node must be that person's own. \
+       Answered with the command's exit code and the last 64 KiB of each stream; keeps nothing.",
+      read::<Run>(generator),
+    )
+    .at::<String>(generator, "nodeName", NODE)
+    .body::<RunAsk>(generator)
+    .refuses(&[NotFound, NotAHubNode, Incomplete, UpstreamFailed]),
     Route::new(
       "post",
       "/node-checks",

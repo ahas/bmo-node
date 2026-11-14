@@ -6,9 +6,10 @@ anything here changes this document in the same commit.
 
 The service is an upstream unit (bmo-chat's `docs/conventions.md`, 「Upstream and downstream」): a harness
 can take it as its first entry point through its MCP server, with no other unit running. Routes are
-grouped by the resource they act on. The service names no caller and keeps no list of callers: any caller
-holding the token calls any route, and whether a launch may start on a machine is the caller's own policy,
-read from the fields below.
+grouped by the resource they act on. The service's own token names no caller: any caller holding it calls
+any route but a run, and whether a launch may start on a machine is the caller's own policy, read from the
+fields below. A run is the one route a caller calls as itself, with a token of its own the deployment's
+configuration names (「Runs」, 「Configuration」); no name of a caller is written in the service.
 
 ## Wire format
 
@@ -17,7 +18,8 @@ wire format」 and 「API design」): camelCase keys, times as one integer of ep
 and refusal a non-2xx status with a body of `code` and `error`, and lists as a page of `items` and `more`.
 What the service adds to it:
 
-- **Every route needs `Authorization: Bearer <token>`,** the configured token, `GET /health` among them.
+- **Every route needs `Authorization: Bearer <token>`,** `GET /health` among them: the configured token on
+  every route but a run, and a caller's own token on a run and on no other route.
 - **A field written with a question mark** may be null or left out of an answer, and may be left out of a
   request.
 - **A figure is a number in the unit its name says** (`celsius`, `watts`, `mhz`, `usedGb`, `megabytes`,
@@ -33,6 +35,7 @@ What the service adds to it:
 |---|---|---|
 | 400 | `bad-request` | the body or the query is not the shape the route takes; the error names what is wrong |
 | 401 | `unauthorized` | the token is missing or wrong |
+| 403 | `forbidden` | the token is right but the caller may not do this: a caller's token on a route but a run, the service's own token on a run, or a run the node does not let the caller make; the error names why |
 | 404 | `no-route` | no route answers this method and path |
 | 404 | `not-found` | nothing stands at the key the path names: no node, hub or machine of that name or id |
 | 409 | `conflict` | the key is taken: a node of that name, or a hub at that address, is already listed |
@@ -40,7 +43,9 @@ What the service adds to it:
 | 422 | `name-rule` | a node's name is not lowercase letters, digits and hyphens of at most 32 characters |
 | 422 | `bad-field` | a field is out of range, of the other connection type, or names nothing listed; the error names it |
 | 422 | `incomplete` | the node's row lacks a field its connection type needs |
+| 422 | `not-a-hub-node` | a run names an ssh node, which is reached over its own login |
 | 500 | `failed` | the service failed; the error is the failure as a sentence |
+| 502 | `upstream-failed` | what a run needed did not answer: the node's hub, its agent, or the owners' read; the error names which and why |
 
 ## The clients and the harness plugin
 
@@ -81,7 +86,7 @@ its own.
 - **The hosted tool, `node-exec`** (`tools/node-exec`, `docs/tools.md`): the tool host's entry `bmo/node_exec`,
   which runs one command on a hub node through its hub for a caller whose account owns the node, or that holds
   the administrator's grant, and answers its exit code and output. It is not among the plugin's tools, which know
-  no caller.
+  no caller, and neither is a run (「Runs」), which a caller makes as itself with a token of its own.
 - This document is the canonical statement: where the document, the code and the clients disagree, the
   code is repaired and both clients generated again.
 
@@ -95,6 +100,7 @@ its own.
 | `PATCH /nodes/{nodeName}` | any of `label`, `role`, `host`, `user`, `port`, `keyPath`, `shell`; null clears `keyPath` and `role` | the node; a changed address, port, account, key or shell clears the last check |
 | `DELETE /nodes/{nodeName}` | query `leave?`, `true` to send a hub node's agent a leave first | 204; a leave the hub refuses or cannot be sent is `conflict` with the hub's reason, and nothing is removed |
 | `GET /nodes/{nodeName}/target` | | how to reach the node (below) |
+| `POST /nodes/{nodeName}/runs` | `account`, `command`, `shell?`, `cwd?`, `env?`, `distro?` | one command run on the node for the caller, answered with its end (「Runs」) |
 
 A node holds no credential, only where one is kept:
 
@@ -106,6 +112,7 @@ A node holds no credential, only where one is kept:
 | `address` | where it is reached: `user@host`, `:port` after it where the port is not 22 and ` (PowerShell)` where the login answers in PowerShell; `agent @ hub address` for a hub node |
 | `credential?` | where the credential is kept: an ssh node's key path, or the token file of a hub node's hub |
 | `role?` | the services the node is reserved for, joined by `+` (`docs/nodes.md`, 「A node's role」) |
+| `callers` | the callers the node lets make a run on it, by name, none where it lets none (`docs/nodes.md`, 「A node's callers」) |
 | `state` | the last check's state: `connected`, `disconnected`, `auth`, `hostkey`, `unreachable`, `error` or `unknown` (`docs/nodes.md`, 「The states」) |
 | `tone` | `good`, `bad` or `unknown`, as the policy's node states give it |
 | `detail?`, `checkedAt?`, `connectedAt?` | the last check's line, when it was made, and when the node was last found connected |
@@ -130,7 +137,38 @@ The target names where the credential is kept and never the credential. A node w
 connection type needs is refused `incomplete`.
 
 A hub node is never registered by a route: it is added when its agent attaches to a listed hub
-(`docs/nodes.md`). A hub node takes `label` and `role` alone.
+(`docs/nodes.md`). A hub node takes `label` and `role` alone. A node's `callers` are written by the command
+alone, never by a route, so no caller lets itself onto a node (`docs/nodes.md`, 「A node's callers」).
+
+### Runs
+
+A run is one command a caller runs on a hub node through the node's hub, for a person whose own node it is,
+answered with the command's end. It is a computation that keeps nothing: the service records no run.
+
+- **The caller is named by its own token,** one of the callers the configuration lists (「Configuration」). The
+  service's own token names no caller and is refused here `forbidden`; a token neither is `unauthorized`.
+- **The body:** `account`, the person the caller acts for, as the account's id written out; `command`, the
+  command's text; and, as the hosted tool takes them, `shell?`, `powershell`, `wsl` or `linux`, the shell the
+  node's host takes a command in where none is named; `cwd?`, the folder it runs in; `env?`, variables laid over
+  the agent's environment; and `distro?`, the WSL distribution a `wsl` command runs in.
+- **What is checked, in this order,** before the hub is asked anything:
+  1. a node no row holds is `not-found`;
+  2. a node whose `callers` do not name the caller is `forbidden`, the error naming the node and the caller;
+  3. an ssh node is `not-a-hub-node`: it is reached over its own login with its target's `sshArgs`;
+  4. the node's owners are read (`docs/nodes.md`, 「A person's node」), and a node whose owners do not hold
+     `account` is `forbidden`, the error naming the node, its owners or that it has none, and the account. An
+     owners' read that is not configured lets no run through and is `forbidden` saying so; one that does not
+     answer, or answers something that does not read, is `upstream-failed`.
+- **The answer** is 200 and the run as the hosted tool answers it (`docs/tools.md`, 「A call」): `node`, the
+  `shell` it ran in, `exitCode`, null where the hub reports none, `signal`, the signal that ended it, or null,
+  and `stdout` and `stderr` as text, each its last 64 KiB, with `stdoutCut` and `stderrCut` saying where more
+  came. A command that ran and ended with any code is answered, not refused.
+- **A node out of reach is `upstream-failed`,** told apart as the tool tells it: the hub refusing the token, the
+  agent not attached, the hub not answering, the token file unreadable, the hub ending the run before the
+  command's end and its stream breaking off. Output that came before a break is said in the error with it.
+- **A run is held to the hub's own ceilings** on its time and its output, and the service adds none: the call
+  waits for the hub's stream to end. A caller whose work runs longer starts it on the node as a unit of its own
+  and reads it back with later runs.
 
 ## Node checks
 
@@ -291,15 +329,29 @@ each release links to it as `node.toml`; the unit does not start where the data 
 | this machine's name | `machine_label` | how this machine is shown, where none is set the system's host name |
 | scope variable | `scope_variable` | the environment variable a process's scope is read from (`docs/machine.md`, 「What is read」); where none is set, no process has a scope |
 | drain | `drain_ms` | how long a call under way is given to finish once the service is told to stop, in milliseconds (「Stopping」); where none is set, thirty seconds |
+| callers | `[callers.<name>]` | one table for each caller with a token of its own, keyed by its name, lowercase letters, digits and hyphens of at most 32: `token_file`, the file holding the caller's bearer token, its surrounding whitespace dropped; where none is set, no caller makes a run |
+| owners' read | `[owners]` | where a node's owners are read for a run (`docs/nodes.md`, 「A person's node」): `url`, an address in which `{nodeName}` stands for the node's name and `{caller}` for the caller's, each written escaped; and `token_file`, the file holding the bearer token presented there; where none is set, no run is let through |
+
+- **The callers' tokens are read once, at start,** and the service does not start where a file cannot be read,
+  holds no token, or holds the service's own token or another caller's. A changed token is taken up by a
+  restart.
+- **The owners' read's token is read for each run,** so a token changed where it is kept is taken up at once,
+  and it goes nowhere else: not into an answer, an event or a log line.
+- A path in either may start `~/`, the home of the account the service runs as.
 
 ## Calls the node service makes
 
-The node service calls no other unit. It reaches the machines themselves:
+The node service names no other unit. It reaches the machines themselves, and one address its configuration
+gives:
 
 - **an ssh node** through OpenSSH, with the policy's options (`docs/nodes.md`);
 - **a hub,** an outside program an agent attaches to, over its HTTP control address with the token read
   from the hub's token file for each request: `GET /status` for the agents attached and departed, and
-  `POST /exec?agent=<agent>` to run a command on an agent's machine.
+  `POST /exec?agent=<agent>` to run a command on an agent's machine, a run's among them;
+- **the owners' read,** for a run alone: a `GET` of the address `[owners]` names, with its token, answered by a
+  JSON object whose `owners` lists the accounts that own the node, each a number or a string, none for a node
+  no one owns (`docs/nodes.md`, 「A person's node」). Deployed, it is agency's
+  `GET /nodes/{nodeName}/access?agent={caller}` on its control port, with its control token.
 
 The hosted tool is no part of the service and makes calls of its own (`docs/tools.md`): the service's
 `GET /nodes/{nodeName}/target`, a hub's `POST /exec?agent=<agent>`, and agency's `GET /supervisors/{supervisorName}`,

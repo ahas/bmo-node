@@ -57,6 +57,15 @@ fn nothing_lists_and_each_verb_reads_its_own_fields() {
         role: Some(None),
         ..NodeChanges::default()
       },
+      callers: None,
+    })
+  );
+  assert_eq!(
+    command(&["--set", "pc-four", "--callers", "desk-driver"]),
+    Ok(NodeCommand::Set {
+      name: "pc-four".into(),
+      changes: NodeChanges::default(),
+      callers: Some(Some("desk-driver".into())),
     })
   );
   assert_eq!(
@@ -75,6 +84,7 @@ fn nothing_lists_and_each_verb_reads_its_own_fields() {
         port: Some(22),
         ..NodeChanges::default()
       },
+      callers: None,
     })
   );
   assert_eq!(command(&["--remove-hub", "http://h"]), Ok(NodeCommand::RemoveHub("http://h".into())));

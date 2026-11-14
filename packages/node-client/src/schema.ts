@@ -196,6 +196,23 @@ export interface paths {
         patch: operations["changeNode"];
         trace?: never;
     };
+    "/nodes/{nodeName}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run one command on a hub node through its hub, as the caller its own token names, for the person whose account is named: the node's callers must name the caller and the node must be that person's own. Answered with the command's exit code and the last 64 KiB of each stream; keeps nothing. */
+        post: operations["createNodesRuns"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/nodes/{nodeName}/target": {
         parameters: {
             query?: never;
@@ -331,7 +348,7 @@ export interface components {
          * @description Why a request was not answered with its route's own answer.
          * @enum {string}
          */
-        ErrorCode: "bad-request" | "unauthorized" | "no-route" | "not-found" | "conflict" | "gone" | "name-rule" | "bad-field" | "incomplete" | "failed";
+        ErrorCode: "bad-request" | "unauthorized" | "forbidden" | "no-route" | "not-found" | "conflict" | "gone" | "name-rule" | "bad-field" | "incomplete" | "not-a-hub-node" | "failed" | "upstream-failed";
         /** @description One event as the stream carries it. */
         Event: {
             /**
@@ -650,6 +667,8 @@ export interface components {
             address: string;
             /** @description The name a hub node's hub knows its agent by. */
             agentName: string | null;
+            /** @description The callers the node lets make a run on it, by name; none where it lets none. */
+            callers: string[];
             /**
              * Format: int64
              * @description When the last check was made, in epoch milliseconds.
@@ -779,6 +798,49 @@ export interface components {
             /** @description Whether anything stands past the last item. */
             more: boolean;
         };
+        /** @description A command that ran to its end: how it ended and the last part of what it said. */
+        Run: {
+            /**
+             * Format: int64
+             * @description Its exit code; null where the hub reports none.
+             */
+            exitCode: number | null;
+            /** @description The node it ran on. */
+            node: string;
+            /** @description The shell it ran in. */
+            shell: string;
+            /** @description The signal that ended it, where one did. */
+            signal: string | null;
+            /** @description The last 64 KiB of its standard error. */
+            stderr: string;
+            /** @description Whether more standard error came than `stderr` keeps. */
+            stderrCut: boolean;
+            /** @description The last 64 KiB of its standard output. */
+            stdout: string;
+            /** @description Whether more standard output came than `stdout` keeps. */
+            stdoutCut: boolean;
+        };
+        /** @description One command to run on a node, for the person whose account is named. */
+        RunAsk: {
+            /** @description The person the caller acts for, as the account's id written out; the node must be theirs. */
+            account: string;
+            command: string;
+            /** @description The folder the command runs in. */
+            cwd?: string | null;
+            /** @description The WSL distribution a `wsl` command runs in. */
+            distro?: string | null;
+            /** @description Variables laid over the agent's environment. */
+            env?: {
+                [key: string]: string;
+            };
+            /** @description The shell the node's host takes a command in where none is given. */
+            shell?: components["schemas"]["RunShell"] | null;
+        };
+        /**
+         * @description A shell a hub's agent runs a command in.
+         * @enum {string}
+         */
+        RunShell: "powershell" | "wsl" | "linux";
         /** @description What the processes of one scope hold of the machine. */
         ScopeUse: {
             /** Format: int64 */
@@ -969,6 +1031,15 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
+        /** @description `forbidden`: the token is right but the caller may not do this: a caller's token on a route but a run, the service's own token on a run, or a run the node does not let the caller make; the error names why */
+        Forbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
         /** @description `gone`: an event stream resumed from before the window the service keeps */
         Gone: {
             headers: {
@@ -1005,6 +1076,15 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
+        /** @description `not-a-hub-node`: a run names an ssh node, which is reached over its own login */
+        NotAHubNode: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
         /** @description `not-found`: nothing stands at the key the path names: no node, hub or machine of that name or id */
         NotFound: {
             headers: {
@@ -1016,6 +1096,15 @@ export interface components {
         };
         /** @description `unauthorized`: the token is missing or wrong */
         Unauthorized: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description `upstream-failed`: what a run needed did not answer: the node's hub, its agent, or the owners' read; the error names which and why */
+        UpstreamFailed: {
             headers: {
                 [name: string]: unknown;
             };
@@ -1064,6 +1153,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             410: components["responses"]["Gone"];
         };
     };
@@ -1086,6 +1176,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     listHubs: {
@@ -1107,6 +1198,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             500: components["responses"]["Failed"];
         };
     };
@@ -1134,6 +1226,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["BadField"];
             500: components["responses"]["Failed"];
@@ -1159,6 +1252,7 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             500: components["responses"]["Failed"];
         };
@@ -1182,6 +1276,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             500: components["responses"]["Failed"];
         };
     };
@@ -1207,6 +1302,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             500: components["responses"]["Failed"];
         };
@@ -1238,6 +1334,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["BadField"];
             500: components["responses"]["Failed"];
@@ -1273,6 +1370,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             500: components["responses"]["Failed"];
         };
@@ -1311,6 +1409,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             500: components["responses"]["Failed"];
         };
@@ -1339,6 +1438,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["BadField"];
             500: components["responses"]["Failed"];
         };
@@ -1368,6 +1468,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             500: components["responses"]["Failed"];
         };
     };
@@ -1395,6 +1496,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
             /**
              * @description - `name-rule`: a node's name is not lowercase letters, digits and hyphens of at most 32 characters
@@ -1433,6 +1535,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             500: components["responses"]["Failed"];
         };
@@ -1464,6 +1567,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             500: components["responses"]["Failed"];
@@ -1496,9 +1600,55 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["BadField"];
             500: components["responses"]["Failed"];
+        };
+    };
+    createNodesRuns: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The node's name. */
+                nodeName: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RunAsk"];
+            };
+        };
+        responses: {
+            /** @description Run one command on a hub node through its hub, as the caller its own token names, for the person whose account is named: the node's callers must name the caller and the node must be that person's own. Answered with the command's exit code and the last 64 KiB of each stream; keeps nothing. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Run"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /**
+             * @description - `not-a-hub-node`: a run names an ssh node, which is reached over its own login
+             *     - `incomplete`: the node's row lacks a field its connection type needs
+             */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["Failed"];
+            502: components["responses"]["UpstreamFailed"];
         };
     };
     getNodesTarget: {
@@ -1523,6 +1673,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["Incomplete"];
             500: components["responses"]["Failed"];

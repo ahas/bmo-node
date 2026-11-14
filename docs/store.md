@@ -15,7 +15,7 @@ lock waits its turn until the lock is given back, however long it is held.
 ## The tables
 
 - **`nodes`**: one row per node: `name` (the key), `label`, `kind`, `host`, `port`, `user`, `key_path`,
-  `shell`, `agent`, `hub_url`, `role`, `position`, the last check's `state` (`unknown` by default),
+  `shell`, `agent`, `hub_url`, `role`, `callers`, `position`, the last check's `state` (`unknown` by default),
   `detail`, `checked_at` and `connected_at`, and `created_at` and `updated_at` (`docs/nodes.md`, 「What a
   row holds」). `kind` is `ssh` or `hub`, and a hub node's token file is its hub's.
 - **`hubs`**: one row per hub: `id` (the key, never given again once used), `url` (each listed once),

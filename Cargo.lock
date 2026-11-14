@@ -1384,6 +1384,7 @@ name = "node-check"
 version = "0.1.0-rev.2"
 dependencies = [
  "base64 0.22.1",
+ "bmo-node-client",
  "clap",
  "dotenvy",
  "futures",
@@ -1458,6 +1459,7 @@ dependencies = [
  "futures-util",
  "hardware",
  "node-check",
+ "percent-encoding",
  "policy",
  "reqwest",
  "rmcp",

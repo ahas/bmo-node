@@ -3,7 +3,7 @@
 //! hub's token in no answer, and every road that fails said as what it is.
 
 use bmo_node_client::nodes::{LoginShell, NodeKind};
-use node_exec_tool::command::KEPT_BYTES;
+use node_check::hub_exec::KEPT_BYTES;
 use node_exec_tool::{Answer, ENTRY, answer};
 use serde_json::{Value, json};
 

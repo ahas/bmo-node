@@ -17,6 +17,7 @@ use crate::machines::{Health, Machine, MachineChanges, MachinePage};
 use crate::nodes::{
   Hub, HubPage, NewHub, NewNode, Node, NodeChanges, NodeCheck, NodeCheckAsk, NodePage, NodesQuery, Target,
 };
+use crate::runs::{Run, RunAsk};
 
 /// Why a call did not come back with its route's answer.
 #[derive(Debug)]
@@ -194,6 +195,11 @@ impl NodeClient {
   /// `GET /nodes/{nodeName}/target`.
   pub async fn target(&self, node_name: &str) -> CallResult<Target> {
     self.get(&["nodes", node_name, "target"]).await
+  }
+
+  /// `POST /nodes/{nodeName}/runs`, asked with a caller's own token.
+  pub async fn run(&self, node_name: &str, ask: &RunAsk) -> CallResult<Run> {
+    self.send(Method::POST, &["nodes", node_name, "runs"], ask).await
   }
 
   /// `POST /node-checks`.

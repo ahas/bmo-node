@@ -60,7 +60,8 @@ async fn the_list_comes_in_its_order_paged_after_a_name_and_each_node_says_how_i
     whole["items"][1],
     json!({
       "name": "work", "label": "Work", "kind": "ssh", "hubId": null, "agentName": null,
-      "address": "someone@192.0.2.5:2200", "credential": null, "role": "voice", "state": "connected",
+      "address": "someone@192.0.2.5:2200", "credential": null, "role": "voice", "callers": [],
+      "state": "connected",
       "tone": "good", "detail": null, "checkedAt": (now - 30) * 1000, "connectedAt": (now - 30) * 1000,
       "up": true, "thisMachine": false,
     })

@@ -1,12 +1,14 @@
 //! A command run on a jake node through its hub (docs/nodes.md, 「Reaching a node」): the hub's
 //! `POST /exec` aimed at the node's own agent, with the control token read out of the hub's token file for
 //! that one request, and the hub's stream read into what the command said and how it ended. The token is
-//! part of no answer and no message.
+//! part of no answer and no message. A run and the hosted tool both wait for a command's end here, keeping
+//! the last part of each stream (docs/api.md, 「Runs」; docs/tools.md, 「A call」).
 
 use std::collections::BTreeMap;
 
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
+use bmo_node_client::runs::Run;
 use futures::StreamExt;
 use futures::stream::BoxStream;
 use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
@@ -187,5 +189,77 @@ impl HubRun {
       .json(&json!({ "id": id }))
       .send()
       .await;
+  }
+}
+
+/// The most of each stream a command's end keeps: its last part.
+pub const KEPT_BYTES: usize = 64 * 1024;
+
+/// One stream of a command's output: its last `KEPT_BYTES`, and whether more came.
+#[derive(Debug, Default)]
+struct Kept {
+  bytes: Vec<u8>,
+  cut: bool,
+}
+
+impl Kept {
+  fn push(&mut self, more: &[u8]) {
+    self.bytes.extend_from_slice(more);
+
+    if self.bytes.len() > KEPT_BYTES {
+      self.bytes.drain(..self.bytes.len() - KEPT_BYTES);
+      self.cut = true;
+    }
+  }
+
+  fn text(&self) -> String {
+    String::from_utf8_lossy(&self.bytes).into_owned()
+  }
+}
+
+/// A command whose end is not known: why, and what it said before.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Broke {
+  pub why: String,
+  pub stdout: String,
+  pub stderr: String,
+}
+
+/// Runs `body` on `agent` of `hub`, the node being `node`, and waits for its end.
+pub async fn run(
+  machine: &Machine,
+  hub: &Hub,
+  agent: &str,
+  node: &str,
+  body: &ExecBody,
+) -> Result<Run, Broke> {
+  let mut stdout = Kept::default();
+  let mut stderr = Kept::default();
+  let broke = |why: String, stdout: &Kept, stderr: &Kept| Broke {
+    why,
+    stdout: stdout.text(),
+    stderr: stderr.text(),
+  };
+  let mut running = start(machine, hub, agent, body).await.map_err(|why| broke(why, &stdout, &stderr))?;
+
+  loop {
+    match running.next().await {
+      Ok(Said::Started(_)) => {}
+      Ok(Said::Stdout(bytes)) => stdout.push(&bytes),
+      Ok(Said::Stderr(bytes)) => stderr.push(&bytes),
+      Ok(Said::Exit { code, signal }) => {
+        return Ok(Run {
+          node: node.to_owned(),
+          shell: body.shell.clone(),
+          exit_code: code,
+          signal,
+          stdout: stdout.text(),
+          stderr: stderr.text(),
+          stdout_cut: stdout.cut,
+          stderr_cut: stderr.cut,
+        });
+      }
+      Err(why) => return Err(broke(why, &stdout, &stderr)),
+    }
   }
 }

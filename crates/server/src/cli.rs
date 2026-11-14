@@ -25,7 +25,7 @@ pub const NOUNS: [&str; 2] = ["node\thome", "hardware-setup\thome"];
 /// How the command is run, said under each refusal of its arguments.
 pub const NODES_USAGE: &str = "usage: bmo-node --config <file> node
        bmo-node --config <file> node --add <name> --ssh <user@host> [--port <n>] [--key <path>] [--shell posix|powershell] [--label <label>] [--role <service>]
-       bmo-node --config <file> node --set <name> [--label <label>] [--role <service>|none] [--ssh <user@host>] [--port <n>] [--key <path>|none] [--shell posix|powershell]
+       bmo-node --config <file> node --set <name> [--label <label>] [--role <service>|none] [--callers <caller>[+<caller>]|none] [--ssh <user@host>] [--port <n>] [--key <path>|none] [--shell posix|powershell]
        bmo-node --config <file> node --remove <name>
        bmo-node --config <file> node --add-hub <control url> --token-file <path>
        bmo-node --config <file> node --remove-hub <control url>
@@ -62,6 +62,9 @@ pub struct NodesArgs {
   pub label: Option<String>,
   #[arg(long)]
   pub role: Option<String>,
+  /// The callers the node lets make a run on it, joined by `+`, or `none`.
+  #[arg(long)]
+  pub callers: Option<String>,
   #[arg(long = "token-file")]
   pub token_file: Option<String>,
 }
@@ -79,6 +82,8 @@ pub enum NodeCommand {
   Set {
     name: String,
     changes: NodeChanges,
+    /// The callers set whole, or cleared by none; left as they are where not given.
+    callers: Option<Option<String>>,
   },
   Remove(String),
   AddHub {
@@ -134,6 +139,7 @@ impl NodesArgs {
       ("--shell", self.shell.is_some()),
       ("--label", self.label.is_some()),
       ("--role", self.role.is_some()),
+      ("--callers", self.callers.is_some()),
       ("--token-file", self.token_file.is_some()),
     ]
     .into_iter()
@@ -189,6 +195,10 @@ impl NodesArgs {
     }
 
     if verb == "--add" {
+      if self.callers.is_some() {
+        return Err("--callers belongs to --set: a node lets no caller until the owner sets it".to_owned());
+      }
+
       let Some(ssh) = self.ssh else {
         return Err(
           "--add takes --ssh <user@host>; a hub node is added when its agent attaches to a listed hub"
@@ -228,13 +238,16 @@ impl NodesArgs {
     changes.key_path = self.key.as_deref().map(none_or);
     changes.shell = self.shell.as_deref().map(shell).transpose()?;
 
-    if changes == NodeChanges::default() {
+    let callers = self.callers.as_deref().map(none_or);
+
+    if changes == NodeChanges::default() && callers.is_none() {
       return Err("--set changes nothing without a field to change".to_owned());
     }
 
     Ok(NodeCommand::Set {
       name: self.set.unwrap_or_default(),
       changes,
+      callers,
     })
   }
 }
@@ -280,8 +293,13 @@ pub fn format_node_list(nodes: &[Node]) -> String {
         }
       };
       let reserved = node.role.as_deref().map(|role| format!(", {role} only")).unwrap_or_default();
+      let callers = node
+        .callers
+        .as_deref()
+        .map(|callers| format!(", runs by {callers}"))
+        .unwrap_or_default();
       let head = format!(
-        "{} [{}] {} — {}, {credential}{reserved}",
+        "{} [{}] {} — {}, {credential}{reserved}{callers}",
         node.name,
         node.kind.name(),
         node.label,
@@ -342,8 +360,25 @@ pub async fn nodes(store: &Store, machine: &Machine, args: NodesArgs) -> Result<
         .add_node(&name, label.as_deref(), role, login)
         .map_err(store_refusal)?])]
     }
-    NodeCommand::Set { name, changes } => {
-      vec![format_node_list(&[store.update_node(&name, changes).map_err(store_refusal)?])]
+    NodeCommand::Set {
+      name,
+      changes,
+      callers,
+    } => {
+      let mut node = if changes == NodeChanges::default() {
+        store
+          .node(&name)
+          .map_err(store_refusal)?
+          .ok_or_else(|| format!("no node named {name}"))?
+      } else {
+        store.update_node(&name, changes).map_err(store_refusal)?
+      };
+
+      if let Some(callers) = callers {
+        node = store.set_callers(&name, callers).map_err(store_refusal)?;
+      }
+
+      vec![format_node_list(&[node])]
     }
     NodeCommand::Remove(name) => {
       if !store.remove_node(&name).map_err(store_refusal)? {

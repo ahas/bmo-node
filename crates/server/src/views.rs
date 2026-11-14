@@ -44,6 +44,7 @@ pub fn view(node: &Node, here: &ThisMachine, now: i64) -> NodeView {
     address: node.address(),
     credential: node.credential().map(str::to_owned),
     role: node.role.clone(),
+    callers: node.callers().into_iter().map(str::to_owned).collect(),
     state: node.state,
     tone: node.state.tone(),
     detail: node.detail.clone(),

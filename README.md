@@ -11,6 +11,8 @@ The node service of bmo: the machines reachable from here and what is known of t
 - **The tunnel door:** `llm-bridge`, which a node's tunnel dials in by over HTTPS (`docs/llm-bridge.md`).
 - **The hosted tool:** `bmo/node_exec`, a command run on a hub node for a caller whose account owns the node or
   that holds the administrator's grant (`docs/tools.md`).
+- **A run:** a command a unit that is not a session runs on a hub node as itself, where the node's own setting
+  lets it and the node is the person's it acts for (`docs/api.md`, 「Runs」).
 
 Version 0.1.0-rev.2.
 
@@ -41,9 +43,9 @@ Version 0.1.0-rev.2.
 `docs/api.md` is the whole contract: the routes the service answers, the events it publishes, the clients
 and the harness plugin it publishes, and its configuration. `docs/openapi.json` states it in OpenAPI 3.1,
 generated from the code; the Rust client `bmo-node-client` (`crates/client`) and the TypeScript client
-(`packages/node-client`) stand on it. The service calls no other unit; the hosted tool asks agency whose node
-it is and whose the caller is (`docs/tools.md`). `docs/store.md` says what it keeps
-and where.
+(`packages/node-client`) stand on it. The service names no other unit: a run asks the owners' read its
+configuration names whose node it is (`docs/nodes.md`, 「A person's node」), and the hosted tool asks agency
+whose node it is and whose the caller is (`docs/tools.md`). `docs/store.md` says what it keeps and where.
 
 `PERSONAL-DATA.md` states the personal data no file may hold: whose it is, what counts, where a value belongs
 instead, and the checks that hold it.

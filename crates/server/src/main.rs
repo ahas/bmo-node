@@ -176,10 +176,12 @@ where
 
 async fn serve(config: Config) -> Result<(), String> {
   let data_root = config.data_root();
+  let callers = config.callers()?;
   let store = Arc::new(Store::open_in(&data_root).map_err(|why| why.to_string())?);
   let service = Arc::new(
     Service::new(store, config.token.clone(), data_root, config.machine_label.clone())
-      .with_scope_variable(config.scope_variable.clone()),
+      .with_scope_variable(config.scope_variable.clone())
+      .with_runs(callers, config.owners_read()),
   );
   let listener = tokio::net::TcpListener::bind(&config.listen)
     .await

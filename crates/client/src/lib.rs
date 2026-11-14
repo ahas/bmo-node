@@ -10,6 +10,7 @@ pub mod hardware;
 pub mod machines;
 pub mod nodes;
 mod page;
+pub mod runs;
 
 pub use call::{CallError, CallResult, NodeClient};
 pub use error::{ErrorCode, WireError};

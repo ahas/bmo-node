@@ -40,6 +40,8 @@ pub struct Node {
   /// A hub node's hub's token file; none where the hub is not listed.
   pub token_file: Option<String>,
   pub role: Option<String>,
+  /// The callers the node lets make a run on it, joined by `+`; none where it lets none.
+  pub callers: Option<String>,
   pub position: i64,
   pub state: NodeState,
   pub detail: Option<String>,
@@ -61,6 +63,16 @@ impl Node {
   /// The services the node's role names.
   pub fn services(&self) -> Vec<&str> {
     self.role.as_deref().map(|role| role.split('+').collect()).unwrap_or_default()
+  }
+
+  /// The callers the node lets make a run on it, by name.
+  pub fn callers(&self) -> Vec<&str> {
+    self.callers.as_deref().map(|callers| callers.split('+').collect()).unwrap_or_default()
+  }
+
+  /// Whether the node lets `caller` make a run on it.
+  pub fn lets(&self, caller: &str) -> bool {
+    self.callers().contains(&caller)
   }
 
   /// Where the node is reached, as one line a person reads. It names no credential.
@@ -156,7 +168,7 @@ pub struct Checked {
 // Every node with its hub's id and token file beside it: the one query a node is read by.
 const NODE_SELECT: &str = "SELECT nodes.name, nodes.label, nodes.kind, nodes.host, nodes.port, nodes.user,
   nodes.key_path, nodes.shell, nodes.agent, nodes.hub_url, hubs.token_file, nodes.role, nodes.position,
-  nodes.state, nodes.detail, nodes.checked_at, nodes.connected_at, hubs.id
+  nodes.state, nodes.detail, nodes.checked_at, nodes.connected_at, hubs.id, nodes.callers
   FROM nodes LEFT JOIN hubs ON hubs.url = nodes.hub_url";
 
 const HUB_SELECT: &str = "SELECT id, url, token_file, label, created_at FROM hubs";
@@ -192,6 +204,7 @@ fn node_of(row: &Row<'_>) -> rusqlite::Result<Node> {
     hub_id: row.get(17)?,
     token_file: row.get(10)?,
     role: row.get(11)?,
+    callers: row.get(18)?,
     position: row.get(12)?,
     state: NodeState::of_column(&state),
     detail: row.get(14)?,
@@ -244,6 +257,18 @@ fn checked_word(value: &str, what: &str) -> Result<String> {
   }
 
   Ok(trimmed.to_owned())
+}
+
+fn checked_callers(callers: Option<String>) -> Result<Option<String>> {
+  match callers {
+    Some(callers) if !callers.split('+').all(is_node_name) => Err(refused(
+      ErrorCode::BadField,
+      format!(
+        "callers name one caller, or several joined by +, each lowercase letters, digits and hyphens, not \"{callers}\""
+      ),
+    )),
+    callers => Ok(callers),
+  }
 }
 
 fn checked_role(role: Option<String>) -> Result<Option<String>> {
@@ -555,6 +580,23 @@ impl Store {
         name
       ],
     )?;
+
+    get_on(&connection, name)?.ok_or_else(|| no_node(name))
+  }
+
+  /// The callers a node lets make a run on it, set whole, or cleared by none (docs/nodes.md, 「A node's
+  /// callers」). Only the command writes them.
+  pub fn set_callers(&self, name: &str, callers: Option<String>) -> Result<Node> {
+    let callers = checked_callers(callers)?;
+    let connection = self.connection();
+    let changed = connection.execute(
+      "UPDATE nodes SET callers = ?1, updated_at = ?2 WHERE name = ?3",
+      params![callers, now_seconds(), name],
+    )?;
+
+    if changed == 0 {
+      return Err(no_node(name));
+    }
 
     get_on(&connection, name)?.ok_or_else(|| no_node(name))
   }

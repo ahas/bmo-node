@@ -5,6 +5,7 @@ pub mod config;
 pub mod events;
 mod loops;
 pub mod machines;
+pub mod owners;
 pub mod reply;
 mod routes;
 pub mod stop;
@@ -27,7 +28,9 @@ use tokio_util::sync::CancellationToken;
 
 pub use loops::{machine_look, node_pass, start};
 
+use crate::config::Caller;
 use crate::events::Events;
+use crate::owners::OwnersRead;
 use crate::this_machine::ThisMachine;
 
 /// A reading taken once, with when it was taken in milliseconds, kept for one period and joined while it
@@ -48,6 +51,10 @@ pub struct Service {
   pub label: String,
   /// The environment variable a process's scope is read from, where one is configured.
   pub scope_variable: Option<String>,
+  /// The callers with a token of their own, which make a run as themselves.
+  pub callers: Vec<Caller>,
+  /// Where a node's owners are read for a run, where the configuration names it.
+  pub owners: Option<OwnersRead>,
   /// The OpenSSH, the home and the HTTP client a check runs with.
   pub machine: node_check::Machine,
   /// The road a machine is read over.
@@ -80,6 +87,8 @@ impl Service {
         .or_else(|| here.host_name.clone())
         .unwrap_or_else(|| hardware::LOCAL_MACHINE.to_owned()),
       scope_variable: None,
+      callers: Vec::new(),
+      owners: None,
       machine: node_check::Machine::local(),
       road: Hands::default().stream,
       store,
@@ -97,6 +106,13 @@ impl Service {
   /// The service reading each process's scope from the variable named.
   pub fn with_scope_variable(mut self, variable: Option<String>) -> Self {
     self.scope_variable = variable.filter(|variable| !variable.is_empty());
+    self
+  }
+
+  /// The service taking a run from the callers given, their owners read where `owners` names.
+  pub fn with_runs(mut self, callers: Vec<Caller>, owners: Option<OwnersRead>) -> Self {
+    self.callers = callers;
+    self.owners = owners;
     self
   }
 

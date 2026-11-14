@@ -4,7 +4,6 @@
 //! standard output (bmo-pocket's `docs/api.md`, 「The call protocol」).
 
 pub mod caller;
-pub mod command;
 
 use std::collections::BTreeMap;
 use std::io::{Read as _, Write as _};
@@ -12,16 +11,16 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use bmo_node_client::NodeClient;
-use bmo_node_client::nodes::{LoginShell, NodeKind};
+use bmo_node_client::nodes::NodeKind;
+use bmo_node_client::runs::{Run, RunShell};
 use node_check::Machine;
-use node_check::hub_exec::ExecBody;
+use node_check::hub_exec::{Broke, ExecBody, run};
 use node_check::rows::Hub;
 use node_server::config::Config;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::caller::{Agency, Session, judge};
-use crate::command::{Broke, Ran, run};
 
 /// The entry this executable answers, as its manifest declares it.
 pub const ENTRY: &str = "bmo/node_exec";
@@ -37,33 +36,6 @@ pub struct Handed {
   pub session: Session,
 }
 
-/// A shell jake's agent runs a command in.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Shell {
-  Powershell,
-  Wsl,
-  Linux,
-}
-
-impl Shell {
-  fn name(self) -> &'static str {
-    match self {
-      Self::Powershell => "powershell",
-      Self::Wsl => "wsl",
-      Self::Linux => "linux",
-    }
-  }
-
-  /// The shell a node's host takes a command in where the call names none.
-  fn of_host(shell: Option<LoginShell>) -> Self {
-    match shell {
-      Some(LoginShell::Powershell) => Self::Powershell,
-      Some(LoginShell::Posix) | None => Self::Linux,
-    }
-  }
-}
-
 /// The entry's arguments.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -71,7 +43,7 @@ pub struct Ask {
   pub node: String,
   pub command: String,
   #[serde(default)]
-  pub shell: Option<Shell>,
+  pub shell: Option<RunShell>,
   #[serde(default)]
   pub cwd: Option<String>,
   #[serde(default)]
@@ -91,7 +63,7 @@ pub struct Answer {
 }
 
 impl Answer {
-  fn ran(ran: &Ran) -> Self {
+  fn ran(ran: &Run) -> Self {
     let end = match (&ran.exit_code, &ran.signal) {
       (Some(code), _) => format!("exit code {code}"),
       (None, Some(signal)) => format!("ended by {signal}"),
@@ -261,7 +233,7 @@ pub async fn answer(handed: &Handed, ground: &Ground) -> Answer {
     return Answer::refusal(format!("the node {} names no hub and agent to reach it by", ask.node));
   };
   let body = ExecBody {
-    shell: ask.shell.unwrap_or_else(|| Shell::of_host(target.shell)).name().to_owned(),
+    shell: ask.shell.unwrap_or_else(|| RunShell::of_host(target.shell)).name().to_owned(),
     command: ask.command,
     cwd: ask.cwd,
     env: ask.env,

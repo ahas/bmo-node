@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 pub enum ErrorCode {
   BadRequest,
   Unauthorized,
+  Forbidden,
   NoRoute,
   NotFound,
   Conflict,
@@ -19,14 +20,17 @@ pub enum ErrorCode {
   NameRule,
   BadField,
   Incomplete,
+  NotAHubNode,
   Failed,
+  UpstreamFailed,
 }
 
 impl ErrorCode {
   /// Every code, in the order the document lists them.
-  pub const ALL: [Self; 10] = [
+  pub const ALL: [Self; 13] = [
     Self::BadRequest,
     Self::Unauthorized,
+    Self::Forbidden,
     Self::NoRoute,
     Self::NotFound,
     Self::Conflict,
@@ -34,7 +38,9 @@ impl ErrorCode {
     Self::NameRule,
     Self::BadField,
     Self::Incomplete,
+    Self::NotAHubNode,
     Self::Failed,
+    Self::UpstreamFailed,
   ];
 
   /// The code as it crosses the wire.
@@ -42,6 +48,7 @@ impl ErrorCode {
     match self {
       Self::BadRequest => "bad-request",
       Self::Unauthorized => "unauthorized",
+      Self::Forbidden => "forbidden",
       Self::NoRoute => "no-route",
       Self::NotFound => "not-found",
       Self::Conflict => "conflict",
@@ -49,7 +56,9 @@ impl ErrorCode {
       Self::NameRule => "name-rule",
       Self::BadField => "bad-field",
       Self::Incomplete => "incomplete",
+      Self::NotAHubNode => "not-a-hub-node",
       Self::Failed => "failed",
+      Self::UpstreamFailed => "upstream-failed",
     }
   }
 
@@ -58,11 +67,13 @@ impl ErrorCode {
     match self {
       Self::BadRequest => 400,
       Self::Unauthorized => 401,
+      Self::Forbidden => 403,
       Self::NoRoute | Self::NotFound => 404,
       Self::Conflict => 409,
       Self::Gone => 410,
-      Self::NameRule | Self::BadField | Self::Incomplete => 422,
+      Self::NameRule | Self::BadField | Self::Incomplete | Self::NotAHubNode => 422,
       Self::Failed => 500,
+      Self::UpstreamFailed => 502,
     }
   }
 
@@ -73,6 +84,10 @@ impl ErrorCode {
         "the body or the query is not the shape the route takes; the error names what is wrong"
       }
       Self::Unauthorized => "the token is missing or wrong",
+      Self::Forbidden => {
+        "the token is right but the caller may not do this: a caller's token on a route but a run, the service's \
+         own token on a run, or a run the node does not let the caller make; the error names why"
+      }
       Self::NoRoute => "no route answers this method and path",
       Self::NotFound => {
         "nothing stands at the key the path names: no node, hub or machine of that name or id"
@@ -88,7 +103,12 @@ impl ErrorCode {
         "a field is out of range, of the other connection type, or names nothing listed; the error names it"
       }
       Self::Incomplete => "the node's row lacks a field its connection type needs",
+      Self::NotAHubNode => "a run names an ssh node, which is reached over its own login",
       Self::Failed => "the service failed; the error is the failure as a sentence",
+      Self::UpstreamFailed => {
+        "what a run needed did not answer: the node's hub, its agent, or the owners' read; the error names which \
+         and why"
+      }
     }
   }
 }
