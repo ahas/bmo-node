@@ -199,6 +199,21 @@ pub struct Stood {
   _home: tempfile::TempDir,
 }
 
+/// A listener at `addr`. A port named again after its stand-in stopped may be held a moment by another socket of
+/// the suite running beside it, so its bind is tried until the port comes free, for two seconds at most.
+async fn bind(addr: SocketAddr) -> tokio::net::TcpListener {
+  for _ in 0..100 {
+    match tokio::net::TcpListener::bind(addr).await {
+      Err(why) if why.kind() == std::io::ErrorKind::AddrInUse && addr.port() != 0 => {
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+      }
+      bound => return bound.unwrap(),
+    }
+  }
+
+  panic!("{addr} stayed held by another socket");
+}
+
 /// The stand-in of agency, the node service and the hub over `world`, listening at `addr`, a port of 0 taking
 /// a free one; the address it listens at, and its task, whose abort stops it and closes its port.
 pub async fn serve_at(world: &World, addr: SocketAddr) -> (SocketAddr, JoinHandle<()>) {
@@ -209,7 +224,7 @@ pub async fn serve_at(world: &World, addr: SocketAddr) -> (SocketAddr, JoinHandl
     .route("/nodes/{name}/target", get(target))
     .route("/exec", post(exec))
     .with_state(world.clone());
-  let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+  let listener = bind(addr).await;
   let addr = listener.local_addr().unwrap();
 
   (addr, tokio::spawn(async move { axum::serve(listener, app).await.unwrap() }))
