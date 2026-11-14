@@ -1,11 +1,15 @@
 {
   "type": "object",
   "additionalProperties": false,
-  "required": ["node", "command"],
+  "required": ["command"],
   "properties": {
     "node": {
       "type": "string",
-      "description": "The node's name, as the node service lists it."
+      "description": "The node's name, as the node service lists it. Name the node by this or by account, one of the two."
+    },
+    "account": {
+      "type": ["string", "integer"],
+      "description": "The account whose node it is, by its id, in place of node: the node agency's record of a person's node names for the account. An account with no node is refused."
     },
     "command": {
       "type": "string",

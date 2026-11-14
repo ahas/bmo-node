@@ -85,6 +85,70 @@ async fn a_stranger_is_refused_before_the_hub_is_asked() {
 }
 
 #[tokio::test]
+async fn a_node_named_by_its_account_is_the_one_agency_s_record_names_for_it() {
+  let stood = owned().await;
+
+  *stood.world.frames.lock().unwrap() = vec![frame("exit", json!({ "code": 0 }))];
+
+  let answered =
+    answer(&handed("pc-agent", &[], json!({ "account": 4, "command": "hostname" })), &stood.ground).await;
+
+  assert!(!answered.is_error, "{}", answered.text());
+  assert_eq!(answered.structured.unwrap()["node"], json!("pc-four"));
+  assert_eq!(stood.world.execs.lock().unwrap()[0].0, Some("agent_w".into()));
+}
+
+#[tokio::test]
+async fn an_account_with_no_node_is_refused_naming_it_before_the_hub_is_asked() {
+  let stood = owned().await;
+
+  let answered = answer(
+    &handed("house", &["node.admin"], json!({ "account": "9", "command": "hostname" })),
+    &stood.ground,
+  )
+  .await;
+
+  assert!(answered.is_error);
+  assert_eq!(
+    answered.text(),
+    "Account 9 has no node: no record of agency's names a person's node for it."
+  );
+  assert!(stood.world.execs.lock().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn an_account_s_node_is_judged_for_the_caller_as_a_node_named_is() {
+  let stood = owned().await;
+
+  stood.world.supervisors.lock().unwrap().insert("other-agent".into(), json!(7));
+
+  let answered = answer(
+    &handed("other-agent", &[], json!({ "account": "4", "command": "whoami" })),
+    &stood.ground,
+  )
+  .await;
+
+  assert!(answered.is_error);
+  assert!(answered.text().starts_with("The node pc-four is account 4's;"), "{}", answered.text());
+  assert!(stood.world.execs.lock().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn a_call_naming_both_the_node_and_the_account_or_neither_is_refused() {
+  let stood = owned().await;
+  let both = json!({ "node": "pc-four", "account": 4, "command": "true" });
+  let neither = json!({ "command": "true" });
+
+  for arguments in [both, neither] {
+    let answered = answer(&handed("house", &["node.admin"], arguments), &stood.ground).await;
+
+    assert_eq!(answered.text(), "Name the node by node or by account, one of the two.");
+  }
+
+  assert!(stood.world.execs.lock().unwrap().is_empty());
+}
+
+#[tokio::test]
 async fn the_administrator_names_the_shell_and_the_distribution_on_any_node() {
   let stood = owned().await;
 

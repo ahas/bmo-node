@@ -20,7 +20,7 @@ use node_server::config::Config;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-use crate::caller::{Agency, Session, judge};
+use crate::caller::{Agency, Session, account, judge, node_of};
 
 /// The entry this executable answers, as its manifest declares it.
 pub const ENTRY: &str = "bmo/node_exec";
@@ -40,7 +40,10 @@ pub struct Handed {
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Ask {
-  pub node: String,
+  #[serde(default)]
+  pub node: Option<String>,
+  #[serde(default)]
+  pub account: Option<Value>,
   pub command: String,
   #[serde(default)]
   pub shell: Option<RunShell>,
@@ -50,6 +53,22 @@ pub struct Ask {
   pub env: BTreeMap<String, String>,
   #[serde(default)]
   pub distro: Option<String>,
+}
+
+impl Ask {
+  /// The node the call is aimed at: the one it names, or the one agency's records name for the account it
+  /// names; the reason where it names both or neither, or its account has no node.
+  async fn node(&self, agency: Result<&Agency, &String>) -> Result<String, String> {
+    match (&self.node, &self.account) {
+      (Some(node), None) => Ok(node.clone()),
+      (None, Some(named)) => {
+        let id = account(Some(named)).ok_or_else(|| format!("the account {named} is no account's id"))?;
+
+        node_of(&id, agency).await
+      }
+      _ => Err("Name the node by node or by account, one of the two.".to_owned()),
+    }
+  }
 }
 
 /// The host's tool result: a person's reading first, and the command's end for a program beside it.
@@ -195,8 +214,8 @@ fn write(answer: &Answer) -> ExitCode {
   }
 }
 
-/// The entry asked for, answered over `ground`: the caller judged first, then the node read, then the
-/// command run on it.
+/// The entry asked for, answered over `ground`: the node an account names read first, then the caller
+/// judged, then the node read, then the command run on it.
 pub async fn answer(handed: &Handed, ground: &Ground) -> Answer {
   if handed.entry != ENTRY {
     return Answer::refusal(format!("this executable holds no entry {}", handed.entry));
@@ -207,7 +226,12 @@ pub async fn answer(handed: &Handed, ground: &Ground) -> Answer {
     Err(why) => return Answer::refusal(format!("the arguments are not the shape this tool takes: {why}")),
   };
 
-  if let Err(why) = judge(&handed.session, &ask.node, ground.agency.as_ref()).await {
+  let node = match ask.node(ground.agency.as_ref()).await {
+    Ok(node) => node,
+    Err(why) => return Answer::refusal(why),
+  };
+
+  if let Err(why) = judge(&handed.session, &node, ground.agency.as_ref()).await {
     return Answer::refusal(why);
   }
 
@@ -215,22 +239,21 @@ pub async fn answer(handed: &Handed, ground: &Ground) -> Answer {
     Ok(nodes) => nodes,
     Err(why) => return Answer::refusal(format!("the node service cannot be reached: {why}")),
   };
-  let target = match nodes.target(&ask.node).await {
+  let target = match nodes.target(&node).await {
     Ok(target) => target,
-    Err(why) => return Answer::refusal(format!("the node {} could not be read: {why}", ask.node)),
+    Err(why) => return Answer::refusal(format!("the node {node} could not be read: {why}")),
   };
 
   if target.kind != NodeKind::Hub {
     return Answer::refusal(format!(
-      "The node {} is an ssh node, which this tool does not reach: log in with its target's sshArgs.",
-      ask.node
+      "The node {node} is an ssh node, which this tool does not reach: log in with its target's sshArgs."
     ));
   }
 
   let (Some(url), Some(token_file), Some(agent)) =
     (target.hub_address, target.hub_token_file, target.agent_name)
   else {
-    return Answer::refusal(format!("the node {} names no hub and agent to reach it by", ask.node));
+    return Answer::refusal(format!("the node {node} names no hub and agent to reach it by"));
   };
   let body = ExecBody {
     shell: ask.shell.unwrap_or_else(|| RunShell::of_host(target.shell)).name().to_owned(),
@@ -241,8 +264,8 @@ pub async fn answer(handed: &Handed, ground: &Ground) -> Answer {
   };
   let hub = Hub { url, token_file };
 
-  match run(&ground.machine, &hub, &agent, &ask.node, &body).await {
+  match run(&ground.machine, &hub, &agent, &node, &body).await {
     Ok(ran) => Answer::ran(&ran),
-    Err(broke) => Answer::broke(&ask.node, &broke),
+    Err(broke) => Answer::broke(&node, &broke),
   }
 }

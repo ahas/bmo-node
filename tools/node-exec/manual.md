@@ -13,6 +13,9 @@ command's exit code and its output.
 ## Arguments
 
 - `node`: the node's name, as the node service lists it.
+- `account`: the account whose node it is, by its id, a number or a string, in place of `node`. The node is
+  the one agency's record of a person's node names for the account; an account with no node is refused, and
+  the caller is judged on that node as on one named. Name the node by `node` or by `account`, never both.
 - `command`: the command's text.
 - `shell`: `powershell`, `wsl` or `linux`. Where none is named the node's own is taken: `powershell` on a
   Windows host, `linux` otherwise.
@@ -33,4 +36,5 @@ own and read it back with later commands.
 ## Examples
 
     bmo use bmo/node_exec --arg node=my-pc --arg command=hostname
+    bmo use bmo/node_exec --json '{"account": 4, "command": "hostname"}'
     bmo use bmo/node_exec --json '{"node": "my-pc", "shell": "wsl", "cwd": "~", "command": "systemctl --user status"}'

@@ -26,13 +26,22 @@
 
 ## A call
 
-- **The arguments:** `node`, the node's name; `command`, the command's text; and, as jake's console takes them for
-  its exec, `shell`, `powershell`, `wsl` or `linux`, `cwd`, the folder it runs in, `env`, variables laid over the
-  agent's environment, and `distro`, the WSL distribution a `wsl` command runs in. A call naming no shell runs the
-  command in the shell the node's host takes a command in: `powershell` on a Windows host, `linux` otherwise
+- **The arguments:** the node, named either by `node`, its name, or by `account`, the account whose node it is,
+  one of the two and never both; `command`, the command's text; and, as jake's console takes them for its exec,
+  `shell`, `powershell`, `wsl` or `linux`, `cwd`, the folder it runs in, `env`, variables laid over the agent's
+  environment, and `distro`, the WSL distribution a `wsl` command runs in. A call naming no shell runs the command
+  in the shell the node's host takes a command in: `powershell` on a Windows host, `linux` otherwise
   (`docs/nodes.md`, 「What a row holds」).
-- **The caller is checked first,** before the node service or the hub is asked anything (「Who may run a command on
-  which node」).
+- **A call that names the node by its account** has the node read first from agency's records of a person's node,
+  the same `GET /person-nodes` the caller's check reads (「Who may run a command on which node」): the node the
+  record for that account names, an account's id compared as it is written out, so `4` and `"4"` name the same
+  account. An account no record names is refused as one with no node, naming the account; where agency cannot
+  be asked, or answers something that does not read, the call is refused saying so. A call naming both `node`
+  and `account`, or neither, is refused saying the tool takes one of them. The node so read then stands for the
+  rest of the call exactly as a node named by `node` does, and the answer's `node` names it.
+- **The caller is checked next,** for the node named or read, before the node service or the hub is asked anything
+  (「Who may run a command on which node」): naming a node by its account reaches no node the caller could not
+  reach by its name.
 - **The node is read through the node service,** as `GET /nodes/{nodeName}/target` answers it, at the address and
   with the token of the service's configuration under the data root, `env/node.toml`. A node no row holds is
   refused naming it, and an ssh node is refused as one this tool does not reach: it is reached over its own login

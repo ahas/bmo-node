@@ -1,6 +1,7 @@
 //! Who may run a command on which node (docs/tools.md, 「Who may run a command on which node」): a caller
 //! reaches the nodes its own account owns, and a session holding the administrator's grant reaches every
-//! node. The caller's account and the node's owner are read from agency, the issuer of the session records.
+//! node. The caller's account and the node's owner are read from agency, the issuer of the session records,
+//! and so is the node a call names by its account (docs/tools.md, 「A call」).
 
 use std::path::Path;
 
@@ -52,8 +53,8 @@ pub struct Agency {
   http: reqwest::Client,
 }
 
-/// An account's id as agency writes it, a number or a string alike.
-fn account(value: Option<&Value>) -> Option<String> {
+/// An account's id written out, as agency writes it and a call names it: a number or a string alike.
+pub fn account(value: Option<&Value>) -> Option<String> {
   match value? {
     Value::Number(number) => Some(number.to_string()),
     Value::String(text) if !text.is_empty() => Some(text.clone()),
@@ -153,6 +154,26 @@ impl Agency {
 
     Ok(record.and_then(|one| account(one.get("ownerAccount"))))
   }
+
+  /// The node agency's record of a person's node names for `account`, or none where no record names one.
+  pub async fn node_of(&self, account_id: &str) -> Result<Option<String>, String> {
+    let records = self.read_ok("/person-nodes").await?;
+    let record = items(&records)
+      .iter()
+      .find(|one| account(one.get("ownerAccount")).as_deref() == Some(account_id));
+
+    Ok(record.and_then(|one| one.get("node").and_then(Value::as_str)).map(str::to_owned))
+  }
+}
+
+/// The node a call names by its account, or the reason it cannot be had, naming the account.
+pub async fn node_of(account_id: &str, agency: Result<&Agency, &String>) -> Result<String, String> {
+  let unread = |why: &str| format!("Which node account {account_id} has could not be read: {why}");
+  let agency = agency.map_err(|why| unread(why))?;
+
+  agency.node_of(account_id).await.map_err(|why| unread(&why))?.ok_or_else(|| {
+    format!("Account {account_id} has no node: no record of agency's names a person's node for it.")
+  })
 }
 
 /// Whether the session may run a command on `node`, or the reason it may not, naming the node and its
