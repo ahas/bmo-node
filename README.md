@@ -20,7 +20,6 @@ Version 0.1.0-rev.2.
 
 | Folder | Holds |
 |---|---|
-| `.graph/` | The code dependency graph in bmo-graph's format, one node per feature with its files and the features it needs |
 | `crates/` | The Rust crates: the client, the harness plugin, the policy files, the store, the node check, the hardware monitor, the tunnel door and the server binary |
 | `deploy/` | The service units, `bmo-node.service` and `bmo-llm-bridge.service` |
 | `docs/` | The canonical documents, and `openapi.json`, the contract the clients are generated from |

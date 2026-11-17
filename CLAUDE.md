@@ -62,12 +62,6 @@ which job a process serves, whether a launch goes ahead and what the chat agent 
 - `deploy/`: the service units, `bmo-node.service` and `bmo-llm-bridge.service`.
 - `tools/node-exec`: the hosted tool, its manifest, schemas and manual beside `node-exec-tool`, the crate of its
   executable (`docs/tools.md`).
-- `.graph/`: the code dependency graph in bmo-graph's format, one node per feature in five areas (`core`,
-  `nodes`, `hardware`, `server`, `api`), each with its files and the features it needs, and a boundary node for
-  each API the repository exposes. It is written only by `bmo-graph` run in this checkout, and a change that
-  touches the files a node names, or moves one, brings that node up to date in the checkout. Its area files are
-  generated and untracked, so a fresh checkout builds them again, while `settings.toml` is the repository's
-  configuration and stays tracked.
 - `testbed.toml`: how the testbed tests, checks, builds and deploys the repository.
 - `tests/`: every test, with the probe's fixtures under `tests/hardware/fixtures`.
 

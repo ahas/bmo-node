@@ -1,6 +1,0 @@
-repository = "bmo-node"
-base = false
-
-[coverage]
-# Every Cargo package's src/ is the coverage scope, and no file in it carries no node, so there is no exception.
-layout = "bmo-next"
