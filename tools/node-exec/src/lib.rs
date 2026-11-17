@@ -291,7 +291,14 @@ pub async fn answer(handed: &Handed, ground: &Ground) -> Answer {
     return Answer::refusal(format!("the node {node} names no hub and agent to reach it by"));
   };
   let shell = ask.shell.unwrap_or_else(|| RunShell::of_host(target.shell));
-  let script = Script::of(shell, target.shell);
+  let host = target.shell.unwrap_or_default();
+  let Some(script) = Script::of(shell, host) else {
+    return Answer::refusal(format!(
+      "The node {node} runs {} commands, not {}: name one of those as shell.",
+      Script::runs(host),
+      shell.name()
+    ));
+  };
   let folder = if handing.files.is_empty() {
     None
   } else {
@@ -306,10 +313,10 @@ pub async fn answer(handed: &Handed, ground: &Ground) -> Answer {
 
   let body = ExecBody {
     shell: shell.name().to_owned(),
-    command: match &folder {
+    command: script.sent(match &folder {
       Some(id) => script.wrap(id, &handing.files, &ask.command),
       None => ask.command.clone(),
-    },
+    }),
     cwd: ask.cwd.clone(),
     env,
     distro: ask.distro.clone(),
@@ -326,7 +333,7 @@ pub async fn answer(handed: &Handed, ground: &Ground) -> Answer {
   // A kill skips the handing script's own removal, so the folder is removed again whatever the end was.
   let removal = ExecBody {
     shell: body.shell,
-    command: script.removal(&id),
+    command: script.sent(script.removal(&id)),
     cwd: None,
     env: ask.env,
     distro: ask.distro,

@@ -47,6 +47,16 @@
   with the token of the service's configuration under the data root, `env/node.toml`. A node no row holds is
   refused naming it, and an ssh node is refused as one this tool does not reach: it is reached over its own login
   with its target's `sshArgs`.
+- **A shell the node's host does not run is refused, naming the node and the shells it runs:** a Windows host,
+  whose target's `shell` is `powershell`, runs `powershell` and `wsl` commands, and any other host `linux` ones.
+  The agent would run any other in its host's own shell, so the answer would name a shell the command never ran
+  in, and a folder such as `~` would be one its host cannot enter.
+- **A `wsl` command reaches bash as written.** The agent enters WSL through `wsl.exe`, which hands its command
+  line to the distribution's default shell before bash takes it, so that shell would expand every `$`, quote and
+  backtick in the command once, with the shell's own variables still unset. The tool sends a `wsl` command
+  base64-encoded inside a line holding no character any shell expands, which decodes it and hands it whole to
+  bash on standard input, in one group bash reads to its end before it runs any of it, so a command that reads
+  its standard input reads nothing.
 - **The command goes to the hub's `POST /exec?agent=<agent>`,** the node's agent named, with the shell, the
   command, the folder, the variables and the distribution as the call gives them, the secrets it names laid in as
   「Secrets handed by name」 says. The hub's control token is read
@@ -129,7 +139,7 @@
     access list on Windows. It writes each file there, removes the variable that carried it, sets the path
     variable and runs the command.
   - In bash, for `linux` and `wsl`, the command runs in a subshell, so a trap it sets replaces none of the
-    script's own. The folder is removed when the script exits, also on a hangup, an interrupt or a termination,
+    script's own, and on `wsl` the whole script is sent encoded as every `wsl` command is (「A call」). The folder is removed when the script exits, also on a hangup, an interrupt or a termination,
     the way the agent stops a command, and the script exits with the command's status by an `exit` of its own
     after the subshell, since bash runs a subshell that ends a script in the script's own process, dropping its
     traps.

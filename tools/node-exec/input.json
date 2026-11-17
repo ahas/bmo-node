@@ -17,7 +17,7 @@
     },
     "shell": {
       "enum": ["powershell", "wsl", "linux"],
-      "description": "The shell the agent runs the command in; the node's own where none is named: powershell on a Windows host, linux otherwise."
+      "description": "The shell the agent runs the command in; the node's own where none is named: powershell on a Windows host, linux otherwise. A Windows host runs powershell and wsl, any other host linux. A wsl command reaches bash as written."
     },
     "cwd": {
       "type": "string",

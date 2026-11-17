@@ -18,7 +18,9 @@ command's exit code and its output.
   the caller is judged on that node as on one named. Name the node by `node` or by `account`, never both.
 - `command`: the command's text.
 - `shell`: `powershell`, `wsl` or `linux`. Where none is named the node's own is taken: `powershell` on a
-  Windows host, `linux` otherwise.
+  Windows host, `linux` otherwise. A Windows host runs `powershell` and `wsl`, any other host `linux`; a shell the
+  host does not run is refused. A `wsl` command reaches bash as written: write `$`, quotes and backticks as you
+  would on a Linux host, without escaping them again.
 - `cwd`: the folder the command runs in.
 - `env`: variables laid over the agent's environment, each a string.
 - `distro`: the WSL distribution a `wsl` command runs in.

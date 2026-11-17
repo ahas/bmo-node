@@ -2,8 +2,11 @@
 //! by name」): it writes each file out of the variable carrying it into a folder of the call's own in the user's
 //! temporary folder, runs the command, and removes the folder however the command ends; and the command the tool
 //! sends after the command's end, removing the folder where a kill skipped the script's own removal. A script
-//! names variables alone and holds no value.
+//! names variables alone and holds no value. Every command of the `wsl` road is sent encoded, whatever it holds
+//! (docs/tools.md, 「A call」).
 
+use base64::Engine;
+use base64::engine::general_purpose::STANDARD;
 use bmo_node_client::nodes::LoginShell;
 use bmo_node_client::runs::RunShell;
 
@@ -12,30 +15,52 @@ use crate::secrets::Carried;
 /// The prefix of a call's folder, which a later handing script sweeps once a day old.
 const FOLDER_HEAD: &str = "bmo-secret-";
 
-/// The language the agent runs a command in, as far as a handing script differs by it.
+/// The road a command takes to the shell that runs it, as far as what the tool sends differs by it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Script {
-  /// bash, the Linux host's shell and the one `wsl` enters.
+  /// bash, a Linux host's shell, taking the command as written.
   Bash,
+  /// bash in WSL on a Windows host, entered through `wsl.exe`, whose distribution's default shell expands the
+  /// command line once before bash takes it.
+  Wsl,
   /// Windows PowerShell.
   PowerShell,
 }
 
 impl Script {
-  /// The script's language for a command in `shell` on a host whose own shell is `host`: the agent runs every
-  /// command of a Linux host in bash, whatever shell it names.
-  pub fn of(shell: RunShell, host: Option<LoginShell>) -> Self {
-    match (shell, host) {
-      (RunShell::Powershell, Some(LoginShell::Posix)) => Self::Bash,
-      (RunShell::Powershell, _) => Self::PowerShell,
-      (RunShell::Wsl | RunShell::Linux, _) => Self::Bash,
+  /// The road of a command in `shell` on a host whose own shell is `host`; none where the host does not run
+  /// that shell, since the agent would run the command in its host's own instead.
+  pub fn of(shell: RunShell, host: LoginShell) -> Option<Self> {
+    match (host, shell) {
+      (LoginShell::Posix, RunShell::Linux) => Some(Self::Bash),
+      (LoginShell::Powershell, RunShell::Wsl) => Some(Self::Wsl),
+      (LoginShell::Powershell, RunShell::Powershell) => Some(Self::PowerShell),
+      _ => None,
+    }
+  }
+
+  /// The shells a host whose own shell is `host` runs, as a refusal names them.
+  pub fn runs(host: LoginShell) -> &'static str {
+    match host {
+      LoginShell::Posix => "linux",
+      LoginShell::Powershell => "powershell and wsl",
+    }
+  }
+
+  /// `command` as it is sent on this road. A `wsl` command goes base64-encoded inside a line holding no character
+  /// a shell expands, decoded and handed to bash on its standard input inside one group, which bash reads whole
+  /// before it runs any of it, so the command reaches bash as written and reads nothing on its own standard input.
+  pub fn sent(self, command: String) -> String {
+    match self {
+      Self::Wsl => format!("echo {} | base64 -d | bash", STANDARD.encode(format!("{{\n{command}\n}}\n"))),
+      Self::Bash | Self::PowerShell => command,
     }
   }
 
   /// `command` wrapped so it finds `files` written in the folder `id` names, removed at its end.
   pub fn wrap(self, id: &str, files: &[Carried], command: &str) -> String {
     match self {
-      Self::Bash => bash_wrap(id, files, command),
+      Self::Bash | Self::Wsl => bash_wrap(id, files, command),
       Self::PowerShell => powershell_wrap(id, files, command),
     }
   }
@@ -43,7 +68,7 @@ impl Script {
   /// The command removing the folder `id` names, ending with 0 where it is gone.
   pub fn removal(self, id: &str) -> String {
     match self {
-      Self::Bash => format!("rm -rf \"${{TMPDIR:-/tmp}}/{FOLDER_HEAD}{id}\""),
+      Self::Bash | Self::Wsl => format!("rm -rf \"${{TMPDIR:-/tmp}}/{FOLDER_HEAD}{id}\""),
       Self::PowerShell => format!(
         "$__bmoDir = Join-Path ([System.IO.Path]::GetTempPath()) '{FOLDER_HEAD}{id}'\n\
          if (Test-Path -LiteralPath $__bmoDir) {{ Remove-Item -LiteralPath $__bmoDir -Recurse -Force -ErrorAction Stop }}"

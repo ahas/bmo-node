@@ -4,6 +4,7 @@
 
 use bmo_node_client::nodes::{LoginShell, NodeKind};
 use node_check::hub_exec::KEPT_BYTES;
+use node_exec_tool::script::Script;
 use node_exec_tool::{Answer, ENTRY, answer};
 use serde_json::{Value, json};
 
@@ -160,8 +161,22 @@ async fn the_administrator_names_the_shell_and_the_distribution_on_any_node() {
   assert!(!answered.is_error, "{}", answered.text());
   assert_eq!(
     stood.world.execs.lock().unwrap()[0].2,
-    json!({ "shell": "wsl", "command": "uname -a", "env": {}, "distro": "Ubuntu" })
+    json!({ "shell": "wsl", "command": Script::Wsl.sent("uname -a".into()), "env": {}, "distro": "Ubuntu" })
   );
+}
+
+#[tokio::test]
+async fn a_shell_the_node_s_host_does_not_run_is_refused_before_the_hub_is_asked() {
+  let stood = owned().await;
+  let arguments = json!({ "node": "pc-four", "command": "pwd", "shell": "linux", "cwd": "~" });
+  let refused = answer(&handed("house", &["node.admin"], arguments), &stood.ground).await;
+
+  assert!(refused.is_error);
+  assert_eq!(
+    refused.text(),
+    "The node pc-four runs powershell and wsl commands, not linux: name one of those as shell."
+  );
+  assert!(stood.world.execs.lock().unwrap().is_empty());
 }
 
 #[tokio::test]
