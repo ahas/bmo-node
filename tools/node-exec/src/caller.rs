@@ -3,7 +3,7 @@
 //! node. The caller's account and the node's owner are read from agency, the issuer of the session records,
 //! and so is the node a call names by its account (docs/tools.md, 「A call」).
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
 use serde::Deserialize;
@@ -174,11 +174,51 @@ pub async fn node_of(account_id: &str, agency: Result<&Agency, &String>) -> Resu
   })
 }
 
-/// Whether the session may run a command on `node`, or the reason it may not, naming the node and its
-/// owner. An owner or an account that cannot be read lets nobody through but the administrator.
-pub async fn judge(session: &Session, node: &str, agency: Result<&Agency, &String>) -> Result<(), String> {
+/// How a caller was let through to a node: as the administrator, or as the account owning it. Whose
+/// secrets a call reads follows it (docs/tools.md, 「Secrets handed by name」).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Caller {
+  Administrator,
+  Owner(String),
+}
+
+/// Whose secrets a caller reads: a folder under the data root's `env/`, and how a reason names it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Space {
+  pub folder: PathBuf,
+  pub whose: String,
+}
+
+impl Caller {
+  /// The administrator reads the platform's space, `env/` itself; an owner its own account's,
+  /// `env/users/<account>/`, and never the platform's. An account whose id is not a decimal number holds no
+  /// space, since a space is named by the number alone.
+  pub fn space(&self, env: &Path) -> Result<Space, String> {
+    match self {
+      Self::Administrator => Ok(Space {
+        folder: env.to_path_buf(),
+        whose: "the platform's secrets".into(),
+      }),
+      Self::Owner(account) if !account.is_empty() && account.bytes().all(|byte| byte.is_ascii_digit()) => {
+        Ok(Space {
+          folder: env.join("users").join(account),
+          whose: format!("account {account}'s secrets"),
+        })
+      }
+      Self::Owner(account) => Err(format!("account {account} holds no secret space")),
+    }
+  }
+}
+
+/// How the session may run a command on `node`, or the reason it may not, naming the node and its owner. An
+/// owner or an account that cannot be read lets nobody through but the administrator.
+pub async fn judge(
+  session: &Session,
+  node: &str,
+  agency: Result<&Agency, &String>,
+) -> Result<Caller, String> {
   if session.is_administrator() {
-    return Ok(());
+    return Ok(Caller::Administrator);
   }
 
   let unread = |why: &str| {
@@ -191,8 +231,8 @@ pub async fn judge(session: &Session, node: &str, agency: Result<&Agency, &Strin
   let agent = session.agent();
   let caller = agency.account_of(agent).await.map_err(|why| unread(&why))?;
 
-  if owner.is_some() && owner == caller {
-    return Ok(());
+  if let Some(owner) = owner.as_ref().filter(|owner| caller.as_ref() == Some(*owner)) {
+    return Ok(Caller::Owner(owner.clone()));
   }
 
   let whose = match &owner {

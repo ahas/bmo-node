@@ -31,6 +31,28 @@
     "distro": {
       "type": "string",
       "description": "The WSL distribution a wsl command runs in; the default one where none is named."
+    },
+    "secrets": {
+      "type": "array",
+      "description": "Saved secrets the command is handed by name, never by value: the platform's for the administrator, the caller's own account's otherwise. A file of KEY=VALUE fields is handed as variables named by its keys; a file of one value is written to a file on the node, removed when the command ends, whose path is in BMO_SECRET_<STEM>_FILE, the stem being the name in capitals with other characters made underscores. A value the command prints is masked in the answer.",
+      "items": {
+        "oneOf": [
+          { "type": "string", "description": "The secret's name, a plain file name." },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name"],
+            "properties": {
+              "name": { "type": "string", "description": "The secret's name, a plain file name." },
+              "prefix": { "type": "string", "description": "Written before each field's key in its variable's name." },
+              "as": {
+                "enum": ["env", "file", "both"],
+                "description": "Variables, a file on the node, or both: env for a file of fields and file for a file of one value where none is named. One value as a variable is BMO_SECRET_<STEM>."
+              }
+            }
+          }
+        ]
+      }
     }
   }
 }

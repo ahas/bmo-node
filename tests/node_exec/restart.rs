@@ -8,7 +8,7 @@ use std::net::SocketAddr;
 
 use bmo_node_client::nodes::LoginShell;
 use node_exec_tool::answer;
-use node_exec_tool::caller::{Agency, judge};
+use node_exec_tool::caller::{Agency, Caller, judge};
 use serde_json::json;
 
 use super::{frame, handed, held_hub, hub_target, out, owned, serve_at, session};
@@ -67,7 +67,10 @@ async fn agency_stopped_lets_nobody_but_the_administrator_through_and_started_ag
   let url = format!("http://{addr}");
   let owner = session("pc-agent", &[]);
 
-  assert_eq!(judge(&owner, "pc-four", Ok(&Agency::new(&url, "token"))).await, Ok(()));
+  assert_eq!(
+    judge(&owner, "pc-four", Ok(&Agency::new(&url, "token"))).await,
+    Ok(Caller::Owner("4".into()))
+  );
 
   agency.abort();
   assert!(agency.await.unwrap_err().is_cancelled());
@@ -77,12 +80,12 @@ async fn agency_stopped_lets_nobody_but_the_administrator_through_and_started_ag
   assert!(refused.starts_with("Whose node pc-four is could not be read"), "{refused}");
   assert_eq!(
     judge(&session("house", &["node.admin"]), "pc-four", Ok(&Agency::new(&url, "token"))).await,
-    Ok(())
+    Ok(Caller::Administrator)
   );
 
   let (_, again) = serve_at(&stood.world, addr).await;
   let let_in = judge(&owner, "pc-four", Ok(&Agency::new(&url, "token"))).await;
 
   again.abort();
-  assert_eq!(let_in, Ok(()));
+  assert_eq!(let_in, Ok(Caller::Owner("4".into())));
 }

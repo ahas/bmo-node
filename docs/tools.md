@@ -31,7 +31,8 @@
   `shell`, `powershell`, `wsl` or `linux`, `cwd`, the folder it runs in, `env`, variables laid over the agent's
   environment, and `distro`, the WSL distribution a `wsl` command runs in. A call naming no shell runs the command
   in the shell the node's host takes a command in: `powershell` on a Windows host, `linux` otherwise
-  (`docs/nodes.md`, 「What a row holds」).
+  (`docs/nodes.md`, 「What a row holds」). `secrets` names saved secrets the command is handed without their values
+  passing through the call (「Secrets handed by name」).
 - **A call that names the node by its account** has the node read first from agency's records of a person's node,
   the same `GET /person-nodes` the caller's check reads (「Who may run a command on which node」): the node the
   record for that account names, an account's id compared as it is written out, so `4` and `"4"` name the same
@@ -47,13 +48,15 @@
   refused naming it, and an ssh node is refused as one this tool does not reach: it is reached over its own login
   with its target's `sshArgs`.
 - **The command goes to the hub's `POST /exec?agent=<agent>`,** the node's agent named, with the shell, the
-  command, the folder, the variables and the distribution as the call gives them. The hub's control token is read
+  command, the folder, the variables and the distribution as the call gives them, the secrets it names laid in as
+  「Secrets handed by name」 says. The hub's control token is read
   by the tool out of the hub's token file for that one request and goes nowhere else: not into the answer, a log
   line or anything the session's shell is handed.
 - **The answer** is the command's `exitCode`, null where the hub reports none, `signal`, the signal that ended it,
   or null, and its `stdout` and `stderr` as text, with `node` and the `shell` it ran in, both as a person's
   reading and as structured content. Each stream keeps its last 64 KiB; `stdoutCut` and `stderrCut` say where
-  more came. A command that ran and ended with any code is answered, not refused: its code says how it went.
+  more came. A command that ran and ended with any code is answered, not refused: its code says how it went. A
+  secret's value the command printed is masked in it (「Secrets handed by name」).
 - **A command is held to the hub's own ceilings** on its time and its output, and the tool adds none: a call
   waits for the hub's stream to end. Work longer than the hub's ceiling is started on the node as a unit of its
   own and read back by later commands.
@@ -85,3 +88,63 @@
   but the administrator.
 - **Where the data root stands** is the record's `BMO_DATA_DIR` variable, handed to the call's environment; a
   call whose environment names none is refused.
+
+## Secrets handed by name
+
+- **A call names saved secrets, never their values,** in `secrets`: each item a secret's name, or an object of
+  `name`, and optionally `prefix` and `as`. The tool reads each named file on this machine and hands what it holds
+  to the command as variables, as a file on the node, or both, so a value passes through neither the caller's
+  text, the hub's record of the command, nor the answer.
+- **Whose secrets a call reads follows how its caller was let through** (「Who may run a command on which
+  node」): the administrator reads the platform's space, the data root's `env/`, and a caller let through as the
+  node's owner reads its own account's space, `env/users/<account>/`, and never the platform's (bmo-web's
+  `docs/accounts.md`, 「The secret store」). The secrets are read after the caller is judged and before the node
+  service or the hub is asked, so a caller the node refuses learns nothing of which names stand.
+- **A name is a plain file name:** no slash or backslash, no leading dot and no `.previous` ending; any other is
+  refused naming it. A name its space holds no regular file under is refused naming it and the space, a link or a
+  folder being no secret. A file over 16 KiB is refused, the most a variable carries on every node's shell once
+  encoded, and so is a file that cannot be read. No refusal carries what a file holds.
+- **What a file holds:** fields, where every line is a `KEY=VALUE` line whose key is a capital letter or an
+  underscore followed by capitals, digits and underscores, no key twice, the shape the console writes a secret
+  of several fields in; or else one value, the file's bytes. A field's value is the line after its first `=`,
+  exactly as written: the console writes a value as typed, with no quoting, so no quoting or expansion is read
+  into it.
+- **How a secret is handed is its `as`:**
+  - `env`: a file of fields hands each field as a variable named by its key, with `prefix` written before the key;
+    a file of one value hands the value as `BMO_SECRET_<STEM>`, the stem being the name in capitals with every
+    character other than a letter or a digit made an underscore, so `acme-portal` is `acme-portal`. A value
+    that is not UTF-8 text is refused as a variable.
+  - `file`: the file's bytes unchanged, written into a file on the node whose path the command finds in
+    `BMO_SECRET_<STEM>_FILE`.
+  - `both`: the two together.
+  - Where `as` is left out, a file of fields is handed as `env` and a file of one value as `file`.
+  - `prefix` is letters, digits and underscores, not opening on a digit.
+- **A variable named twice,** by two secrets or by a secret and the call's `env`, is refused naming the variable.
+- **A file on the node** is written by the command's own shell. The file's bytes travel base64-encoded in a
+  variable `BMO_SECRET_BYTES_<n>`, and the command is wrapped in the shell's handing script, which names the
+  variables and holds no value:
+  - it makes a folder `bmo-secret-<id>`, its id random to the call, in the user's temporary folder (`$TMPDIR`, or
+    `/tmp` where none is set, for `linux` and `wsl`; PowerShell's temporary path, the user's `%TEMP%` on Windows),
+    readable by the user alone: made under a umask of 077 in bash, and under the user's own temporary folder's
+    access list on Windows. It writes each file there, removes the variable that carried it, sets the path
+    variable and runs the command.
+  - In bash, for `linux` and `wsl`, the command runs in a subshell, so a trap it sets replaces none of the
+    script's own. The folder is removed when the script exits, also on a hangup, an interrupt or a termination,
+    the way the agent stops a command, and the script exits with the command's status by an `exit` of its own
+    after the subshell, since bash runs a subshell that ends a script in the script's own process, dropping its
+    traps.
+  - In PowerShell the command runs in a `try` whose `finally` removes the folder, and the process ends with 1
+    where the command's last statement failed, as PowerShell does for a command it is handed.
+  - **After the command's end, however it ended, the tool sends a second command removing the folder,** since a
+    kill skips the script's own removal: the agent's kill after its grace on Linux, and its forced tree kill on
+    Windows on a cancel or at the hub's ceiling. Where that command does not end with code 0, the answer says the
+    folder's removal could not be confirmed.
+  - Every handing script first removes the user's `bmo-secret-*` folders more than a day old, so a folder left by
+    a node lost in the middle of a command goes with the next call that hands a file there.
+- **A value in the answer is masked:** every value handed of at least four characters, each field's value, each
+  line of a file of one value, the file whole and its encoded form, is replaced in the output and in a failure's
+  reason by `[secret <name>]`. A value shorter than that is not masked, a value the command prints in another
+  encoding is not recognised, and a value cut at the head of a stream's last 64 KiB may leave its tail.
+- **Where a value goes:** the tool's own process, the hub's exec request, whose record of a command keeps its
+  text and not its variables, and the environment of the command's process on the node, and the file where one
+  is asked for. No log line, refusal or answer of the tool carries one.

@@ -1436,8 +1436,10 @@ dependencies = [
 name = "node-exec-tool"
 version = "0.1.0-rev.2"
 dependencies = [
+ "base64 0.22.1",
  "bmo-node-client",
  "dotenvy",
+ "getrandom 0.3.4",
  "node-check",
  "node-server",
  "percent-encoding",

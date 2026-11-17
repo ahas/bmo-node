@@ -4,6 +4,8 @@
 mod call;
 mod caller;
 mod restart;
+mod script;
+mod secrets;
 
 use std::collections::HashMap;
 use std::net::{Ipv4Addr, SocketAddr};
@@ -196,6 +198,8 @@ pub struct Stood {
   pub world: World,
   pub url: String,
   pub ground: Ground,
+  /// The stand-in's data root's `env/`, the platform's secrets, with each account's under `users/`.
+  pub env: std::path::PathBuf,
   _home: tempfile::TempDir,
 }
 
@@ -238,9 +242,14 @@ pub async fn stood() -> Stood {
 
   std::fs::write(home.path().join("hub.env"), format!("JAKE_CONTROL_TOKEN={HUB_TOKEN}\n")).unwrap();
 
+  let env = home.path().join("env");
+
+  std::fs::create_dir(&env).unwrap();
+
   let ground = Ground {
     nodes: NodeClient::new(&url, "node-token"),
     agency: Ok(Agency::new(&url, "agency-token")),
+    secrets: Ok(env.clone()),
     machine: Machine::new("ssh", home.path()),
   };
 
@@ -248,6 +257,7 @@ pub async fn stood() -> Stood {
     world,
     url,
     ground,
+    env,
     _home: home,
   }
 }

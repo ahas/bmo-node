@@ -85,7 +85,8 @@ its own.
   status, `code` and `error`.
 - **The hosted tool, `node-exec`** (`tools/node-exec`, `docs/tools.md`): the tool host's entry `bmo/node_exec`,
   which runs one command on a hub node through its hub for a caller whose account owns the node, or that holds
-  the administrator's grant, and answers its exit code and output. It is not among the plugin's tools, which know
+  the administrator's grant, handing it the caller's saved secrets by name where the call names them, and answers
+  its exit code and output. It is not among the plugin's tools, which know
   no caller, and neither is a run (「Runs」), which a caller makes as itself with a token of its own.
 - This document is the canonical statement: where the document, the code and the clients disagree, the
   code is repaired and both clients generated again.

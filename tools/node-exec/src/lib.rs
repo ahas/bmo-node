@@ -4,6 +4,8 @@
 //! standard output (bmo-pocket's `docs/api.md`, 「The call protocol」).
 
 pub mod caller;
+pub mod script;
+pub mod secrets;
 
 use std::collections::BTreeMap;
 use std::io::{Read as _, Write as _};
@@ -20,7 +22,9 @@ use node_server::config::Config;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-use crate::caller::{Agency, Session, account, judge, node_of};
+use crate::caller::{Agency, Caller, Session, account, judge, node_of};
+use crate::script::{Script, folder_id};
+use crate::secrets::{Handing, Named, read};
 
 /// The entry this executable answers, as its manifest declares it.
 pub const ENTRY: &str = "bmo/node_exec";
@@ -53,6 +57,8 @@ pub struct Ask {
   pub env: BTreeMap<String, String>,
   #[serde(default)]
   pub distro: Option<String>,
+  #[serde(default)]
+  pub secrets: Vec<Named>,
 }
 
 impl Ask {
@@ -119,6 +125,12 @@ impl Answer {
     Self::refusal(text)
   }
 
+  /// The answer with a sentence of its own after what it says.
+  fn noting(mut self, note: String) -> Self {
+    self.content.push(json!({ "type": "text", "text": note }));
+    self
+  }
+
   /// A refusal saying why in English.
   pub fn refusal(why: impl Into<String>) -> Self {
     Self {
@@ -139,11 +151,13 @@ impl Answer {
   }
 }
 
-/// What a call reaches: the node service, agency, and this machine's hub requests and home. Each is read
-/// where it is first needed, and a part that could not be read is the reason a call needing it is refused.
+/// What a call reaches: the node service, agency, the data root's `env/` the secrets stand in, and this
+/// machine's hub requests and home. Each is read where it is first needed, and a part that could not be read is
+/// the reason a call needing it is refused.
 pub struct Ground {
   pub nodes: Result<NodeClient, String>,
   pub agency: Result<Agency, String>,
+  pub secrets: Result<PathBuf, String>,
   pub machine: Machine,
 }
 
@@ -156,6 +170,7 @@ impl Ground {
     Self {
       nodes,
       agency: Agency::read(data_root),
+      secrets: Ok(data_root.join("env")),
       machine: Machine::local(),
     }
   }
@@ -166,7 +181,8 @@ impl Ground {
 
     Self {
       nodes: Err(why.clone()),
-      agency: Err(why),
+      agency: Err(why.clone()),
+      secrets: Err(why),
       machine: Machine::local(),
     }
   }
@@ -214,8 +230,22 @@ fn write(answer: &Answer) -> ExitCode {
   }
 }
 
+/// The secrets a call names, read from the space its caller reads and laid beside its own variables; none
+/// where it names none.
+fn handing(ask: &Ask, caller: &Caller, ground: &Ground) -> Result<Handing, String> {
+  if ask.secrets.is_empty() {
+    return Ok(Handing::default());
+  }
+
+  let env = ground.secrets.as_ref().map_err(|why| format!("no secret can be read: {why}"))?;
+  let secrets = read(&ask.secrets, &caller.space(env)?)?;
+
+  Handing::of(&secrets, &ask.env)
+}
+
 /// The entry asked for, answered over `ground`: the node an account names read first, then the caller
-/// judged, then the node read, then the command run on it.
+/// judged, then the secrets it names read, then the node read, then the command run on it, and every value
+/// handed masked in what the answer says.
 pub async fn answer(handed: &Handed, ground: &Ground) -> Answer {
   if handed.entry != ENTRY {
     return Answer::refusal(format!("this executable holds no entry {}", handed.entry));
@@ -231,9 +261,14 @@ pub async fn answer(handed: &Handed, ground: &Ground) -> Answer {
     Err(why) => return Answer::refusal(why),
   };
 
-  if let Err(why) = judge(&handed.session, &node, ground.agency.as_ref()).await {
-    return Answer::refusal(why);
-  }
+  let caller = match judge(&handed.session, &node, ground.agency.as_ref()).await {
+    Ok(caller) => caller,
+    Err(why) => return Answer::refusal(why),
+  };
+  let handing = match handing(&ask, &caller, ground) {
+    Ok(handing) => handing,
+    Err(why) => return Answer::refusal(why),
+  };
 
   let nodes = match &ground.nodes {
     Ok(nodes) => nodes,
@@ -255,17 +290,88 @@ pub async fn answer(handed: &Handed, ground: &Ground) -> Answer {
   else {
     return Answer::refusal(format!("the node {node} names no hub and agent to reach it by"));
   };
+  let shell = ask.shell.unwrap_or_else(|| RunShell::of_host(target.shell));
+  let script = Script::of(shell, target.shell);
+  let folder = if handing.files.is_empty() {
+    None
+  } else {
+    match folder_id() {
+      Ok(id) => Some(id),
+      Err(why) => return Answer::refusal(why),
+    }
+  };
+  let mut env = ask.env.clone();
+
+  env.extend(handing.env.clone());
+
   let body = ExecBody {
-    shell: ask.shell.unwrap_or_else(|| RunShell::of_host(target.shell)).name().to_owned(),
-    command: ask.command,
-    cwd: ask.cwd,
+    shell: shell.name().to_owned(),
+    command: match &folder {
+      Some(id) => script.wrap(id, &handing.files, &ask.command),
+      None => ask.command.clone(),
+    },
+    cwd: ask.cwd.clone(),
+    env,
+    distro: ask.distro.clone(),
+  };
+  let hub = Hub { url, token_file };
+  let answered = match run(&ground.machine, &hub, &agent, &node, &body).await {
+    Ok(ran) => Answer::ran(&masked_run(ran, &handing)),
+    Err(broke) => Answer::broke(&node, &masked_broke(broke, &handing)),
+  };
+  let Some(id) = folder else {
+    return answered;
+  };
+
+  // A kill skips the handing script's own removal, so the folder is removed again whatever the end was.
+  let removal = ExecBody {
+    shell: body.shell,
+    command: script.removal(&id),
+    cwd: None,
     env: ask.env,
     distro: ask.distro,
   };
-  let hub = Hub { url, token_file };
 
-  match run(&ground.machine, &hub, &agent, &node, &body).await {
-    Ok(ran) => Answer::ran(&ran),
-    Err(broke) => Answer::broke(&node, &broke),
+  match unconfirmed(&ground.machine, &hub, &agent, &node, &removal).await {
+    Some(why) => answered.noting(format!(
+      "Whether the secrets' folder on {node} was removed could not be confirmed: {}; the next call handing a \
+       file there removes it once a day old.",
+      handing.masked(&why)
+    )),
+    None => answered,
+  }
+}
+
+/// Why the removal of a call's folder is not known to have happened; none where it ended with code 0.
+async fn unconfirmed(
+  machine: &Machine,
+  hub: &Hub,
+  agent: &str,
+  node: &str,
+  removal: &ExecBody,
+) -> Option<String> {
+  match run(machine, hub, agent, node, removal).await {
+    Ok(ran) if ran.exit_code == Some(0) => None,
+    Ok(ran) => Some(match ran.exit_code {
+      Some(code) => format!("its removal ended with exit code {code}"),
+      None => "its removal ended with no exit code".to_owned(),
+    }),
+    Err(broke) => Some(broke.why),
+  }
+}
+
+fn masked_run(ran: Run, handing: &Handing) -> Run {
+  Run {
+    stdout: handing.masked(&ran.stdout),
+    stderr: handing.masked(&ran.stderr),
+    ..ran
+  }
+}
+
+fn masked_broke(broke: Broke, handing: &Handing) -> Broke {
+  Broke {
+    why: handing.masked(&broke.why),
+    stdout: handing.masked(&broke.stdout),
+    stderr: handing.masked(&broke.stderr),
   }
 }

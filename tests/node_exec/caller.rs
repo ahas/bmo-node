@@ -1,7 +1,7 @@
 //! Who may run a command on which node: the node's owner and the administrator, and nobody else, each refusal
 //! naming the node and its owner.
 
-use node_exec_tool::caller::{Agency, judge};
+use node_exec_tool::caller::{Agency, Caller, judge};
 use serde_json::json;
 
 use super::{session, stood};
@@ -19,7 +19,7 @@ async fn a_supervisor_reaches_its_own_account_s_node_and_not_another_s() {
   let agency = stood.ground.agency.as_ref().unwrap();
   let caller = session("pc-agent", &[]);
 
-  assert_eq!(judge(&caller, "pc-four", Ok(agency)).await, Ok(()));
+  assert_eq!(judge(&caller, "pc-four", Ok(agency)).await, Ok(Caller::Owner("4".into())));
   assert_eq!(
     judge(&caller, "pc-seven", Ok(agency)).await,
     Err(
@@ -49,7 +49,10 @@ async fn a_role_agent_s_account_is_read_from_agency_s_role_agents() {
 
   let agency = stood.ground.agency.as_ref().unwrap();
 
-  assert_eq!(judge(&session("helper", &[]), "pc-seven", Ok(agency)).await, Ok(()));
+  assert_eq!(
+    judge(&session("helper", &[]), "pc-seven", Ok(agency)).await,
+    Ok(Caller::Owner("7".into()))
+  );
 }
 
 #[tokio::test]
@@ -88,7 +91,10 @@ async fn an_agent_of_no_account_reaches_no_node_and_a_node_of_no_person_is_the_a
 async fn the_administrator_s_grant_reaches_every_node_without_asking_agency() {
   let unreachable = "agency is not configured".to_owned();
 
-  assert_eq!(judge(&session("house", &["node.admin"]), "pc-four", Err(&unreachable)).await, Ok(()));
+  assert_eq!(
+    judge(&session("house", &["node.admin"]), "pc-four", Err(&unreachable)).await,
+    Ok(Caller::Administrator)
+  );
 }
 
 #[tokio::test]

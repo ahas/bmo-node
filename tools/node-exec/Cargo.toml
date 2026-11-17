@@ -15,8 +15,10 @@ path = "src/main.rs"
 test = false
 
 [dependencies]
+base64.workspace = true
 bmo-node-client = { path = "../../crates/client" }
 dotenvy.workspace = true
+getrandom.workspace = true
 node-check = { path = "../../crates/node-check" }
 node-server = { path = "../../crates/server" }
 percent-encoding.workspace = true
