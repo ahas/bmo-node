@@ -135,8 +135,9 @@
   variables and holds no value:
   - it makes a folder `bmo-secret-<id>`, its id random to the call, in the user's temporary folder (`$TMPDIR`, or
     `/tmp` where none is set, for `linux` and `wsl`; PowerShell's temporary path, the user's `%TEMP%` on Windows),
-    readable by the user alone: made under a umask of 077 in bash, and under the user's own temporary folder's
-    access list on Windows. It writes each file there, removes the variable that carried it, sets the path
+    readable by the user alone: made under a umask of 077 in bash, and on Windows given an access list of its own
+    that holds the user alone and inherits nothing, since a user's temporary folder may grant others too, as a
+    sandbox's install does. It writes each file there, once that access list stands, removes the variable that carried it, sets the path
     variable and runs the command.
   - In bash, for `linux` and `wsl`, the command runs in a subshell, so a trap it sets replaces none of the
     script's own, and on `wsl` the whole script is sent encoded as every `wsl` command is (「A call」). The folder is removed when the script exits, also on a hangup, an interrupt or a termination,

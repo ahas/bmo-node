@@ -110,9 +110,11 @@ fn bash_wrap(id: &str, files: &[Carried], command: &str) -> String {
   script
 }
 
-/// The folder is made in PowerShell's temporary path, the user's own `%TEMP%` on Windows, whose access list
-/// holds the user alone; the command runs in a `try` whose `finally` removes it. The process ends with 1 where
-/// the command's last statement failed, as PowerShell ends a command it is handed.
+/// The folder is made in PowerShell's temporary path, the user's own `%TEMP%` on Windows, and on Windows given an
+/// access list of its own holding the user alone and inheriting nothing, before any file is written in it, since
+/// a user's temporary folder may grant others too; PowerShell on another system, which has no such list, skips
+/// it. The command runs in a `try` whose `finally` removes the folder. The process ends with 1 where the
+/// command's last statement failed, as PowerShell ends a command it is handed.
 fn powershell_wrap(id: &str, files: &[Carried], command: &str) -> String {
   let mut script = format!(
     "$__bmoTemp = [System.IO.Path]::GetTempPath()\n\
@@ -122,7 +124,15 @@ fn powershell_wrap(id: &str, files: &[Carried], command: &str) -> String {
      $__bmoDir = Join-Path $__bmoTemp '{FOLDER_HEAD}{id}'\n\
      $null = New-Item -ItemType Directory -Path $__bmoDir -ErrorAction Stop\n\
      $__bmoOk = $false\n\
-     try {{\n"
+     try {{\n\
+     if ($IsWindows -ne $false) {{\n\
+     $__bmoAcl = New-Object System.Security.AccessControl.DirectorySecurity\n\
+     $__bmoAcl.SetAccessRuleProtection($true, $false)\n\
+     $__bmoAcl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule(\
+     [System.Security.Principal.WindowsIdentity]::GetCurrent().User, 'FullControl', \
+     'ContainerInherit, ObjectInherit', 'None', 'Allow')))\n\
+     Set-Acl -LiteralPath $__bmoDir -AclObject $__bmoAcl -ErrorAction Stop\n\
+     }}\n"
   );
 
   for Carried {
