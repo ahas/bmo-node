@@ -31,7 +31,7 @@ async fn a_supervisor_reaches_its_own_account_s_node_and_not_another_s() {
 }
 
 #[tokio::test]
-async fn a_role_agent_s_account_is_read_and_a_double_answers_for_its_supervisor() {
+async fn a_role_agent_s_account_is_read_from_agency_s_role_agents() {
   let stood = stood().await;
 
   stood
@@ -40,7 +40,6 @@ async fn a_role_agent_s_account_is_read_and_a_double_answers_for_its_supervisor(
     .lock()
     .unwrap()
     .push(json!({ "name": "helper", "role": "worker", "ownerAccount": 7 }));
-  stood.world.supervisors.lock().unwrap().insert("pc-agent".into(), json!(4));
   stood
     .world
     .person_nodes
@@ -49,19 +48,8 @@ async fn a_role_agent_s_account_is_read_and_a_double_answers_for_its_supervisor(
     .push(json!({ "ownerAccount": "7", "node": "pc-seven", "setAt": 2 }));
 
   let agency = stood.ground.agency.as_ref().unwrap();
-  let mut double = session("pc-agent-double", &[]);
-
-  double.labels.insert("doubleOf".into(), json!("pc-agent"));
 
   assert_eq!(judge(&session("helper", &[]), "pc-seven", Ok(agency)).await, Ok(()));
-  assert_eq!(
-    judge(&double, "pc-seven", Ok(agency)).await,
-    Err(
-      "The node pc-seven is account 7's; this session's agent pc-agent is account 4's and holds no \
-       administrator's grant (node.admin)."
-        .into()
-    )
-  );
 }
 
 #[tokio::test]

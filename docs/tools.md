@@ -70,8 +70,7 @@
   grant. The record's issuer writes it; the tool reads it and asks nobody else.
 - **The caller's account** is read from agency, the issuer of the session records, since a record carries no
   account of its own:
-  - the caller is the agent the record is held by, `holderName`, or the supervisor a double stands for where its
-    labels name one as `doubleOf`;
+  - the caller is the agent the record is held by, `holderName`;
   - a supervisor's account is its `ownerAccount` on agency's `GET /supervisors/{supervisorName}`, and a role
     agent's its `ownerAccount` among agency's `GET /role-agents`;
   - an agent agency knows as neither, or one with no `ownerAccount`, belongs to no account and owns no node.

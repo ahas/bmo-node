@@ -257,7 +257,6 @@ pub fn session(holder: &str, grants: &[&str]) -> Session {
   serde_json::from_value(json!({
     "holderName": holder,
     "grants": grants.iter().map(|resource| json!({ "resource": resource })).collect::<Vec<_>>(),
-    "labels": {},
   }))
   .unwrap()
 }

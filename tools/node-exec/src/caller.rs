@@ -7,7 +7,7 @@ use std::path::Path;
 
 use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
 use serde::Deserialize;
-use serde_json::{Map, Value};
+use serde_json::Value;
 
 /// The resource a session's grants hold where it is the administrator's.
 pub const ADMIN_GRANT: &str = "node.admin";
@@ -30,8 +30,6 @@ pub struct Session {
   pub holder_name: String,
   #[serde(default)]
   pub grants: Vec<Grant>,
-  #[serde(default)]
-  pub labels: Map<String, Value>,
 }
 
 impl Session {
@@ -40,9 +38,9 @@ impl Session {
     self.grants.iter().any(|grant| grant.resource == ADMIN_GRANT)
   }
 
-  /// The agent the call is made for: the supervisor a double stands for, or the record's holder.
+  /// The agent the call is made for: the record's holder.
   pub fn agent(&self) -> &str {
-    self.labels.get("doubleOf").and_then(Value::as_str).unwrap_or(&self.holder_name)
+    &self.holder_name
   }
 }
 
