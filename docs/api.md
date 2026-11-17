@@ -131,8 +131,10 @@ then
   login laid out for `ssh` ahead of the command: each option after `-o`, `-i` and the key with its home
   expanded where the node names one, `-p` and the port, and `user@host` last. `keyPath` is as the row holds
   it, a leading `~/` meaning the home of the account that reads it;
-- for a hub node: `hubId`, `hubAddress`, `hubTokenFile`, the file the hub's control token is kept in, and
-  `agentName`; `sshOptions` and `sshArgs` are empty.
+- for a hub node: `hubId`, `hubAddress`, `hubTokenFile`, the file the hub's control token is kept in,
+  `agentName`, and `shell`, the language its agent's host takes a command in as the row holds it, read off the
+  shells its hub says the agent offers (`docs/nodes.md`, 「What a row holds」), `posix` until a pass has read
+  it; `sshOptions` and `sshArgs` are empty.
 
 The target names where the credential is kept and never the credential. A node whose row lacks a field its
 connection type needs is refused `incomplete`.

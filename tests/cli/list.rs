@@ -188,7 +188,8 @@ async fn says_each_node_s_address_where_its_credential_is_kept_its_state_and_whe
     serde_json::to_value(target(&listed[0], &machine).unwrap()).unwrap(),
     json!({
       "nodeName": "agent-a", "kind": "hub", "role": null,
-      "host": null, "port": null, "user": null, "keyPath": null, "shell": null, "sshOptions": [], "sshArgs": [],
+      "host": null, "port": null, "user": null, "keyPath": null, "shell": "posix", "sshOptions": [],
+      "sshArgs": [],
       "hubId": 1, "hubAddress": "http://127.0.0.1:8791", "hubTokenFile": "~/.local/share/jake/hub.env",
       "agentName": "agent_a",
     })

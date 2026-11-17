@@ -198,10 +198,13 @@ async fn a_node_s_target_is_how_it_is_reached_without_a_credential_and_a_row_mis
     stood.get("/nodes/box/target").await,
     json!({
       "nodeName": "box", "kind": "hub", "role": null, "host": null, "port": null, "user": null, "keyPath": null,
-      "shell": null, "sshOptions": [], "sshArgs": [], "hubId": hub["id"], "hubAddress": "http://hub.example",
+      "shell": "posix", "sshOptions": [], "sshArgs": [], "hubId": hub["id"], "hubAddress": "http://hub.example",
       "hubTokenFile": "~/hub.env", "agentName": "box",
     })
   );
+
+  stood.store().set_agent_shell("http://hub.example", "box", "powershell").unwrap();
+  assert_eq!(stood.get("/nodes/box/target").await["shell"], json!("powershell"));
   assert_eq!(stood.refused(Method::GET, "/nodes/far/target", None).await, "incomplete");
   assert_eq!(stood.refused(Method::GET, "/nodes/gone/target", None).await, "not-found");
 }

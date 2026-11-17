@@ -939,6 +939,10 @@ export interface components {
             /** Format: uint16 */
             port: number | null;
             role: string | null;
+            /**
+             * @description The language the node takes a command in: an ssh node's login shell, or a hub node's host's as its hub says
+             *     the agent offers shells, `posix` until a pass has read them.
+             */
             shell: components["schemas"]["LoginShell"] | null;
             /** @description The same login laid out as `ssh` arguments ahead of the command. Empty for a hub node. */
             sshArgs: string[];

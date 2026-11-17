@@ -2381,7 +2381,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "The language the node takes a command in: an ssh node's login shell, or a hub node's host's as its hub says\nthe agent offers shells, `posix` until a pass has read them."
           },
           "sshArgs": {
             "description": "The same login laid out as `ssh` arguments ahead of the command. Empty for a hub node.",

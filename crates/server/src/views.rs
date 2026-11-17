@@ -120,6 +120,7 @@ pub fn target(node: &Node, machine: &Machine) -> Result<Target, Reply> {
       target.hub_address = Some(hub_url.clone());
       target.hub_token_file = Some(token_file.clone());
       target.agent_name = Some(agent.clone());
+      target.shell = LoginShell::of_code(&node.shell);
     }
     NodeKind::Ssh => {
       let login = ssh_target(node)?;

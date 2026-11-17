@@ -205,6 +205,8 @@ pub struct Target {
   /// The private key the login offers, as the row holds it; a leading `~/` is the home of the account that
   /// reads it.
   pub key_path: Option<String>,
+  /// The language the node takes a command in: an ssh node's login shell, or a hub node's host's as its hub says
+  /// the agent offers shells, `posix` until a pass has read them.
   pub shell: Option<LoginShell>,
   /// The OpenSSH options of a batch login, each given after `-o`, the options a key brings among them where
   /// the node names a key; the same for `ssh`, `sftp` and `scp`. Empty for a hub node.
