@@ -4,7 +4,6 @@
 mod support;
 
 mod cli;
-mod dependencies;
 mod hardware;
 mod layout;
 mod literals;

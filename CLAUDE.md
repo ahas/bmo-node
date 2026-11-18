@@ -14,7 +14,7 @@ which job a process serves, whether a launch goes ahead and what the chat agent 
   stating what is true now, and the code is then written to match. A change to the boundary API changes
   `docs/api.md` in the same commit.
 - **No other service's code.** Among other repositories only the base libraries `bmo-chat`,
-  `bmo-chat-client` and `bmo-ui` may be depended on or imported; `tests/dependencies.rs` fails on any
+  `bmo-chat-client` and `bmo-ui` may be depended on or imported; the testbed's `dependencies` check fails on any
   other. Another unit reaches the service through its API, and the service tells a consumer something by
   publishing an event, never by calling it.
 - **A variation belongs to its member.** A value that differs per connection type, road or machine is
