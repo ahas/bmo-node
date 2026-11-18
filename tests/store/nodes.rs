@@ -1,8 +1,9 @@
 //! The node list and the hubs: registering, changing and removing a node, the refusals, the agents a hub
-//! adds and removes, a check written to its row, and every node read with its hub.
+//! adds and removes, a check written to its row, every node read with its hub, and whose each node is.
 
 use policy::node_states::NodeState;
-use policy::nodes::NodeKind;
+use policy::nodes::{NodeKind, Ownership};
+use store::Store;
 use store::nodes::{Checked, NodeChanges, SshLogin, agent_node_name};
 
 use crate::store::scratch;
@@ -307,4 +308,104 @@ fn a_check_is_written_and_the_last_connection_stands_until_another_moves_it() {
   assert_eq!(node.detail.as_deref(), Some("Connection timed out"));
   assert_eq!((node.checked_at, node.connected_at), (Some(200), Some(100)));
   assert!(!store.node_exists("gone").unwrap());
+}
+
+/// Whose a node is, as the store holds it.
+fn owned(node: &store::nodes::Node) -> (Ownership, Option<&str>) {
+  (node.ownership, node.account.as_deref())
+}
+
+#[test]
+fn a_person_s_machine_joins_personal_with_its_account_and_every_other_node_joins_shared() {
+  let scratch = scratch();
+  let store = &scratch.store;
+
+  for agent in ["u60", "u1-cdd7da85", "u07", "u-laptop", "user5", "lab"] {
+    store.add_agent("http://hub.example", agent).unwrap();
+  }
+  store.add_node("box", None, None, login("192.0.2.4")).unwrap();
+
+  let nodes = store.nodes().unwrap();
+
+  assert_eq!(
+    nodes.iter().map(owned).collect::<Vec<_>>(),
+    [
+      (Ownership::Personal, Some("60")),
+      (Ownership::Personal, Some("1")),
+      (Ownership::Shared, None),
+      (Ownership::Shared, None),
+      (Ownership::Shared, None),
+      (Ownership::Shared, None),
+      (Ownership::Shared, None),
+    ]
+  );
+}
+
+#[test]
+fn a_node_s_ownership_is_changed_and_a_shared_node_holds_no_account() {
+  let scratch = scratch();
+  let store = &scratch.store;
+  let change = |name: &str, ownership: Option<Ownership>, account: Option<Option<&str>>| {
+    store.update_node(
+      name,
+      NodeChanges {
+        ownership,
+        account: account.map(|account| account.map(str::to_owned)),
+        ..NodeChanges::default()
+      },
+    )
+  };
+
+  store.add_agent("http://hub.example", "u60").unwrap();
+  store.add_node("box", None, None, login("192.0.2.4")).unwrap();
+
+  assert_eq!(owned(&change("u60", Some(Ownership::Shared), None).unwrap()), (Ownership::Shared, None));
+  assert_eq!(
+    owned(&change("u60", Some(Ownership::Personal), Some(Some("61"))).unwrap()),
+    (Ownership::Personal, Some("61"))
+  );
+  assert_eq!(
+    owned(&change("box", Some(Ownership::Personal), None).unwrap()),
+    (Ownership::Personal, None),
+    "an ssh node takes it as a hub node does, and a person's PC need not name its account"
+  );
+  assert_eq!(owned(&change("box", None, Some(Some("7"))).unwrap()), (Ownership::Personal, Some("7")));
+  assert_eq!(owned(&change("box", None, Some(None)).unwrap()), (Ownership::Personal, None));
+
+  for (name, ownership, account) in [
+    ("u60", Some(Ownership::Shared), Some(Some("61"))),
+    ("u60", None, Some(Some("007"))),
+    ("u60", None, Some(Some("sixty"))),
+  ] {
+    assert_eq!(code(change(name, ownership, account).unwrap_err()), "bad-field", "{account:?}");
+  }
+  assert_eq!(owned(&store.node("u60").unwrap().unwrap()), (Ownership::Personal, Some("61")));
+}
+
+#[test]
+fn a_store_made_before_ownership_reads_its_hub_nodes_once() {
+  let dir = tempfile::tempdir().unwrap();
+  let path = dir.path().join("node.db");
+  let store = Store::open(&path).unwrap();
+
+  store.add_agent("http://hub.example", "u4").unwrap();
+  store.add_agent("http://hub.example", "n2").unwrap();
+  drop(store);
+
+  let old = rusqlite::Connection::open(&path).unwrap();
+
+  old
+    .execute_batch(
+      "ALTER TABLE nodes DROP COLUMN ownership; ALTER TABLE nodes DROP COLUMN account;
+       PRAGMA user_version = 4;",
+    )
+    .unwrap();
+  drop(old);
+
+  let nodes = Store::open(&path).unwrap().nodes().unwrap();
+
+  assert_eq!(
+    nodes.iter().map(owned).collect::<Vec<_>>(),
+    [(Ownership::Personal, Some("4")), (Ownership::Shared, None)]
+  );
 }

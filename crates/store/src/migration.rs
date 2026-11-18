@@ -1,7 +1,7 @@
 //! The store's tables, made where they are missing (docs/store.md, 「The tables」). The schema's version is
 //! the database's own `user_version`; each step runs once, in order, inside one transaction.
 
-use rusqlite::{Connection, params};
+use rusqlite::{Connection, Transaction, params};
 
 /// The hub every store starts with: the local hub and the environment file its token stands in. It is
 /// written once, when the table is made, so a hub removed stays removed.
@@ -87,6 +87,30 @@ CREATE INDEX memory_samples_at ON memory_samples (at);
 // The callers a node lets make a run on it, joined by `+`; none until the owner writes them.
 const FOURTH: &str = "ALTER TABLE nodes ADD COLUMN callers TEXT;";
 
+// Whose a node is, `shared` until it is read otherwise, and the account a personal node belongs to.
+const FIFTH: &str = "ALTER TABLE nodes ADD COLUMN ownership TEXT NOT NULL DEFAULT 'shared';
+ALTER TABLE nodes ADD COLUMN account TEXT;";
+
+/// Every hub node already listed read as one joining now would be: personal, with its account, where its
+/// agent's name is a person's machine's (docs/nodes.md, 「A node's ownership」).
+fn read_hub_ownership(unit: &Transaction<'_>) -> rusqlite::Result<()> {
+  let agents: Vec<(String, String)> = unit
+    .prepare("SELECT name, agent FROM nodes WHERE kind = 'hub' AND agent IS NOT NULL")?
+    .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+    .collect::<rusqlite::Result<_>>()?;
+
+  for (name, agent) in agents {
+    if let Some(account) = policy::nodes::personal_account(&agent) {
+      unit.execute(
+        "UPDATE nodes SET ownership = 'personal', account = ?1 WHERE name = ?2",
+        params![account, name],
+      )?;
+    }
+  }
+
+  Ok(())
+}
+
 /// Every step not yet run, run, and the version moved to the last.
 pub fn settle(connection: &mut Connection, now: i64) -> rusqlite::Result<()> {
   let version: i64 = connection.pragma_query_value(None, "user_version", |row| row.get(0))?;
@@ -124,6 +148,15 @@ pub fn settle(connection: &mut Connection, now: i64) -> rusqlite::Result<()> {
 
     unit.execute_batch(FOURTH)?;
     unit.pragma_update(None, "user_version", 4)?;
+    unit.commit()?;
+  }
+
+  if version < 5 {
+    let unit = connection.transaction()?;
+
+    unit.execute_batch(FIFTH)?;
+    read_hub_ownership(&unit)?;
+    unit.pragma_update(None, "user_version", 5)?;
     unit.commit()?;
   }
 

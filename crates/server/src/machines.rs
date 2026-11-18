@@ -48,7 +48,8 @@ fn of_node(node: store::nodes::Node) -> Known {
   }
 }
 
-/// This machine, or a listed node; any other name is refused rather than kept as a setting nothing reads.
+/// This machine, or a listed shared node; any other name, a personal node's among them, is refused rather
+/// than kept as a setting nothing reads (docs/hardware.md, 「Which machines」).
 pub fn known(service: &Service, name: &str) -> Result<Known, Reply> {
   if name == LOCAL_MACHINE {
     return Ok(here(service));
@@ -57,16 +58,17 @@ pub fn known(service: &Service, name: &str) -> Result<Known, Reply> {
   let node = service
     .store
     .node(name)?
+    .filter(store::nodes::Node::monitored)
     .ok_or_else(|| Reply::not_found(format!("no machine named {name}")))?;
 
   Ok(of_node(node))
 }
 
-/// Every machine the monitor knows: this machine, then every node in the list's order.
+/// Every machine the monitor knows: this machine, then every shared node in the list's order.
 pub fn every(service: &Service) -> Result<Vec<Known>, Reply> {
   let mut machines = vec![here(service)];
 
-  machines.extend(service.store.nodes()?.into_iter().map(of_node));
+  machines.extend(service.store.nodes()?.into_iter().filter(store::nodes::Node::monitored).map(of_node));
 
   Ok(machines)
 }

@@ -660,6 +660,8 @@ export interface components {
         };
         /** @description A node as every route and event answers it. It holds no credential, only where one is kept. */
         Node: {
+            /** @description The account a personal node belongs to, its id as a decimal number; none on a shared node. */
+            account: string | null;
             /**
              * @description Where it is reached: `user@host`, `:port` after it where the port is not 22 and ` (PowerShell)` where
              *     the login answers in PowerShell; `agent @ hub address` for a hub node.
@@ -691,6 +693,8 @@ export interface components {
             kind: components["schemas"]["NodeKind"];
             label: string;
             name: string;
+            /** @description A machine of the platform, or a person's own PC. */
+            ownership: components["schemas"]["Ownership"];
             /** @description The services the node is reserved for, joined by `+`. */
             role: string | null;
             state: components["schemas"]["NodeState"];
@@ -701,13 +705,15 @@ export interface components {
             up: boolean;
         };
         /**
-         * @description A change to a node, as a JSON merge patch: only the fields sent change, and null clears `keyPath` and
-         *     `role`.
+         * @description A change to a node, as a JSON merge patch: only the fields sent change, and null clears `keyPath`,
+         *     `role` and `account`. A node made `shared` loses its account.
          */
         NodeChanges: {
+            account?: string | null;
             host?: string;
             keyPath?: string | null;
             label?: string;
+            ownership?: components["schemas"]["Ownership"];
             /** Format: int64 */
             port?: number;
             role?: string | null;
@@ -742,6 +748,12 @@ export interface components {
          * @enum {string}
          */
         NodeState: "connected" | "disconnected" | "auth" | "hostkey" | "unreachable" | "error" | "unknown";
+        /**
+         * @description Whose a node is (docs/nodes.md, 「A node's ownership」): a machine of the platform, run for everyone, or one
+         *     person's own PC, which the hardware monitor never reads.
+         * @enum {string}
+         */
+        Ownership: "shared" | "personal";
         Pressure: {
             /** @description Null for a resource the kernel keeps no `full` line for. */
             full: components["schemas"]["PressureLine"] | null;

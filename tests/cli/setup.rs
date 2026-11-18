@@ -1,6 +1,6 @@
 //! The Windows sensor setup: done only where both the library and the driver answered, a machine with no
-//! Windows left alone, and a Windows machine reached in its own PowerShell handed the setup script itself
-//! over the hardware monitor's road.
+//! Windows left alone, a Windows machine reached in its own PowerShell handed the setup script itself over
+//! the hardware monitor's road, and a person's own PC refused.
 
 use std::io::Read;
 use std::os::unix::fs::PermissionsExt;
@@ -104,8 +104,10 @@ fn a_windows_machine_reached_in_its_own_powershell_is_handed_the_setup_script_it
     format!("listen = \"127.0.0.1:0\"\ntoken = \"t\"\ndata_root = \"{}\"\n", data.display()),
   )
   .unwrap();
-  Store::open_in(&data)
-    .unwrap()
+
+  let store = Store::open_in(&data).unwrap();
+
+  store
     .add_node(
       "win",
       None,
@@ -116,6 +118,8 @@ fn a_windows_machine_reached_in_its_own_powershell_is_handed_the_setup_script_it
       },
     )
     .unwrap();
+  store.add_agent("http://hub.example", "u60").unwrap();
+  drop(store);
 
   let (code, out, err) = run(dir.path(), &path, &["hardware-setup", "win"]);
   let handed = std::fs::read_to_string(dir.path().join("handed")).unwrap();
@@ -129,6 +133,11 @@ fn a_windows_machine_reached_in_its_own_powershell_is_handed_the_setup_script_it
   let (code, _, err) = run(dir.path(), &path, &["hardware-setup", "nowhere"]);
 
   assert_eq!((code, err.as_str()), (1, "no such node: nowhere\n"));
+
+  // Nothing of the monitor's goes on a person's own PC.
+  let (code, _, err) = run(dir.path(), &path, &["hardware-setup", "win", "u60"]);
+
+  assert_eq!((code, err.as_str()), (1, "a person's own PC is not set up for the monitor: u60\n"));
 
   // The node verbs run through the command over the same store.
   let (code, out, _) = run(dir.path(), &path, &["node"]);

@@ -9,7 +9,7 @@ use hardware::source_of;
 use hardware::windows::encoded_command;
 use node_check::Machine;
 use node_check::pass::check_nodes;
-use policy::nodes::NodeKind;
+use policy::nodes::{NodeKind, Ownership};
 use policy::windows_sensors::WINDOWS_SENSORS;
 use store::Store;
 use store::nodes::{DEFAULT_LOGIN_SHELL, Hub, LOGIN_SHELLS, Node, NodeChanges, SshLogin};
@@ -25,7 +25,7 @@ pub const NOUNS: [&str; 2] = ["node\thome", "hardware-setup\thome"];
 /// How the command is run, said under each refusal of its arguments.
 pub const NODES_USAGE: &str = "usage: bmo-node --config <file> node
        bmo-node --config <file> node --add <name> --ssh <user@host> [--port <n>] [--key <path>] [--shell posix|powershell] [--label <label>] [--role <service>]
-       bmo-node --config <file> node --set <name> [--label <label>] [--role <service>|none] [--callers <caller>[+<caller>]|none] [--ssh <user@host>] [--port <n>] [--key <path>|none] [--shell posix|powershell]
+       bmo-node --config <file> node --set <name> [--label <label>] [--role <service>|none] [--callers <caller>[+<caller>]|none] [--ownership shared|personal] [--account <id>|none] [--ssh <user@host>] [--port <n>] [--key <path>|none] [--shell posix|powershell]
        bmo-node --config <file> node --remove <name>
        bmo-node --config <file> node --add-hub <control url> --token-file <path>
        bmo-node --config <file> node --remove-hub <control url>
@@ -65,6 +65,12 @@ pub struct NodesArgs {
   /// The callers the node lets make a run on it, joined by `+`, or `none`.
   #[arg(long)]
   pub callers: Option<String>,
+  /// Whose the node is: `shared` or `personal`.
+  #[arg(long)]
+  pub ownership: Option<String>,
+  /// The account a personal node belongs to, its id, or `none`.
+  #[arg(long)]
+  pub account: Option<String>,
   #[arg(long = "token-file")]
   pub token_file: Option<String>,
 }
@@ -110,6 +116,14 @@ fn shell(text: &str) -> Result<String, String> {
   }
 }
 
+fn ownership(text: &str) -> Result<Ownership, String> {
+  Ownership::of_code(text).ok_or_else(|| {
+    let codes: Vec<&str> = Ownership::ALL.into_iter().map(Ownership::name).collect();
+
+    format!("--ownership is one of {}, not {text}", codes.join(", "))
+  })
+}
+
 fn none_or(text: &str) -> Option<String> {
   (text != "none").then(|| text.to_owned())
 }
@@ -140,6 +154,8 @@ impl NodesArgs {
       ("--label", self.label.is_some()),
       ("--role", self.role.is_some()),
       ("--callers", self.callers.is_some()),
+      ("--ownership", self.ownership.is_some()),
+      ("--account", self.account.is_some()),
       ("--token-file", self.token_file.is_some()),
     ]
     .into_iter()
@@ -199,6 +215,12 @@ impl NodesArgs {
         return Err("--callers belongs to --set: a node lets no caller until the owner sets it".to_owned());
       }
 
+      if self.ownership.is_some() || self.account.is_some() {
+        return Err(
+          "--ownership and --account belong to --set: an ssh node is registered shared".to_owned(),
+        );
+      }
+
       let Some(ssh) = self.ssh else {
         return Err(
           "--add takes --ssh <user@host>; a hub node is added when its agent attaches to a listed hub"
@@ -237,6 +259,8 @@ impl NodesArgs {
     changes.port = self.port.as_deref().map(port).transpose()?;
     changes.key_path = self.key.as_deref().map(none_or);
     changes.shell = self.shell.as_deref().map(shell).transpose()?;
+    changes.ownership = self.ownership.as_deref().map(ownership).transpose()?;
+    changes.account = self.account.as_deref().map(none_or);
 
     let callers = self.callers.as_deref().map(none_or);
 
@@ -298,8 +322,13 @@ pub fn format_node_list(nodes: &[Node]) -> String {
         .as_deref()
         .map(|callers| format!(", runs by {callers}"))
         .unwrap_or_default();
+      let personal = match (node.ownership, &node.account) {
+        (Ownership::Shared, _) => String::new(),
+        (Ownership::Personal, None) => ", personal".to_owned(),
+        (Ownership::Personal, Some(account)) => format!(", personal to account {account}"),
+      };
       let head = format!(
-        "{} [{}] {} — {}, {credential}{reserved}{callers}",
+        "{} [{}] {} — {}, {credential}{reserved}{callers}{personal}",
         node.name,
         node.kind.name(),
         node.label,
@@ -526,18 +555,31 @@ pub async fn run_setup(source: &Source) -> WindowsSetup {
   read_setup(&printed.join("\n"), ended)
 }
 
-/// The nodes named, or every node, set up one after another: a line printed for each, and how many failed.
+/// The shared nodes named, or every shared node, set up one after another: a line printed for each, and how
+/// many failed. A personal node named is refused, since nothing of the monitor's goes on a person's PC.
 pub async fn hardware_setup(store: &Store, names: &[String]) -> Result<(Vec<String>, usize), String> {
-  let nodes = store.nodes().map_err(store_refusal)?;
+  let listed = store.nodes().map_err(store_refusal)?;
   let unknown: Vec<&str> = names
     .iter()
-    .filter(|name| !nodes.iter().any(|node| node.name == **name))
+    .filter(|name| !listed.iter().any(|node| node.name == **name))
     .map(String::as_str)
     .collect();
 
   if !unknown.is_empty() {
     return Err(format!("no such node: {}", unknown.join(", ")));
   }
+
+  let personal: Vec<&str> = listed
+    .iter()
+    .filter(|node| !node.monitored() && names.contains(&node.name))
+    .map(|node| node.name.as_str())
+    .collect();
+
+  if !personal.is_empty() {
+    return Err(format!("a person's own PC is not set up for the monitor: {}", personal.join(", ")));
+  }
+
+  let nodes: Vec<Node> = listed.into_iter().filter(Node::monitored).collect();
 
   let mut lines = Vec::new();
   let mut failed = 0;

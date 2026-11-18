@@ -34,6 +34,34 @@ impl NodeKind {
   }
 }
 
+/// Whose a node is (docs/nodes.md, 「A node's ownership」): a machine of the platform, run for everyone, or one
+/// person's own PC, which the hardware monitor never reads.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum Ownership {
+  #[default]
+  Shared,
+  Personal,
+}
+
+impl Ownership {
+  /// Every ownership.
+  pub const ALL: [Self; 2] = [Self::Shared, Self::Personal];
+
+  /// The ownership a code names, or none where it names none.
+  pub fn of_code(code: &str) -> Option<Self> {
+    Self::ALL.into_iter().find(|ownership| ownership.name() == code)
+  }
+
+  /// The code the store's column and every answer hold.
+  pub fn name(self) -> &'static str {
+    match self {
+      Self::Shared => "shared",
+      Self::Personal => "personal",
+    }
+  }
+}
+
 /// One state a node's check comes to (docs/nodes.md, 「The states」).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "lowercase")]
@@ -146,6 +174,10 @@ pub struct Node {
   pub address: String,
   /// Where the credential is kept: an ssh node's key path, or the token file of a hub node's hub.
   pub credential: Option<String>,
+  /// A machine of the platform, or a person's own PC.
+  pub ownership: Ownership,
+  /// The account a personal node belongs to, its id as a decimal number; none on a shared node.
+  pub account: Option<String>,
   /// The services the node is reserved for, joined by `+`.
   pub role: Option<String>,
   /// The callers the node lets make a run on it, by name; none where it lets none.
@@ -244,8 +276,8 @@ pub struct NewNode {
   pub role: Option<String>,
 }
 
-/// A change to a node, as a JSON merge patch: only the fields sent change, and null clears `keyPath` and
-/// `role`.
+/// A change to a node, as a JSON merge patch: only the fields sent change, and null clears `keyPath`,
+/// `role` and `account`. A node made `shared` loses its account.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct NodeChanges {
@@ -254,6 +286,11 @@ pub struct NodeChanges {
   pub label: Option<String>,
   #[serde(default, skip_serializing_if = "Option::is_none", deserialize_with = "present")]
   pub role: Option<Option<String>>,
+  #[serde(default, skip_serializing_if = "Option::is_none", deserialize_with = "present")]
+  #[schemars(with = "Ownership")]
+  pub ownership: Option<Ownership>,
+  #[serde(default, skip_serializing_if = "Option::is_none", deserialize_with = "present")]
+  pub account: Option<Option<String>>,
   #[serde(default, skip_serializing_if = "Option::is_none", deserialize_with = "present")]
   #[schemars(with = "String")]
   pub host: Option<String>,

@@ -27,7 +27,8 @@ What the service adds to it:
 - **A node is keyed by its name:** lowercase letters, digits and hyphens, at most 32. A hub is keyed by its
   id, a signed 64-bit integer.
 - **A machine** is named as the hardware monitor knows it: `local` for this machine, a node's own name for
-  a node.
+  a shared node. A personal node is no machine: every machine route answers it `not-found`
+  (`docs/hardware.md`, 「Which machines」).
 - **A page** is `{"items": [...], "more": boolean}`; `more` says whether anything stands past the last item,
   and the next page is asked with that item's key or time as `after`.
 
@@ -96,9 +97,9 @@ its own.
 | Method and path | Sends | Answers |
 |---|---|---|
 | `GET /nodes` | query `after?`, the name of the last node read, and `limit?` | a page of nodes in the list's order; an `after` naming no listed node is `bad-request` |
-| `POST /nodes` | `name`, `host`, `user`, `port?`, `keyPath?`, `shell?`, `label?`, `role?` | 201 and the new ssh node; it goes last |
+| `POST /nodes` | `name`, `host`, `user`, `port?`, `keyPath?`, `shell?`, `label?`, `role?` | 201 and the new ssh node, `shared`; it goes last |
 | `GET /nodes/{nodeName}` | | the node |
-| `PATCH /nodes/{nodeName}` | any of `label`, `role`, `host`, `user`, `port`, `keyPath`, `shell`; null clears `keyPath` and `role` | the node; a changed address, port, account, key or shell clears the last check |
+| `PATCH /nodes/{nodeName}` | any of `label`, `role`, `ownership`, `account`, `host`, `user`, `port`, `keyPath`, `shell`; null clears `keyPath`, `role` and `account` | the node; a changed address, port, login account, key or shell clears the last check; a node made `shared` loses its account |
 | `DELETE /nodes/{nodeName}` | query `leave?`, `true` to send a hub node's agent a leave first | 204; a leave the hub refuses or cannot be sent is `conflict` with the hub's reason, and nothing is removed |
 | `GET /nodes/{nodeName}/target` | | how to reach the node (below) |
 | `POST /nodes/{nodeName}/runs` | `account`, `command`, `shell?`, `cwd?`, `env?`, `distro?` | one command run on the node for the caller, answered with its end (「Runs」) |
@@ -112,10 +113,12 @@ A node holds no credential, only where one is kept:
 | `hubId?`, `agentName?` | a hub node's hub, and the name the hub knows the node's agent by |
 | `address` | where it is reached: `user@host`, `:port` after it where the port is not 22 and ` (PowerShell)` where the login answers in PowerShell; `agent @ hub address` for a hub node |
 | `credential?` | where the credential is kept: an ssh node's key path, or the token file of a hub node's hub |
+| `ownership` | `shared`, a machine of the platform, or `personal`, a person's own PC (`docs/nodes.md`, 「A node's ownership」) |
+| `account?` | the account a personal node belongs to, its id as a decimal number written out; none on a shared node |
 | `role?` | the services the node is reserved for, joined by `+` (`docs/nodes.md`, 「A node's role」) |
 | `callers` | the callers the node lets make a run on it, by name, none where it lets none (`docs/nodes.md`, 「A node's callers」) |
 | `state` | the last check's state: `connected`, `disconnected`, `auth`, `hostkey`, `unreachable`, `error` or `unknown` (`docs/nodes.md`, 「The states」) |
-| `tone` | `good`, `bad` or `unknown`, as the policy's node states give it |
+| `tone` | `good`, `bad` or `unknown`, as the policy's node states give it; `unknown` for a personal node that is `disconnected` or `unreachable` (`docs/nodes.md`, 「The states」) |
 | `detail?`, `checkedAt?`, `connectedAt?` | the last check's line, when it was made, and when the node was last found connected |
 | `up` | the last check found the node connected and was made within the link window (`docs/nodes.md`, 「A node's link」) |
 | `thisMachine` | an ssh node whose host names this machine (`docs/nodes.md`, 「This machine」) |
@@ -140,7 +143,8 @@ The target names where the credential is kept and never the credential. A node w
 connection type needs is refused `incomplete`.
 
 A hub node is never registered by a route: it is added when its agent attaches to a listed hub
-(`docs/nodes.md`). A hub node takes `label` and `role` alone. A node's `callers` are written by the command
+(`docs/nodes.md`). A hub node takes `label`, `role`, `ownership` and `account` alone. An `account` that is not
+a decimal number, or one given to a node left or made `shared`, is `bad-field`. A node's `callers` are written by the command
 alone, never by a route, so no caller lets itself onto a node (`docs/nodes.md`, 「A node's callers」).
 
 ### Runs
@@ -196,7 +200,7 @@ A hub is `id`, `address`, its control address, `tokenFile`, the file its control
 
 | Method and path | Sends | Answers |
 |---|---|---|
-| `GET /machines` | | a page of every machine the hardware monitor knows: this machine, then every node in the list's order, each with the recorder's latest reading |
+| `GET /machines` | | a page of every machine the hardware monitor knows: this machine, then every shared node in the list's order, each with the recorder's latest reading |
 | `GET /machines/{machineName}` | | the machine, with its latest reading |
 | `PATCH /machines/{machineName}` | any of `tracking` and `cpuLimit`; null clears `cpuLimit` | the machine; the recorder follows a tracking switch at once, and a limit is above 0 °C and below 127 °C |
 | `GET /machines/{machineName}/readings` | query `after?`, `before?`, `limit?`, `spanMs?` | a page of the machine's past readings (below) |
@@ -386,7 +390,7 @@ the service's routes. Where a route makes the same change, the table names it.
 | Noun | Takes | Route making the same change |
 |---|---|---|
 | `node` | the verbs and arguments of `docs/nodes.md`, 「Registering and changing a node」 | `GET /nodes`, `POST /nodes`, `PATCH /nodes/{nodeName}`, `DELETE /nodes/{nodeName}`, `GET /nodes/{nodeName}/target`, `POST /hubs`, `DELETE /hubs/{hubId}` and `POST /node-checks` |
-| `hardware-setup` | the nodes to set up, or every node | none: the Windows sensor setup runs over each node's own road |
+| `hardware-setup` | the shared nodes to set up, or every shared node; a personal node named is refused | none: the Windows sensor setup runs over each node's own road |
 
 Through `bmo`, the same commands are typed as `bmo node …` and `bmo hardware-setup …`.
 

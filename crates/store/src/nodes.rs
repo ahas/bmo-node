@@ -4,7 +4,7 @@
 
 use bmo_node_client::ErrorCode;
 use policy::node_states::NodeState;
-use policy::nodes::{NodeKind, is_node_name};
+use policy::nodes::{NodeKind, Ownership, is_account, is_node_name, personal_account};
 use rusqlite::{Connection, OptionalExtension, Row, params};
 
 use crate::{Result, Store, StoreError, now_seconds};
@@ -39,6 +39,10 @@ pub struct Node {
   pub hub_id: Option<i64>,
   /// A hub node's hub's token file; none where the hub is not listed.
   pub token_file: Option<String>,
+  /// A machine of the platform, or a person's own PC (docs/nodes.md, 「A node's ownership」).
+  pub ownership: Ownership,
+  /// The account a personal node belongs to, its id written out; none on a shared node.
+  pub account: Option<String>,
   pub role: Option<String>,
   /// The callers the node lets make a run on it, joined by `+`; none where it lets none.
   pub callers: Option<String>,
@@ -68,6 +72,12 @@ impl Node {
   /// The callers the node lets make a run on it, by name.
   pub fn callers(&self) -> Vec<&str> {
     self.callers.as_deref().map(|callers| callers.split('+').collect()).unwrap_or_default()
+  }
+
+  /// Whether the hardware monitor reads the node: a shared node, never a person's own PC (docs/hardware.md,
+  /// 「Which machines」).
+  pub fn monitored(&self) -> bool {
+    self.ownership == Ownership::Shared
   }
 
   /// Whether the node lets `caller` make a run on it.
@@ -145,11 +155,14 @@ impl SshLogin {
   }
 }
 
-/// What a change may say: a field left out stays as it is, and a role or a key of none clears it.
+/// What a change may say: a field left out stays as it is, and a role, an account or a key of none clears
+/// it.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct NodeChanges {
   pub label: Option<String>,
   pub role: Option<Option<String>>,
+  pub ownership: Option<Ownership>,
+  pub account: Option<Option<String>>,
   pub host: Option<String>,
   pub user: Option<String>,
   pub port: Option<i64>,
@@ -168,7 +181,8 @@ pub struct Checked {
 // Every node with its hub's id and token file beside it: the one query a node is read by.
 const NODE_SELECT: &str = "SELECT nodes.name, nodes.label, nodes.kind, nodes.host, nodes.port, nodes.user,
   nodes.key_path, nodes.shell, nodes.agent, nodes.hub_url, hubs.token_file, nodes.role, nodes.position,
-  nodes.state, nodes.detail, nodes.checked_at, nodes.connected_at, hubs.id, nodes.callers
+  nodes.state, nodes.detail, nodes.checked_at, nodes.connected_at, hubs.id, nodes.callers, nodes.ownership,
+  nodes.account
   FROM nodes LEFT JOIN hubs ON hubs.url = nodes.hub_url";
 
 const HUB_SELECT: &str = "SELECT id, url, token_file, label, created_at FROM hubs";
@@ -187,6 +201,7 @@ fn node_of(row: &Row<'_>) -> rusqlite::Result<Node> {
   let kind: String = row.get(2)?;
   let shell: Option<String> = row.get(7)?;
   let state: String = row.get(13)?;
+  let ownership: String = row.get(19)?;
 
   Ok(Node {
     name: row.get(0)?,
@@ -203,6 +218,8 @@ fn node_of(row: &Row<'_>) -> rusqlite::Result<Node> {
     hub_url: row.get(9)?,
     hub_id: row.get(17)?,
     token_file: row.get(10)?,
+    ownership: Ownership::of_code(&ownership).unwrap_or_default(),
+    account: row.get(20)?,
     role: row.get(11)?,
     callers: row.get(18)?,
     position: row.get(12)?,
@@ -280,6 +297,26 @@ fn checked_role(role: Option<String>) -> Result<Option<String>> {
       ),
     )),
     role => Ok(role),
+  }
+}
+
+/// A node's ownership and account once a change is laid over them (docs/nodes.md, 「A node's ownership」): a
+/// node made or left shared holds no account, and an account is a decimal number.
+fn checked_ownership(node: &Node, changes: &NodeChanges) -> Result<(Ownership, Option<String>)> {
+  let ownership = changes.ownership.unwrap_or(node.ownership);
+
+  match (ownership, changes.account.clone()) {
+    (Ownership::Shared, Some(Some(_))) => Err(refused(
+      ErrorCode::BadField,
+      format!("{} is shared, and only a personal node belongs to an account", node.name),
+    )),
+    (Ownership::Shared, _) => Ok((ownership, None)),
+    (Ownership::Personal, Some(Some(account))) if !is_account(&account) => Err(refused(
+      ErrorCode::BadField,
+      format!("an account is the account's id as a decimal number, not \"{account}\""),
+    )),
+    (Ownership::Personal, None) => Ok((ownership, node.account.clone())),
+    (Ownership::Personal, Some(account)) => Ok((ownership, account)),
   }
 }
 
@@ -506,6 +543,7 @@ impl Store {
       None => node.role.clone(),
       Some(role) => checked_role(role)?,
     };
+    let (ownership, account) = checked_ownership(&node, &changes)?;
 
     if node.kind == NodeKind::Hub {
       let fields: Vec<&str> = [
@@ -523,15 +561,15 @@ impl Store {
         return Err(refused(
           ErrorCode::BadField,
           format!(
-            "{} is not a field of a hub node, which takes a label and a role alone",
+            "{} is not a field of a hub node, which takes a label, a role, an ownership and an account alone",
             fields.join(", ")
           ),
         ));
       }
 
       connection.execute(
-        "UPDATE nodes SET label = ?1, role = ?2, updated_at = ?3 WHERE name = ?4",
-        params![label, role, now_seconds(), name],
+        "UPDATE nodes SET label = ?1, role = ?2, ownership = ?3, account = ?4, updated_at = ?5 WHERE name = ?6",
+        params![label, role, ownership.name(), account, now_seconds(), name],
       )?;
 
       return get_on(&connection, name)?.ok_or_else(|| no_node(name));
@@ -566,7 +604,7 @@ impl Store {
     connection.execute(
       &format!(
         "UPDATE nodes SET label = ?1, role = ?2, host = ?3, port = ?4, user = ?5, key_path = ?6, shell = ?7,
-         updated_at = ?8{forget} WHERE name = ?9"
+         ownership = ?8, account = ?9, updated_at = ?10{forget} WHERE name = ?11"
       ),
       params![
         label,
@@ -576,6 +614,8 @@ impl Store {
         login.user,
         login.key_path,
         login.shell,
+        ownership.name(),
+        account,
         now_seconds(),
         name
       ],
@@ -607,7 +647,8 @@ impl Store {
   }
 
   /// The hub node for an agent attached to a hub, added last in the list where none stands for it yet,
-  /// named after the agent and labelled with its name; whether one was added.
+  /// named after the agent and labelled with its name, and personal where the name is a person's machine's
+  /// (docs/nodes.md, 「A node's ownership」); whether one was added.
   pub fn add_agent(&self, hub: &str, agent: &str) -> Result<bool> {
     let connection = self.connection();
     let known: bool = connection.query_row(
@@ -638,11 +679,13 @@ impl Store {
       label => label,
     };
     let at = now_seconds();
+    let account = personal_account(agent);
+    let ownership = if account.is_some() { Ownership::Personal } else { Ownership::Shared };
 
     connection.execute(
-      "INSERT INTO nodes (name, label, kind, agent, hub_url, position, created_at, updated_at)
-       VALUES (?1, ?2, 'hub', ?3, ?4, ?5, ?6, ?6)",
-      params![name, label, agent, hub, next_position(&connection)?, at],
+      "INSERT INTO nodes (name, label, kind, agent, hub_url, ownership, account, position, created_at, updated_at)
+       VALUES (?1, ?2, 'hub', ?3, ?4, ?5, ?6, ?7, ?8, ?8)",
+      params![name, label, agent, hub, ownership.name(), account, next_position(&connection)?, at],
     )?;
 
     Ok(true)

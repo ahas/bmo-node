@@ -122,6 +122,8 @@ async fn every_machine_is_answered_as_the_recorder_holds_it_reading_none_again()
     .add_node("lab", None, None, SshLogin::new("192.0.2.4", "someone"))
     .unwrap();
   stood.store().add_agent(store::HUB_SEED.0, "box").unwrap();
+  // A person's own PC is no machine the monitor knows.
+  stood.store().add_agent(store::HUB_SEED.0, "u60").unwrap();
   // A reading of long ago is still what the recorder holds.
   writer.reading("lab", 1_000, &view());
   writer.written();
@@ -142,6 +144,7 @@ async fn every_machine_is_answered_as_the_recorder_holds_it_reading_none_again()
   );
   assert_eq!((items[0]["readAt"].clone(), items[0]["failure"].clone()), (json!(null), json!(null)));
   assert!(items[0]["standing"].is_object() && items[1]["standing"].is_null());
+  assert_eq!(stood.refused(Method::GET, "/machines/u60", None).await, "not-found");
 }
 
 #[tokio::test]

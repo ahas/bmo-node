@@ -1,7 +1,8 @@
-//! The node policy's files read as their types: every node state declared with its tone, the logins'
+//! The node policy's files read as their types: every node state declared with its tone on a shared and on
+//! a personal node, the logins'
 //! options and how a login's end is read, the Windows sensor setup, and what a node's name and kind may be.
 
-use policy::node_states::{NODE_STATES, NodeState, StateTone, Tone};
+use policy::node_states::{NODE_STATES, NodeState, Ownership, StateTone, Tone};
 use policy::nodes::{NodeKind, is_node_name};
 use policy::ssh::SSH;
 use policy::windows_sensors::WINDOWS_SENSORS;
@@ -15,6 +16,19 @@ fn the_file_declares_every_state_and_no_other_each_with_its_tone() {
   );
   for state in [NodeState::Disconnected, NodeState::Hostkey, NodeState::Unreachable, NodeState::Error] {
     assert_eq!(state.tone(), Tone::Bad, "{}", state.name());
+  }
+}
+
+#[test]
+fn a_person_s_pc_switched_off_reads_unknown_and_a_failed_login_still_reads_bad() {
+  let on_personal = |state: NodeState| state.tone_on(Ownership::Personal);
+
+  assert_eq!(
+    NodeState::ALL.map(on_personal),
+    [Tone::Good, Tone::Unknown, Tone::Bad, Tone::Bad, Tone::Unknown, Tone::Bad, Tone::Unknown]
+  );
+  for state in NodeState::ALL {
+    assert_eq!(state.tone_on(Ownership::Shared), state.tone(), "{}", state.name());
   }
 }
 

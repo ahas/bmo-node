@@ -1,5 +1,6 @@
 //! The nodes and the node checks: the token every route needs, the list paged in its order, an ssh node
-//! added, changed and removed, the target a node is reached by, and the check made now.
+//! added, changed and removed, whose a node is and how its state reads for it, the target a node is reached
+//! by, and the check made now.
 
 use policy::node_states::NodeState;
 use reqwest::{Method, StatusCode};
@@ -60,8 +61,8 @@ async fn the_list_comes_in_its_order_paged_after_a_name_and_each_node_says_how_i
     whole["items"][1],
     json!({
       "name": "work", "label": "Work", "kind": "ssh", "hubId": null, "agentName": null,
-      "address": "someone@192.0.2.5:2200", "credential": null, "role": "voice", "callers": [],
-      "state": "connected",
+      "address": "someone@192.0.2.5:2200", "credential": null, "ownership": "shared", "account": null,
+      "role": "voice", "callers": [], "state": "connected",
       "tone": "good", "detail": null, "checkedAt": (now - 30) * 1000, "connectedAt": (now - 30) * 1000,
       "up": true, "thisMachine": false,
     })
@@ -151,6 +152,48 @@ async fn an_ssh_node_is_added_changed_and_removed_and_what_the_list_does_not_tak
 
   stood.delete("/nodes/lab").await;
   assert_eq!(stood.refused(Method::DELETE, "/nodes/lab", None).await, "not-found");
+}
+
+#[tokio::test]
+async fn a_node_s_ownership_and_account_round_trip_and_a_person_s_pc_switched_off_reads_unknown() {
+  let stood = Stand::default().up().await;
+  let off = Checked {
+    state: NodeState::Disconnected,
+    detail: None,
+    at: 1_000,
+  };
+  let owned =
+    |node: &serde_json::Value| (node["ownership"].clone(), node["account"].clone(), node["tone"].clone());
+
+  stood.store().add_agent(store::HUB_SEED.0, "u60").unwrap();
+  stood.store().record_check("u60", &off).unwrap();
+
+  assert_eq!(
+    owned(&stood.get("/nodes/u60").await),
+    (json!("personal"), json!("60"), json!("unknown"))
+  );
+  assert_eq!(
+    owned(&stood.patch("/nodes/u60", json!({ "ownership": "shared" })).await),
+    (json!("shared"), json!(null), json!("bad"))
+  );
+  assert_eq!(
+    stood.refused(Method::PATCH, "/nodes/u60", Some(json!({ "account": "61" }))).await,
+    "bad-field"
+  );
+  assert_eq!(
+    owned(&stood.patch("/nodes/u60", json!({ "ownership": "personal", "account": "61" })).await),
+    (json!("personal"), json!("61"), json!("unknown"))
+  );
+  assert_eq!(
+    owned(&stood.get("/nodes").await["items"][0]),
+    (json!("personal"), json!("61"), json!("unknown"))
+  );
+  assert_eq!(
+    stood
+      .refused(Method::PATCH, "/nodes/u60", Some(json!({ "ownership": "everyone" })))
+      .await,
+    "bad-request"
+  );
 }
 
 #[tokio::test]

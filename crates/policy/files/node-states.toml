@@ -1,11 +1,13 @@
 # What a node's last check came to, and how each reads at a glance: reached, not reached, or not yet asked
-# (docs/nodes.md, 「The states」). Each state is named by its code; the web console words it.
+# (docs/nodes.md, 「The states」). Each state is named by its code; the web console words it. A
+# `personal_tone` is how the state reads on a person's own PC, which is switched off as a matter of course.
 
 [connected]
 tone = "good"
 
 [disconnected]
 tone = "bad"
+personal_tone = "unknown"
 
 [auth]
 tone = "bad"
@@ -15,6 +17,7 @@ tone = "bad"
 
 [unreachable]
 tone = "bad"
+personal_tone = "unknown"
 
 [error]
 tone = "bad"

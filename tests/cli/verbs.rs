@@ -3,6 +3,7 @@
 
 use clap::Parser;
 use node_server::cli::{NodeCommand, NodesArgs};
+use policy::nodes::Ownership;
 use store::nodes::{NodeChanges, SshLogin};
 
 fn command(args: &[&str]) -> Result<NodeCommand, String> {
@@ -69,6 +70,29 @@ fn nothing_lists_and_each_verb_reads_its_own_fields() {
     })
   );
   assert_eq!(
+    command(&["--set", "u60", "--ownership", "personal", "--account", "61"]),
+    Ok(NodeCommand::Set {
+      name: "u60".into(),
+      changes: NodeChanges {
+        ownership: Some(Ownership::Personal),
+        account: Some(Some("61".into())),
+        ..NodeChanges::default()
+      },
+      callers: None,
+    })
+  );
+  assert_eq!(
+    command(&["--set", "u60", "--account", "none"]),
+    Ok(NodeCommand::Set {
+      name: "u60".into(),
+      changes: NodeChanges {
+        account: Some(None),
+        ..NodeChanges::default()
+      },
+      callers: None,
+    })
+  );
+  assert_eq!(
     command(&["--add-hub", "http://127.0.0.1:8791", "--token-file", "~/hub.env"]),
     Ok(NodeCommand::AddHub {
       url: "http://127.0.0.1:8791".into(),
@@ -125,6 +149,8 @@ fn refuses_what_it_cannot_make_sense_of() {
     &["--target"],
     &["--target", "x", "--label", "y"],
     &["--set", "x", "--shell", "cmd"],
+    &["--set", "x", "--ownership", "everyone"],
+    &["--add", "x", "--ssh", "a@b", "--ownership", "personal"],
   ] {
     assert!(command(args).is_err(), "{args:?} was read");
   }

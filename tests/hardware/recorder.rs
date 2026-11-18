@@ -48,6 +48,8 @@ async fn the_recorder_holds_live_runs_for_the_tracked_machines_alone_following_a
     .unwrap();
   // A jake node whose hub is not listed has no token file, so no road reaches it.
   store.add_agent("http://hub.example", "half").unwrap();
+  // A person's own PC is never read.
+  store.add_agent("http://hub.example", "u60").unwrap();
 
   let tracked = recorder.tracked().unwrap();
 

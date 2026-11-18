@@ -93,6 +93,8 @@ pub async fn change(service: Shared, Path(name): Path<String>, bytes: Bytes) -> 
   let changes = StoreChanges {
     label: asked.label,
     role: asked.role,
+    ownership: asked.ownership,
+    account: asked.account,
     host: asked.host,
     user: asked.user,
     port: asked.port,

@@ -146,6 +146,7 @@ async fn says_each_node_s_address_where_its_credential_is_kept_its_state_and_whe
   let (_dir, store, machine) = stand();
 
   store.add_agent(store::HUB_SEED.0, "agent_a").unwrap();
+  store.add_agent(store::HUB_SEED.0, "u60").unwrap();
   store
     .add_node(
       "pc-node",
@@ -179,7 +180,10 @@ async fn says_each_node_s_address_where_its_credential_is_kept_its_state_and_whe
     "hub 1 http://127.0.0.1:8791, token file ~/.local/share/jake/hub.env"
   );
   assert_eq!(format_hub_list(&[]), "(no hubs)");
-  assert!(text.contains("pc-node [ssh] home pc — someone@192.0.2.82:2222, key (ssh config)"));
+  assert!(text.contains(
+    "u60 [hub] u60 — u60 @ http://127.0.0.1:8791, token file ~/.local/share/jake/hub.env, personal to account 60\n"
+  ));
+  assert!(text.contains("pc-node [ssh] home pc — someone@192.0.2.82:2222, key (ssh config)\n"));
   assert!(text.contains("    auth · checked 2026-09-21 14:13:20 UTC · last connected -"), "{text}");
   assert_eq!(clock(Some(1_790_000_000)), "2026-09-21 14:13:20 UTC");
   assert!(text.contains("    Permission denied (publickey,password)."));

@@ -1566,6 +1566,13 @@
       "Node": {
         "description": "A node as every route and event answers it. It holds no credential, only where one is kept.",
         "properties": {
+          "account": {
+            "description": "The account a personal node belongs to, its id as a decimal number; none on a shared node.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "address": {
             "description": "Where it is reached: `user@host`, `:port` after it where the port is not 22 and ` (PowerShell)` where\nthe login answers in PowerShell; `agent @ hub address` for a hub node.",
             "type": "string"
@@ -1631,6 +1638,10 @@
           "name": {
             "type": "string"
           },
+          "ownership": {
+            "$ref": "#/components/schemas/Ownership",
+            "description": "A machine of the platform, or a person's own PC."
+          },
           "role": {
             "description": "The services the node is reserved for, joined by `+`.",
             "type": [
@@ -1661,6 +1672,8 @@
           "agentName",
           "address",
           "credential",
+          "ownership",
+          "account",
           "role",
           "callers",
           "state",
@@ -1674,8 +1687,14 @@
         "type": "object"
       },
       "NodeChanges": {
-        "description": "A change to a node, as a JSON merge patch: only the fields sent change, and null clears `keyPath` and\n`role`.",
+        "description": "A change to a node, as a JSON merge patch: only the fields sent change, and null clears `keyPath`,\n`role` and `account`. A node made `shared` loses its account.",
         "properties": {
+          "account": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "host": {
             "type": "string"
           },
@@ -1687,6 +1706,9 @@
           },
           "label": {
             "type": "string"
+          },
+          "ownership": {
+            "$ref": "#/components/schemas/Ownership"
           },
           "port": {
             "format": "int64",
@@ -1784,6 +1806,14 @@
           "unreachable",
           "error",
           "unknown"
+        ],
+        "type": "string"
+      },
+      "Ownership": {
+        "description": "Whose a node is (docs/nodes.md, 「A node's ownership」): a machine of the platform, run for everyone, or one\nperson's own PC, which the hardware monitor never reads.",
+        "enum": [
+          "shared",
+          "personal"
         ],
         "type": "string"
       },

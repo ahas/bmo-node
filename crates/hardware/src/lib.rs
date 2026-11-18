@@ -151,7 +151,8 @@ impl Recorder {
     })
   }
 
-  /// This machine and every node the store lists, in the list's order, whose tracking is on.
+  /// This machine and every shared node the store lists, in the list's order, whose tracking is on; a
+  /// personal node is never read (docs/hardware.md, 「Which machines」).
   pub fn tracked(&self) -> store::Result<Vec<Wanted>> {
     let off = self.store.untracked()?;
     let mut machines = vec![Wanted {
@@ -159,7 +160,7 @@ impl Recorder {
       source: Some(Source::Local),
     }];
 
-    for node in self.store.nodes()? {
+    for node in self.store.nodes()?.into_iter().filter(Node::monitored) {
       machines.push(Wanted {
         source: source_of(&node),
         name: node.name,

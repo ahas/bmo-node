@@ -44,11 +44,34 @@ service's API (`docs/api.md`); nothing else keeps a list of its own.
 - **A credential is never in either table.** A row names where a key or a token is kept, never the key or
   the token; the token is read out of its file for the one request that needs it and goes nowhere else:
   not into a row, a log line, an event or an answer.
+- `ownership`: `shared` or `personal`, and `account`, the account a personal node belongs to, or none
+  (「A node's ownership」).
 - `role`: the services the node is reserved for, joined by `+`, or none (「A node's role」).
 - `callers`: the callers the node lets make a run on it, joined by `+`, or none (「A node's callers」).
 - `position`: the order the list is shown in. A new node goes last.
 - The last check: `state`, `detail` (one line saying what the check met), `checked_at`, and
   `connected_at`, the last moment the node was found connected, kept when a later check fails.
+
+## A node's ownership
+
+- **Every node is either shared or personal.** A `shared` node is a machine of the platform, run for everyone;
+  a `personal` node is one person's own PC, and names the `account` it belongs to where that is known.
+- **A personal node stays in the list and is reached as any node is:** it is checked, its target is handed
+  out, and runs and the hosted tool reach it as before. What it is spared is monitoring: the hardware monitor
+  never reads it (`docs/hardware.md`, 「Which machines」), and a personal node that is merely off is not told as
+  a failure (「The states」).
+- **A hub node takes its ownership from its agent's name when it joins the list.** A person's machine is named
+  by the invitation or the pairing that binds it to their account as `u<user>`, the account's id as a decimal
+  number, or `u<user>-<tail>`; an agent whose name has that shape is `personal`, its account the number. Every
+  other hub node, and every ssh node, is `shared`. The stores made before ownership existed are given the same
+  reading of their hub nodes once.
+- **The account is what a screen shows and filters by,** never who may reach the node: a run and the hosted
+  tool read the node's owners afresh each time (「A person's node」).
+- **A PC several accounts were declared to share** (a binding the account service keeps as shared) is still a
+  person's PC, and so `personal` here: `shared` means a machine of the platform, not one shared by people.
+- **A person changes it with the command or a route:** `bmo-node node --set <name> --ownership
+  shared|personal [--account <id>|none]`, or `PATCH /nodes/{nodeName}` (`docs/api.md`). A node made `shared`
+  loses its account, and a shared node takes none.
 
 ## A node's role
 
@@ -133,7 +156,9 @@ service's API (`docs/api.md`); nothing else keeps a list of its own.
 
 `connected`, `disconnected`, `auth`, `hostkey`, `unreachable`, `error` and `unknown`. The policy's
 `node-states.toml` gives each its tone at a glance: `good` for `connected`, `unknown` for `unknown`, and
-`bad` for every other. The service hands the state and its tone; a caller words them.
+`bad` for every other. A personal node's PC is switched off as a matter of course, so its `disconnected` and
+`unreachable` are `unknown` instead, as the policy's `personal_tone` gives them; its `auth`, `hostkey` and
+`error` stay `bad`. The service hands the state and its tone; a caller words them.
 
 ## A node's link
 
@@ -156,16 +181,18 @@ service's API (`docs/api.md`); nothing else keeps a list of its own.
 The command is `bmo-node --config <file> node`, served through `bmo` as `bmo node …`, and the registry
 routes do the same (`docs/api.md`).
 
-- `node` alone lists the nodes with their state and when each was last connected, and the hubs after
-  them.
+- `node` alone lists the nodes with their state and when each was last connected, a personal node marked
+  so with its account, and the hubs after them.
 - `--add <name> --ssh <user@host> [--port <n>] [--key <path>] [--shell posix|powershell] [--label
-  <label>] [--role <service>]` registers an ssh node.
+  <label>] [--role <service>]` registers an ssh node, `shared` until it is set otherwise.
 - A hub node is never registered by hand: it is added when its agent attaches to a listed hub.
 - `--add-hub <control url> --token-file <path>` lists a hub; `--remove-hub <control url>` removes it with
   every hub node reached through it.
-- `--set <name>` with any of `--label`, `--role`, `--callers`, `--ssh`, `--port`, `--key`, `--shell` changes
-  those fields; `--key none` clears the key path, `--role none` the role and `--callers none` the callers. A
-  hub node takes `--label`, `--role` and `--callers` alone. A changed address, port, account, key or shell
+- `--set <name>` with any of `--label`, `--role`, `--callers`, `--ownership`, `--account`, `--ssh`, `--port`,
+  `--key`, `--shell` changes those fields; `--key none` clears the key path, `--role none` the role,
+  `--callers none` the callers and `--account none` the account. A hub node takes `--label`, `--role`,
+  `--callers`, `--ownership` and `--account` alone. An account is the account's id as a decimal number, and
+  is refused on a node left or made `shared` (「A node's ownership」). A changed address, port, login account, key or shell
   clears the last check, since it was a check of something else. `--callers` is this command's alone
   (「A node's callers」).
 - `--remove <name>` removes a node. A hub node whose agent is still attached comes back on the next pass,
