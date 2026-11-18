@@ -14,6 +14,6 @@ document, a test fixture or a commit message.
 - **A test's fixtures carry no real person, agent, room or message.** A conversation line a test reads is
   written for the test.
 
-The repository's checks hold it (`CLAUDE.md`, 「Rules」 and 「Checks」): a pattern check over every tracked file
-for mail addresses, home paths, telephone numbers, tokens and private network addresses, and the literals check
+The checks hold it (`CLAUDE.md`, 「Rules」 and 「Checks」): the testbed's `personal-data` check over every
+tracked file for mail addresses, home paths, telephone numbers, tokens and private network addresses, and the literals check
 for the account, host name and mail address this machine commits under.

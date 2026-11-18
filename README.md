@@ -52,7 +52,8 @@ instead, and the checks that hold it.
 ## Building and testing
 
 - `cargo check --workspace --all-targets`
-- `cargo test --workspace`, which runs the repository-wide checks, `tests/personal_data.rs` among them: it fails
+- `cargo test --workspace`, which runs the repository-wide checks.
+- The testbed's quick checks, the `personal-data` check among them: it fails
   on a tracked file holding a mail address outside the reserved example domains, a person's home path, a
   telephone number, a token or a private network address (`PERSONAL-DATA.md`).
 - `cargo fmt --all --check` and `cargo clippy --workspace --all-targets -- -D warnings`

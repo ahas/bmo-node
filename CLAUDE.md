@@ -35,7 +35,7 @@ which job a process serves, whether a launch goes ahead and what the chat agent 
   runs on.
 - **No personal data in a tracked file.** A mail address outside the reserved example domains, a person's home
   path, a telephone number, a token and a private network address are never written; a value is read from a
-  setting and an example is neutral. `tests/personal_data.rs` fails on one, and `PERSONAL-DATA.md` states the
+  setting and an example is neutral. The testbed's `personal-data` check fails on one, and `PERSONAL-DATA.md` states the
   rule whole.
 - **No credential in a row, an answer, an event or a log line,** only where one is kept.
 - **No directory named after its parent.** `tests/layout.rs` fails on one.

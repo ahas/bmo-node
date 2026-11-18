@@ -13,7 +13,6 @@ mod machine;
 mod node_check;
 mod node_exec;
 mod openapi;
-mod personal_data;
 mod policy;
 mod server;
 mod store;
