@@ -7,6 +7,7 @@ use hardware::live::Hands;
 use hardware::record::{KEEP_SECONDS, Reader, Writer};
 use hardware::roads::{Source, StreamEnd};
 use hardware::{Recorder, probe, view};
+use policy::nodes::MonitoredAccounts;
 use store::Store;
 use store::nodes::SshLogin;
 
@@ -32,8 +33,9 @@ fn quiet_runs() -> Hands {
 async fn the_recorder_holds_live_runs_for_the_tracked_machines_alone_following_a_switch_when_kept_again() {
   let dir = tempfile::tempdir().unwrap();
   let store = Arc::new(Store::in_memory().unwrap());
-  let recorder =
-    Recorder::with_hands(store.clone(), &dir.path().join("hardware-live.db"), quiet_runs()).unwrap();
+  let recorder = Recorder::with_hands(store.clone(), &dir.path().join("hardware-live.db"), quiet_runs())
+    .unwrap()
+    .monitoring(MonitoredAccounts::try_from(vec!["1".to_owned()]).unwrap());
 
   store
     .add_node(
@@ -48,14 +50,15 @@ async fn the_recorder_holds_live_runs_for_the_tracked_machines_alone_following_a
     .unwrap();
   // A jake node whose hub is not listed has no token file, so no road reaches it.
   store.add_agent("http://hub.example", "half").unwrap();
-  // A person's own PC is never read.
+  // A person's own PC is never read, but for a PC of an account the monitor is set to read.
   store.add_agent("http://hub.example", "u60").unwrap();
+  store.add_agent("http://hub.example", "u1-desk").unwrap();
 
   let tracked = recorder.tracked().unwrap();
 
   assert_eq!(
     tracked.iter().map(|one| one.name.as_str()).collect::<Vec<_>>(),
-    ["local", "pc-node", "half"]
+    ["local", "pc-node", "half", "u1-desk"]
   );
   assert!(matches!(
     &tracked[1].source,

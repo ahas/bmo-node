@@ -1635,6 +1635,10 @@
           "label": {
             "type": "string"
           },
+          "monitored": {
+            "description": "Whether the hardware monitor reads the node: a shared node, or a personal one of a monitored account.",
+            "type": "boolean"
+          },
           "name": {
             "type": "string"
           },
@@ -1674,6 +1678,7 @@
           "credential",
           "ownership",
           "account",
+          "monitored",
           "role",
           "callers",
           "state",

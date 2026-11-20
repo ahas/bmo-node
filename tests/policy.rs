@@ -1,9 +1,10 @@
 //! The node policy's files read as their types: every node state declared with its tone on a shared and on
 //! a personal node, the logins'
-//! options and how a login's end is read, the Windows sensor setup, and what a node's name and kind may be.
+//! options and how a login's end is read, the Windows sensor setup, what a node's name and kind may be, and
+//! which nodes the hardware monitor reads.
 
 use policy::node_states::{NODE_STATES, NodeState, Ownership, StateTone, Tone};
-use policy::nodes::{NodeKind, is_node_name};
+use policy::nodes::{MonitoredAccounts, NodeKind, is_node_name};
 use policy::ssh::SSH;
 use policy::windows_sensors::WINDOWS_SENSORS;
 
@@ -30,6 +31,27 @@ fn a_person_s_pc_switched_off_reads_unknown_and_a_failed_login_still_reads_bad()
   for state in NodeState::ALL {
     assert_eq!(state.tone_on(Ownership::Shared), state.tone(), "{}", state.name());
   }
+}
+
+#[test]
+fn the_monitor_reads_every_shared_node_and_the_personal_nodes_of_the_accounts_named_alone() {
+  let monitored = MonitoredAccounts::try_from(vec!["1".to_owned()]).unwrap();
+
+  assert_eq!(
+    [
+      monitored.read(Ownership::Shared, None),
+      monitored.read(Ownership::Personal, Some("1")),
+      monitored.read(Ownership::Personal, Some("60")),
+      monitored.read(Ownership::Personal, None),
+      MonitoredAccounts::default().read(Ownership::Personal, Some("1")),
+      MonitoredAccounts::default().read(Ownership::Shared, None),
+    ],
+    [true, true, false, false, false, true]
+  );
+  assert_eq!(
+    MonitoredAccounts::try_from(vec!["1".to_owned(), "01".to_owned()]),
+    Err("a monitored account is an account's id as a decimal number, not \"01\"".to_owned())
+  );
 }
 
 #[test]

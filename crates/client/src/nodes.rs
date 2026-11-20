@@ -178,6 +178,8 @@ pub struct Node {
   pub ownership: Ownership,
   /// The account a personal node belongs to, its id as a decimal number; none on a shared node.
   pub account: Option<String>,
+  /// Whether the hardware monitor reads the node: a shared node, or a personal one of a monitored account.
+  pub monitored: bool,
   /// The services the node is reserved for, joined by `+`.
   pub role: Option<String>,
   /// The callers the node lets make a run on it, by name; none where it lets none.

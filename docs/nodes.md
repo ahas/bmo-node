@@ -57,9 +57,11 @@ service's API (`docs/api.md`); nothing else keeps a list of its own.
 - **Every node is either shared or personal.** A `shared` node is a machine of the platform, run for everyone;
   a `personal` node is one person's own PC, and names the `account` it belongs to where that is known.
 - **A personal node stays in the list and is reached as any node is:** it is checked, its target is handed
-  out, and runs and the hosted tool reach it as before. What it is spared is monitoring: the hardware monitor
-  never reads it (`docs/hardware.md`, 「Which machines」), and a personal node that is merely off is not told as
-  a failure (「The states」).
+  out, and runs and the hosted tool reach it as before. A personal node that is merely off is not told as a
+  failure (「The states」).
+- **Ownership is not monitoring.** The hardware monitor reads every shared node and the personal nodes of the
+  monitored accounts the configuration names, and never another person's PC (`docs/hardware.md`, 「Which
+  machines」); each node answers whether it is `monitored`.
 - **A hub node takes its ownership from its agent's name when it joins the list.** A person's machine is named
   by the invitation or the pairing that binds it to their account as `u<user>`, the account's id as a decimal
   number, or `u<user>-<tail>`; an agent whose name has that shape is `personal`, its account the number. Every

@@ -59,7 +59,10 @@ pub fn start(service: Arc<Service>) -> Result<Vec<JoinHandle<()>>, String> {
     now_ms: Arc::new(hardware::now_ms),
   };
   let listen: Arc<dyn Listen> = Arc::new(Readings(service.events.clone()));
-  let recorder = Arc::new(Recorder::listened(service.store.clone(), &service.record, hands, Some(listen))?);
+  let recorder = Arc::new(
+    Recorder::listened(service.store.clone(), &service.record, hands, Some(listen))?
+      .monitoring(service.monitored.clone()),
+  );
   let mut tasks = Vec::new();
 
   recorder.follow();

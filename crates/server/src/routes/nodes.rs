@@ -21,18 +21,11 @@ use bmo_node_client::ErrorCode;
 fn all(service: &Service) -> Result<Vec<Node>, Reply> {
   let now = store::now_seconds();
 
-  Ok(
-    service
-      .store
-      .nodes()?
-      .iter()
-      .map(|node| views::view(node, &service.here, now))
-      .collect(),
-  )
+  Ok(service.store.nodes()?.iter().map(|node| service.node_view(node, now)).collect())
 }
 
 fn one_view(service: &Service, name: &str) -> Result<Node, Reply> {
-  Ok(views::view(&node(service, name)?, &service.here, store::now_seconds()))
+  Ok(service.node_view(&node(service, name)?, store::now_seconds()))
 }
 
 /// The page of nodes after the one `after` names, at most `limit` of them.
@@ -85,7 +78,7 @@ pub async fn create(service: Shared, bytes: Bytes) -> Made<Node> {
   let node = service.store.add_node(&asked.name, asked.label.as_deref(), asked.role, login)?;
 
   settle(&service)?;
-  Ok((StatusCode::CREATED, Json(views::view(&node, &service.here, store::now_seconds()))))
+  Ok((StatusCode::CREATED, Json(service.node_view(&node, store::now_seconds()))))
 }
 
 pub async fn change(service: Shared, Path(name): Path<String>, bytes: Bytes) -> Answer<Node> {
@@ -104,7 +97,7 @@ pub async fn change(service: Shared, Path(name): Path<String>, bytes: Bytes) -> 
   let node = service.store.update_node(&name, changes)?;
 
   settle(&service)?;
-  Ok(Json(views::view(&node, &service.here, store::now_seconds())))
+  Ok(Json(service.node_view(&node, store::now_seconds())))
 }
 
 pub async fn remove(service: Shared, Path(name): Path<String>, uri: Uri) -> Done {

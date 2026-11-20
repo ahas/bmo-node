@@ -22,6 +22,7 @@ use bmo_node_client::events::Change;
 use bmo_node_client::hardware::HardwareView;
 use bmo_node_client::nodes::{Node as NodeView, NodeKey};
 use hardware::live::{Hands, Road};
+use policy::nodes::MonitoredAccounts;
 use store::Store;
 use tokio::sync::OnceCell;
 use tokio_util::sync::CancellationToken;
@@ -55,6 +56,8 @@ pub struct Service {
   pub callers: Vec<Caller>,
   /// Where a node's owners are read for a run, where the configuration names it.
   pub owners: Option<OwnersRead>,
+  /// The accounts whose personal nodes the hardware monitor reads.
+  pub monitored: MonitoredAccounts,
   /// The OpenSSH, the home and the HTTP client a check runs with.
   pub machine: node_check::Machine,
   /// The road a machine is read over.
@@ -78,7 +81,8 @@ impl Service {
     label: Option<String>,
   ) -> Self {
     let here = ThisMachine::read();
-    let seen = Mutex::new(node_views(&store, &here).unwrap_or_default());
+    let monitored = MonitoredAccounts::default();
+    let seen = Mutex::new(node_views(&store, &here, &monitored).unwrap_or_default());
 
     Self {
       record: store::live_record_path(&data_root),
@@ -89,6 +93,7 @@ impl Service {
       scope_variable: None,
       callers: Vec::new(),
       owners: None,
+      monitored,
       machine: node_check::Machine::local(),
       road: Hands::default().stream,
       store,
@@ -109,6 +114,16 @@ impl Service {
     self
   }
 
+  /// The service monitoring the personal nodes of the accounts given as well as every shared node, the node
+  /// list's last told views read again by them.
+  pub fn with_monitored(mut self, accounts: MonitoredAccounts) -> Self {
+    let seen = node_views(&self.store, &self.here, &accounts).unwrap_or_default();
+
+    self.monitored = accounts;
+    self.seen = Mutex::new(seen);
+    self
+  }
+
   /// The service taking a run from the callers given, their owners read where `owners` names.
   pub fn with_runs(mut self, callers: Vec<Caller>, owners: Option<OwnersRead>) -> Self {
     self.callers = callers;
@@ -116,11 +131,16 @@ impl Service {
     self
   }
 
+  /// A node as every route answers it, at `now` in seconds.
+  pub fn node_view(&self, node: &store::nodes::Node, now: i64) -> NodeView {
+    views::view(node, &self.here, &self.monitored, now)
+  }
+
   /// The node list told against the one its events last told: each node added, moved or gone since
   /// published as its own event (docs/api.md, 「Events」).
   pub fn settle_nodes(&self) -> store::Result<()> {
     let mut seen = self.seen.lock().unwrap_or_else(PoisonError::into_inner);
-    let now = node_views(&self.store, &self.here)?;
+    let now = node_views(&self.store, &self.here, &self.monitored)?;
 
     for (name, view) in &now {
       match seen.get(name) {
@@ -167,14 +187,18 @@ impl Service {
 }
 
 /// Every node as the routes answer it now, by its name.
-fn node_views(store: &Store, here: &ThisMachine) -> store::Result<BTreeMap<String, NodeView>> {
+fn node_views(
+  store: &Store,
+  here: &ThisMachine,
+  monitored: &MonitoredAccounts,
+) -> store::Result<BTreeMap<String, NodeView>> {
   let now = store::now_seconds();
 
   Ok(
     store
       .nodes()?
       .iter()
-      .map(|node| (node.name.clone(), views::view(node, here, now)))
+      .map(|node| (node.name.clone(), views::view(node, here, monitored, now)))
       .collect(),
   )
 }

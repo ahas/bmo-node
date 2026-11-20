@@ -111,7 +111,10 @@ async fn main() -> ExitCode {
       .await;
     }
     Step::HardwareSetup { nodes } => {
-      return command(&config, |store| async move { hardware_setup(&store, &nodes).await }).await;
+      let monitored = config.monitored_accounts.clone();
+
+      return command(&config, |store| async move { hardware_setup(&store, &monitored, &nodes).await })
+        .await;
     }
     Step::Nouns => unreachable!("the nouns are printed above"),
     Step::Mcp { .. } => unreachable!("the MCP server is served above"),
@@ -181,7 +184,8 @@ async fn serve(config: Config) -> Result<(), String> {
   let service = Arc::new(
     Service::new(store, config.token.clone(), data_root, config.machine_label.clone())
       .with_scope_variable(config.scope_variable.clone())
-      .with_runs(callers, config.owners_read()),
+      .with_runs(callers, config.owners_read())
+      .with_monitored(config.monitored_accounts.clone()),
   );
   let listener = tokio::net::TcpListener::bind(&config.listen)
     .await

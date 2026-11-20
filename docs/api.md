@@ -27,8 +27,9 @@ What the service adds to it:
 - **A node is keyed by its name:** lowercase letters, digits and hyphens, at most 32. A hub is keyed by its
   id, a signed 64-bit integer.
 - **A machine** is named as the hardware monitor knows it: `local` for this machine, a node's own name for
-  a shared node. A personal node is no machine: every machine route answers it `not-found`
-  (`docs/hardware.md`, 「Which machines」).
+  a monitored node, a shared one or a personal one of a monitored account. A personal node that is not
+  monitored is no machine: every machine route answers it `not-found` (`docs/hardware.md`, 「Which
+  machines」).
 - **A page** is `{"items": [...], "more": boolean}`; `more` says whether anything stands past the last item,
   and the next page is asked with that item's key or time as `after`.
 
@@ -115,6 +116,7 @@ A node holds no credential, only where one is kept:
 | `credential?` | where the credential is kept: an ssh node's key path, or the token file of a hub node's hub |
 | `ownership` | `shared`, a machine of the platform, or `personal`, a person's own PC (`docs/nodes.md`, 「A node's ownership」) |
 | `account?` | the account a personal node belongs to, its id as a decimal number written out; none on a shared node |
+| `monitored` | whether the hardware monitor reads the node: a shared node, or a personal node of a monitored account (`docs/hardware.md`, 「Which machines」) |
 | `role?` | the services the node is reserved for, joined by `+` (`docs/nodes.md`, 「A node's role」) |
 | `callers` | the callers the node lets make a run on it, by name, none where it lets none (`docs/nodes.md`, 「A node's callers」) |
 | `state` | the last check's state: `connected`, `disconnected`, `auth`, `hostkey`, `unreachable`, `error` or `unknown` (`docs/nodes.md`, 「The states」) |
@@ -200,7 +202,7 @@ A hub is `id`, `address`, its control address, `tokenFile`, the file its control
 
 | Method and path | Sends | Answers |
 |---|---|---|
-| `GET /machines` | | a page of every machine the hardware monitor knows: this machine, then every shared node in the list's order, each with the recorder's latest reading |
+| `GET /machines` | | a page of every machine the hardware monitor knows: this machine, then every monitored node in the list's order, each with the recorder's latest reading |
 | `GET /machines/{machineName}` | | the machine, with its latest reading |
 | `PATCH /machines/{machineName}` | any of `tracking` and `cpuLimit`; null clears `cpuLimit` | the machine; the recorder follows a tracking switch at once, and a limit is above 0 °C and below 127 °C |
 | `GET /machines/{machineName}/readings` | query `after?`, `before?`, `limit?`, `spanMs?` | a page of the machine's past readings (below) |
@@ -337,6 +339,7 @@ each release links to it as `node.toml`; the unit does not start where the data 
 | scope variable | `scope_variable` | the environment variable a process's scope is read from (`docs/machine.md`, 「What is read」); where none is set, no process has a scope |
 | drain | `drain_ms` | how long a call under way is given to finish once the service is told to stop, in milliseconds (「Stopping」); where none is set, thirty seconds |
 | callers | `[callers.<name>]` | one table for each caller with a token of its own, keyed by its name, lowercase letters, digits and hyphens of at most 32: `token_file`, the file holding the caller's bearer token, its surrounding whitespace dropped; where none is set, no caller makes a run |
+| monitored accounts | `monitored_accounts` | the accounts whose personal nodes the hardware monitor reads, each an id written out as a decimal number (`docs/hardware.md`, 「Which machines」); where none is set, no personal node is monitored, and the service does not start where one is not an account's id |
 | owners' read | `[owners]` | where a node's owners are read for a run (`docs/nodes.md`, 「A person's node」): `url`, an address in which `{nodeName}` stands for the node's name and `{caller}` for the caller's, each written escaped; and `token_file`, the file holding the bearer token presented there; where none is set, no run is let through |
 
 - **The callers' tokens are read once, at start,** and the service does not start where a file cannot be read,
@@ -390,7 +393,7 @@ the service's routes. Where a route makes the same change, the table names it.
 | Noun | Takes | Route making the same change |
 |---|---|---|
 | `node` | the verbs and arguments of `docs/nodes.md`, 「Registering and changing a node」 | `GET /nodes`, `POST /nodes`, `PATCH /nodes/{nodeName}`, `DELETE /nodes/{nodeName}`, `GET /nodes/{nodeName}/target`, `POST /hubs`, `DELETE /hubs/{hubId}` and `POST /node-checks` |
-| `hardware-setup` | the shared nodes to set up, or every shared node; a personal node named is refused | none: the Windows sensor setup runs over each node's own road |
+| `hardware-setup` | the monitored nodes to set up, or every monitored node; a node the monitor does not read named is refused | none: the Windows sensor setup runs over each node's own road |
 
 Through `bmo`, the same commands are typed as `bmo node …` and `bmo hardware-setup …`.
 

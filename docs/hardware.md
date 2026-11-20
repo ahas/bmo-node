@@ -1,7 +1,7 @@
 # Hardware monitor
 
-Every machine of the platform's hardware: this one and every shared node of the list (`docs/nodes.md`, 「A
-node's ownership」). Each machine is read by
+Every machine of the platform's hardware: this one and every monitored node of the list, each shared node
+and each personal node of an account the configuration names (「Which machines」). Each machine is read by
 the same probe over its own road, and every reading is described the same way: one group per piece of
 hardware (the CPU with its chip laid out as it physically stands, each GPU, memory, every storage device,
 the board), each carrying its own use, capacity, temperature and power, so the piece at fault is the one
@@ -11,12 +11,20 @@ what this service answers (`docs/api.md`, 「Machines」).
 ## Which machines
 
 - **This machine,** named `local`, read with a local shell.
-- **Every shared node of the list,** in the list's order, and nothing else. The monitor keeps no list of its
-  own.
-  - A personal node, a person's own PC, is never read, shown or set up by the monitor: it is no machine the
-    monitor knows, so the machine routes answer it as no machine at all. Its check and its runs go on as any
-    node's (`docs/nodes.md`, 「A node's ownership」). A node made personal stops being read at the recorder's
-    next pass; what was recorded of it ages out as any machine's history does.
+- **Every monitored node of the list,** in the list's order, and nothing else. The monitor keeps no list of
+  its own. Whether a node is monitored is read from its ownership and its account (`docs/nodes.md`, 「A
+  node's ownership」) against one setting, the monitored accounts (`docs/api.md`, 「Configuration」):
+  - A shared node is monitored.
+  - A personal node is monitored where its account is one of the monitored accounts, so the PCs the
+    deployment's own people run for the platform are read, set up and shown as any shared node; the node's own
+    answer carries its ownership and its account, by which a screen names its owner.
+  - Any other personal node, another person's own PC or one whose account is not known, is never read, shown or
+    set up by the monitor: it is no machine the monitor knows, so the machine routes answer it as no machine at
+    all. Its check and its runs go on as any node's. Where no account is configured, no personal node is
+    monitored.
+  - A node that stops being monitored, made personal or handed to an account that is not monitored, stops being
+    read at the recorder's next pass; what was recorded of it ages out as any machine's history does. The
+    monitored accounts are read at start, so a changed setting is taken up by a restart.
   - An ssh node is read by logging in the way its check does (batch mode, the node's key alone, the host
     key held to) and running the probe there, in the language the node's login answers in.
   - A hub node is read by handing the probe to its hub's `POST /exec?agent=<agent>`, with the control token
@@ -101,8 +109,8 @@ what this service answers (`docs/api.md`, 「Machines」).
   driver, installed with winget; the place, the release and the driver package are the policy's
   `windows-sensors.toml`, which the sensor script and the setup both read.
 - **`bmo-node hardware-setup [<node>…]`** puts both in place on the Windows of each node named, or of every
-  shared node: under a WSL node, or a Windows node itself. A personal node named is refused, since nothing of
-  the monitor's is installed on a person's PC. Run again it changes nothing already in place, and a
+  monitored node: under a WSL node, or a Windows node itself. A node the monitor does not read named is
+  refused, since nothing of the monitor's is installed on a PC it does not monitor. Run again it changes nothing already in place, and a
   node with no Windows is left alone. It is done only where both the library and the driver answered. A
   machine without the library still has every figure the performance counters give, and its board says
   the library is missing.
@@ -208,9 +216,9 @@ flowchart TD
   R --> H[store: one row a minute, folded out of the record]
 ```
 
-- **The recorder holds one live run open per tracked machine,** this one and every tracked shared node, and
-  reads the list again every minute, starting a run for a node added and stopping the run of one removed or
-  made personal.
+- **The recorder holds one live run open per tracked machine,** this one and every tracked monitored node,
+  and reads the list again every minute, starting a run for a node added and stopping the run of one removed
+  or no longer monitored.
   - Each reading carries the whole machine; the parts that hardly change (the host and OS, the CPU's model
     and layout, the block devices, the mounts and the services) are read again only every thirty readings,
     and the recorder lays the last of them under each reading in between.

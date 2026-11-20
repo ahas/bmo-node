@@ -7,7 +7,7 @@ use node_check::Machine;
 use node_check::rows::SshTarget;
 use node_check::ssh::{login_args, login_options};
 use policy::node_states::{NodeState, StateTone};
-use policy::nodes::NodeKind;
+use policy::nodes::{MonitoredAccounts, NodeKind};
 use policy::ssh::SSH;
 use store::nodes::Node;
 
@@ -33,8 +33,8 @@ pub fn is_up(node: &Node, now: i64) -> bool {
   node.state == NodeState::Connected && node.checked_at.is_some_and(|at| now - at <= LINK_WINDOW_SECONDS)
 }
 
-/// A node as every route answers it, at `now` in seconds.
-pub fn view(node: &Node, here: &ThisMachine, now: i64) -> NodeView {
+/// A node as every route answers it, monitored as `monitored` says, at `now` in seconds.
+pub fn view(node: &Node, here: &ThisMachine, monitored: &MonitoredAccounts, now: i64) -> NodeView {
   NodeView {
     name: node.name.clone(),
     label: node.label.clone(),
@@ -45,6 +45,7 @@ pub fn view(node: &Node, here: &ThisMachine, now: i64) -> NodeView {
     credential: node.credential().map(str::to_owned),
     ownership: node.ownership,
     account: node.account.clone(),
+    monitored: node.monitored(monitored),
     role: node.role.clone(),
     callers: node.callers().into_iter().map(str::to_owned).collect(),
     state: node.state,

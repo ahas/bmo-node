@@ -25,7 +25,7 @@ use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use node_check::rows::{DEFAULT_SSH_PORT, Hub, SshTarget};
-use policy::nodes::NodeKind;
+use policy::nodes::{MonitoredAccounts, NodeKind};
 use store::Store;
 use store::nodes::Node;
 use tokio::sync::Notify;
@@ -106,6 +106,8 @@ pub struct Recorder {
   record: PathBuf,
   writer: Writer,
   runs: Mutex<live::Reader>,
+  /// The accounts whose personal nodes are read.
+  monitored: MonitoredAccounts,
 }
 
 // The switch a tracking route moves, where a recorder stands in this process to follow it at once.
@@ -148,11 +150,18 @@ impl Recorder {
       record: record.to_path_buf(),
       runs: Mutex::new(live::Reader::new(Arc::new(recorded), hands)),
       writer,
+      monitored: MonitoredAccounts::default(),
     })
   }
 
-  /// This machine and every shared node the store lists, in the list's order, whose tracking is on; a
-  /// personal node is never read (docs/hardware.md, 「Which machines」).
+  /// The recorder reading the personal nodes of the accounts given as well as every shared node.
+  pub fn monitoring(mut self, accounts: MonitoredAccounts) -> Self {
+    self.monitored = accounts;
+    self
+  }
+
+  /// This machine and every monitored node the store lists, in the list's order, whose tracking is on; a
+  /// personal node of an account not monitored is never read (docs/hardware.md, 「Which machines」).
   pub fn tracked(&self) -> store::Result<Vec<Wanted>> {
     let off = self.store.untracked()?;
     let mut machines = vec![Wanted {
@@ -160,7 +169,7 @@ impl Recorder {
       source: Some(Source::Local),
     }];
 
-    for node in self.store.nodes()?.into_iter().filter(Node::monitored) {
+    for node in self.store.nodes()?.into_iter().filter(|node| node.monitored(&self.monitored)) {
       machines.push(Wanted {
         source: source_of(&node),
         name: node.name,

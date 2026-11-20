@@ -1,6 +1,10 @@
 //! What a node is called, how it is reached and whose it is (docs/nodes.md, 「What a node is」, 「What a row
-//! holds」 and 「A node's ownership」): its connection types, the rule its name holds to, and the name a
-//! person's machine takes.
+//! holds」 and 「A node's ownership」): its connection types, the rule its name holds to, the name a
+//! person's machine takes, and which nodes the hardware monitor reads.
+
+use std::collections::BTreeSet;
+
+use serde::Deserialize;
 
 pub use bmo_node_client::nodes::{NodeKind, Ownership};
 
@@ -37,4 +41,34 @@ pub fn personal_account(agent: &str) -> Option<String> {
   let (account, tail) = rest.split_once('-').map_or((rest, None), |(account, tail)| (account, Some(tail)));
 
   (is_account(account) && tail.is_none_or(|tail| !tail.is_empty())).then(|| account.to_owned())
+}
+
+/// The accounts whose personal nodes the hardware monitor reads, as the configuration names them
+/// (docs/hardware.md, 「Which machines」); none by default, so no personal node is monitored.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize)]
+#[serde(try_from = "Vec<String>")]
+pub struct MonitoredAccounts(BTreeSet<String>);
+
+impl MonitoredAccounts {
+  /// Whether the monitor reads a node of that ownership and account: every shared node, and a personal one
+  /// whose account is among these.
+  pub fn read(&self, ownership: Ownership, account: Option<&str>) -> bool {
+    match ownership {
+      Ownership::Shared => true,
+      Ownership::Personal => account.is_some_and(|account| self.0.contains(account)),
+    }
+  }
+}
+
+impl TryFrom<Vec<String>> for MonitoredAccounts {
+  type Error = String;
+
+  fn try_from(accounts: Vec<String>) -> Result<Self, String> {
+    match accounts.iter().find(|account| !is_account(account)) {
+      Some(wrong) => {
+        Err(format!("a monitored account is an account's id as a decimal number, not {wrong:?}"))
+      }
+      None => Ok(Self(accounts.into_iter().collect())),
+    }
+  }
 }

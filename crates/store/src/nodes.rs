@@ -4,7 +4,7 @@
 
 use bmo_node_client::ErrorCode;
 use policy::node_states::NodeState;
-use policy::nodes::{NodeKind, Ownership, is_account, is_node_name, personal_account};
+use policy::nodes::{MonitoredAccounts, NodeKind, Ownership, is_account, is_node_name, personal_account};
 use rusqlite::{Connection, OptionalExtension, Row, params};
 
 use crate::{Result, Store, StoreError, now_seconds};
@@ -74,10 +74,10 @@ impl Node {
     self.callers.as_deref().map(|callers| callers.split('+').collect()).unwrap_or_default()
   }
 
-  /// Whether the hardware monitor reads the node: a shared node, never a person's own PC (docs/hardware.md,
-  /// 「Which machines」).
-  pub fn monitored(&self) -> bool {
-    self.ownership == Ownership::Shared
+  /// Whether the hardware monitor reads the node: a shared node, or a personal one of an account among those
+  /// monitored, never another person's own PC (docs/hardware.md, 「Which machines」).
+  pub fn monitored(&self, accounts: &MonitoredAccounts) -> bool {
+    accounts.read(self.ownership, self.account.as_deref())
   }
 
   /// Whether the node lets `caller` make a run on it.

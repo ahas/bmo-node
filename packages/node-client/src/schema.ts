@@ -692,6 +692,8 @@ export interface components {
             hubId: number | null;
             kind: components["schemas"]["NodeKind"];
             label: string;
+            /** @description Whether the hardware monitor reads the node: a shared node, or a personal one of a monitored account. */
+            monitored: boolean;
             name: string;
             /** @description A machine of the platform, or a person's own PC. */
             ownership: components["schemas"]["Ownership"];

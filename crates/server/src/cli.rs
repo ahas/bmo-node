@@ -9,7 +9,7 @@ use hardware::source_of;
 use hardware::windows::encoded_command;
 use node_check::Machine;
 use node_check::pass::check_nodes;
-use policy::nodes::{NodeKind, Ownership};
+use policy::nodes::{MonitoredAccounts, NodeKind, Ownership};
 use policy::windows_sensors::WINDOWS_SENSORS;
 use store::Store;
 use store::nodes::{DEFAULT_LOGIN_SHELL, Hub, LOGIN_SHELLS, Node, NodeChanges, SshLogin};
@@ -555,9 +555,14 @@ pub async fn run_setup(source: &Source) -> WindowsSetup {
   read_setup(&printed.join("\n"), ended)
 }
 
-/// The shared nodes named, or every shared node, set up one after another: a line printed for each, and how
-/// many failed. A personal node named is refused, since nothing of the monitor's goes on a person's PC.
-pub async fn hardware_setup(store: &Store, names: &[String]) -> Result<(Vec<String>, usize), String> {
+/// The monitored nodes named, or every monitored node, set up one after another: a line printed for each, and
+/// how many failed. A personal node the monitor does not read named is refused, since nothing of the
+/// monitor's goes on a person's PC it does not monitor.
+pub async fn hardware_setup(
+  store: &Store,
+  monitored: &MonitoredAccounts,
+  names: &[String],
+) -> Result<(Vec<String>, usize), String> {
   let listed = store.nodes().map_err(store_refusal)?;
   let unknown: Vec<&str> = names
     .iter()
@@ -571,7 +576,7 @@ pub async fn hardware_setup(store: &Store, names: &[String]) -> Result<(Vec<Stri
 
   let personal: Vec<&str> = listed
     .iter()
-    .filter(|node| !node.monitored() && names.contains(&node.name))
+    .filter(|node| !node.monitored(monitored) && names.contains(&node.name))
     .map(|node| node.name.as_str())
     .collect();
 
@@ -579,7 +584,7 @@ pub async fn hardware_setup(store: &Store, names: &[String]) -> Result<(Vec<Stri
     return Err(format!("a person's own PC is not set up for the monitor: {}", personal.join(", ")));
   }
 
-  let nodes: Vec<Node> = listed.into_iter().filter(Node::monitored).collect();
+  let nodes: Vec<Node> = listed.into_iter().filter(|node| node.monitored(monitored)).collect();
 
   let mut lines = Vec::new();
   let mut failed = 0;

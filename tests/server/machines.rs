@@ -2,6 +2,7 @@
 //! fresh, or none where its tracking is off; every machine as the recorder holds it; the tracking switch
 //! and the CPU limit changed; this machine's standing; and its past readings.
 
+use policy::nodes::MonitoredAccounts;
 use reqwest::Method;
 use serde_json::json;
 use store::nodes::SshLogin;
@@ -111,6 +112,7 @@ async fn a_tracked_machine_with_nothing_fresh_is_read_once_over_its_road() {
 async fn every_machine_is_answered_as_the_recorder_holds_it_reading_none_again() {
   let stood = Stand {
     road: failing_road("no machine is read for the list"),
+    monitored: MonitoredAccounts::try_from(vec!["1".to_owned()]).unwrap(),
     ..Stand::default()
   }
   .up()
@@ -122,8 +124,9 @@ async fn every_machine_is_answered_as_the_recorder_holds_it_reading_none_again()
     .add_node("lab", None, None, SshLogin::new("192.0.2.4", "someone"))
     .unwrap();
   stood.store().add_agent(store::HUB_SEED.0, "box").unwrap();
-  // A person's own PC is no machine the monitor knows.
+  // A person's own PC is no machine the monitor knows, but for a PC of an account the monitor is set to read.
   stood.store().add_agent(store::HUB_SEED.0, "u60").unwrap();
+  stood.store().add_agent(store::HUB_SEED.0, "u1-desk").unwrap();
   // A reading of long ago is still what the recorder holds.
   writer.reading("lab", 1_000, &view());
   writer.written();
@@ -136,7 +139,7 @@ async fn every_machine_is_answered_as_the_recorder_holds_it_reading_none_again()
       .iter()
       .map(|one| (one["name"].as_str().unwrap(), one["kind"].as_str().unwrap()))
       .collect::<Vec<_>>(),
-    [("local", "local"), ("lab", "ssh"), ("box", "hub")]
+    [("local", "local"), ("lab", "ssh"), ("box", "hub"), ("u1-desk", "hub")]
   );
   assert_eq!(
     (items[1]["readAt"].clone(), items[1]["hardware"]["host"].clone()),

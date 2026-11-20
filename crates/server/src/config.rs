@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use policy::nodes::is_node_name;
+use policy::nodes::{MonitoredAccounts, is_node_name};
 use serde::Deserialize;
 
 use crate::owners::OwnersRead;
@@ -68,6 +68,9 @@ pub struct Config {
   /// Where a node's owners are read for a run; no run is let through where none is set.
   #[serde(default)]
   pub owners: Option<OwnersConfig>,
+  /// The accounts whose personal nodes the hardware monitor reads; none is monitored where none is set.
+  #[serde(default)]
+  pub monitored_accounts: MonitoredAccounts,
 }
 
 impl Config {

@@ -3,6 +3,7 @@
 //! by, and the check made now.
 
 use policy::node_states::NodeState;
+use policy::nodes::MonitoredAccounts;
 use reqwest::{Method, StatusCode};
 use serde_json::json;
 use store::nodes::{Checked, SshLogin};
@@ -61,7 +62,7 @@ async fn the_list_comes_in_its_order_paged_after_a_name_and_each_node_says_how_i
     whole["items"][1],
     json!({
       "name": "work", "label": "Work", "kind": "ssh", "hubId": null, "agentName": null,
-      "address": "someone@192.0.2.5:2200", "credential": null, "ownership": "shared", "account": null,
+      "address": "someone@192.0.2.5:2200", "credential": null, "ownership": "shared", "account": null, "monitored": true,
       "role": "voice", "callers": [], "state": "connected",
       "tone": "good", "detail": null, "checkedAt": (now - 30) * 1000, "connectedAt": (now - 30) * 1000,
       "up": true, "thisMachine": false,
@@ -155,26 +156,38 @@ async fn an_ssh_node_is_added_changed_and_removed_and_what_the_list_does_not_tak
 }
 
 #[tokio::test]
-async fn a_node_s_ownership_and_account_round_trip_and_a_person_s_pc_switched_off_reads_unknown() {
-  let stood = Stand::default().up().await;
+async fn a_node_s_ownership_and_account_round_trip_and_a_person_s_pc_is_monitored_by_its_account_and_reads_unknown_off()
+ {
+  let stood = Stand {
+    monitored: MonitoredAccounts::try_from(vec!["1".to_owned()]).unwrap(),
+    ..Stand::default()
+  }
+  .up()
+  .await;
   let off = Checked {
     state: NodeState::Disconnected,
     detail: None,
     at: 1_000,
   };
-  let owned =
-    |node: &serde_json::Value| (node["ownership"].clone(), node["account"].clone(), node["tone"].clone());
+  let owned = |node: &serde_json::Value| {
+    (
+      node["ownership"].clone(),
+      node["account"].clone(),
+      node["tone"].clone(),
+      node["monitored"].clone(),
+    )
+  };
 
   stood.store().add_agent(store::HUB_SEED.0, "u60").unwrap();
   stood.store().record_check("u60", &off).unwrap();
 
   assert_eq!(
     owned(&stood.get("/nodes/u60").await),
-    (json!("personal"), json!("60"), json!("unknown"))
+    (json!("personal"), json!("60"), json!("unknown"), json!(false))
   );
   assert_eq!(
     owned(&stood.patch("/nodes/u60", json!({ "ownership": "shared" })).await),
-    (json!("shared"), json!(null), json!("bad"))
+    (json!("shared"), json!(null), json!("bad"), json!(true))
   );
   assert_eq!(
     stood.refused(Method::PATCH, "/nodes/u60", Some(json!({ "account": "61" }))).await,
@@ -182,11 +195,16 @@ async fn a_node_s_ownership_and_account_round_trip_and_a_person_s_pc_switched_of
   );
   assert_eq!(
     owned(&stood.patch("/nodes/u60", json!({ "ownership": "personal", "account": "61" })).await),
-    (json!("personal"), json!("61"), json!("unknown"))
+    (json!("personal"), json!("61"), json!("unknown"), json!(false))
   );
   assert_eq!(
     owned(&stood.get("/nodes").await["items"][0]),
-    (json!("personal"), json!("61"), json!("unknown"))
+    (json!("personal"), json!("61"), json!("unknown"), json!(false))
+  );
+  // A PC of an account the monitor is set to read is monitored, and still reads unknown when off.
+  assert_eq!(
+    owned(&stood.patch("/nodes/u60", json!({ "account": "1" })).await),
+    (json!("personal"), json!("1"), json!("unknown"), json!(true))
   );
   assert_eq!(
     stood

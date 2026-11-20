@@ -101,7 +101,10 @@ fn a_windows_machine_reached_in_its_own_powershell_is_handed_the_setup_script_it
 
   std::fs::write(
     dir.path().join("node.toml"),
-    format!("listen = \"127.0.0.1:0\"\ntoken = \"t\"\ndata_root = \"{}\"\n", data.display()),
+    format!(
+      "listen = \"127.0.0.1:0\"\ntoken = \"t\"\ndata_root = \"{}\"\nmonitored_accounts = [\"1\"]\n",
+      data.display()
+    ),
   )
   .unwrap();
 
@@ -119,6 +122,7 @@ fn a_windows_machine_reached_in_its_own_powershell_is_handed_the_setup_script_it
     )
     .unwrap();
   store.add_agent("http://hub.example", "u60").unwrap();
+  store.add_agent("http://hub.example", "u1-desk").unwrap();
   drop(store);
 
   let (code, out, err) = run(dir.path(), &path, &["hardware-setup", "win"]);
@@ -138,6 +142,11 @@ fn a_windows_machine_reached_in_its_own_powershell_is_handed_the_setup_script_it
   let (code, _, err) = run(dir.path(), &path, &["hardware-setup", "win", "u60"]);
 
   assert_eq!((code, err.as_str()), (1, "a person's own PC is not set up for the monitor: u60\n"));
+
+  // A PC of an account the monitor is set to read is set up as any monitored node; this one's hub is unlisted.
+  let (code, out, _) = run(dir.path(), &path, &["hardware-setup", "u1-desk"]);
+
+  assert_eq!((code, out.as_str()), (1, "u1-desk: the row is missing a field its kind needs\n"));
 
   // The node verbs run through the command over the same store.
   let (code, out, _) = run(dir.path(), &path, &["node"]);

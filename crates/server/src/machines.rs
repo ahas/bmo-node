@@ -1,5 +1,5 @@
-//! A machine as every route and event answers it (docs/api.md, 「Machines」): this machine or a listed node,
-//! with its tracking, its CPU limit, its latest reading and, for this machine, its standing.
+//! A machine as every route and event answers it (docs/api.md, 「Machines」): this machine or a monitored
+//! node, with its tracking, its CPU limit, its latest reading and, for this machine, its standing.
 
 use bmo_node_client::events::Change;
 use bmo_node_client::hardware::HardwareView;
@@ -48,8 +48,8 @@ fn of_node(node: store::nodes::Node) -> Known {
   }
 }
 
-/// This machine, or a listed shared node; any other name, a personal node's among them, is refused rather
-/// than kept as a setting nothing reads (docs/hardware.md, 「Which machines」).
+/// This machine, or a listed monitored node; any other name, a personal node's the monitor does not read
+/// among them, is refused rather than kept as a setting nothing reads (docs/hardware.md, 「Which machines」).
 pub fn known(service: &Service, name: &str) -> Result<Known, Reply> {
   if name == LOCAL_MACHINE {
     return Ok(here(service));
@@ -58,17 +58,24 @@ pub fn known(service: &Service, name: &str) -> Result<Known, Reply> {
   let node = service
     .store
     .node(name)?
-    .filter(store::nodes::Node::monitored)
+    .filter(|node| node.monitored(&service.monitored))
     .ok_or_else(|| Reply::not_found(format!("no machine named {name}")))?;
 
   Ok(of_node(node))
 }
 
-/// Every machine the monitor knows: this machine, then every shared node in the list's order.
+/// Every machine the monitor knows: this machine, then every monitored node in the list's order.
 pub fn every(service: &Service) -> Result<Vec<Known>, Reply> {
   let mut machines = vec![here(service)];
 
-  machines.extend(service.store.nodes()?.into_iter().filter(store::nodes::Node::monitored).map(of_node));
+  machines.extend(
+    service
+      .store
+      .nodes()?
+      .into_iter()
+      .filter(|node| node.monitored(&service.monitored))
+      .map(of_node),
+  );
 
   Ok(machines)
 }

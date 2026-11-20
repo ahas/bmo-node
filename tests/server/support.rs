@@ -19,6 +19,7 @@ use node_server::config::Caller;
 use node_server::owners::OwnersRead;
 use node_server::stop::{self, DRAIN, Drained};
 use node_server::this_machine::ThisMachine;
+use policy::nodes::MonitoredAccounts;
 use reqwest::{Method, StatusCode};
 use serde_json::{Value, json};
 use store::Store;
@@ -113,6 +114,8 @@ pub struct Stand {
   pub callers: Vec<Caller>,
   /// Where a node's owners are read for a run.
   pub owners: Option<OwnersRead>,
+  /// The accounts whose personal nodes the hardware monitor reads.
+  pub monitored: MonitoredAccounts,
 }
 
 impl Default for Stand {
@@ -124,6 +127,7 @@ impl Default for Stand {
       drain: DRAIN,
       callers: Vec::new(),
       owners: None,
+      monitored: MonitoredAccounts::default(),
     }
   }
 }
@@ -136,7 +140,8 @@ impl Stand {
     let store = Arc::new(Store::open_in(&data).unwrap());
     let mut service = Service::new(store, TOKEN, data, Some("Lab machine".into()))
       .with_scope_variable(Some(SCOPE.into()))
-      .with_runs(self.callers, self.owners);
+      .with_runs(self.callers, self.owners)
+      .with_monitored(self.monitored);
     let ssh = dir.path().join("ssh");
 
     // A gated login reads the gate, a named pipe, which holds it until the test opens the pipe's other end.

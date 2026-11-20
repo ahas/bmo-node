@@ -27,9 +27,9 @@ one answers every tool with a 401 `unauthorized` error. On the machine the servi
 
 1. `node_nodes`: every node in the list's order, with its `kind` (`ssh`, or `hub` for a machine reached
    through a hub), its `address`, its `ownership` (`shared`, a machine of the platform, or `personal`, a
-   person's own PC with its `account`), its `role` and the last check's `state`. `up` says the last check found
-   it connected within the last three minutes. A node whose `role` names services is reserved for them; leave it
-   alone unless your work is one of them.
+   person's own PC with its `account`), whether the hardware monitor reads it (`monitored`), its `role` and the
+   last check's `state`. `up` says the last check found it connected within the last three minutes. A node
+   whose `role` names services is reserved for them; leave it alone unless your work is one of them.
 2. `node_target` with `{ "nodeName": "<name>" }` before logging in. For an ssh node, `sshArgs` opens a batch
    login ahead of the command:
 
@@ -57,7 +57,8 @@ disk, and `alerts`: a memory pressure or a full disk that stands now. Whether to
 decide from these figures; the service holds nothing back.
 
 `node_machines` gives every machine at once, as the recorder last read each, without reading any of them
-again. Only this machine and the shared nodes are machines; a personal node is never read.
+again. Only this machine and the monitored nodes are machines: every shared node, and a personal node only
+where the deployment monitors its account; any other personal node is never read.
 
 ## Past figures
 
