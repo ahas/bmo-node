@@ -8,6 +8,7 @@ use std::sync::{Mutex, MutexGuard};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use bmo_node_client::ErrorCode;
+use policy::nodes::PersonalCallers;
 use rusqlite::Connection;
 
 pub mod history;
@@ -106,6 +107,8 @@ pub type Result<T> = std::result::Result<T, StoreError>;
 /// The store: one connection, used by one caller at a time.
 pub struct Store {
   connection: Mutex<Connection>,
+  /// The callers a personal hub node is written with as it joins the list.
+  personal_callers: PersonalCallers,
 }
 
 /// A connection that meets another's lock waits until the lock is given back, however long it is held,
@@ -146,7 +149,15 @@ impl Store {
 
     Ok(Self {
       connection: Mutex::new(connection),
+      personal_callers: PersonalCallers::default(),
     })
+  }
+
+  /// The store writing every personal hub node that joins the list with the callers given
+  /// (docs/nodes.md, 「A node's callers」).
+  pub fn with_personal_callers(mut self, callers: PersonalCallers) -> Self {
+    self.personal_callers = callers;
+    self
   }
 
   /// The connection, held for one caller.

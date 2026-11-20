@@ -87,13 +87,20 @@ service's API (`docs/api.md`); nothing else keeps a list of its own.
 ## A node's callers
 
 - **A node lets a caller make a run on it only where its own `callers` name that caller** (`docs/api.md`,
-  「Runs」). A node naming none, as every node does until the owner writes one, takes no caller's run.
+  「Runs」). A node naming none takes no caller's run.
 - **A caller is a name the configuration gives a token of its own** (`docs/api.md`, 「Configuration」),
   lowercase letters, digits and hyphens: a unit of the deployment that is not a session, such as a service
   driving a program on a person's PC. Nothing here keeps a list of them or reads any one of them.
-- **The owner writes it, with the command alone:** `bmo-node node --set <name> --callers <caller>[+<caller>…]`
-  sets the whole list, and `--callers none` clears it. No route writes it, so a caller holding the service's
-  token cannot let itself onto a node; every route and event shows it.
+- **A person's machine joins with the callers the configuration lets onto personal nodes.** A hub node that
+  joins the list as `personal` (「A node's ownership」), which is a machine an invitation or a pairing bound to a
+  person's account, is written with every caller whose table in the configuration says `personal_nodes`, so a
+  service that drives a program on a person's own PC reaches each newly bound machine with no hand at work.
+  The callers are written once, as the node joins: a node already listed keeps what it names, and a machine
+  that rejoins after it departed joins again with the callers the configuration names then. Every other node
+  joins naming none.
+- **Past that, the owner writes it, with the command alone:** `bmo-node node --set <name> --callers
+  <caller>[+<caller>…]` sets the whole list, and `--callers none` clears it. No route writes it, so a caller
+  holding the service's token cannot let itself onto a node; every route and event shows it.
 - **A node's callers do not pass a run on their own:** the node must also be the person's own node the run is
   made for (「A person's node」).
 

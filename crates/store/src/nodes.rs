@@ -648,7 +648,8 @@ impl Store {
 
   /// The hub node for an agent attached to a hub, added last in the list where none stands for it yet,
   /// named after the agent and labelled with its name, and personal where the name is a person's machine's
-  /// (docs/nodes.md, 「A node's ownership」); whether one was added.
+  /// (docs/nodes.md, 「A node's ownership」), a personal one naming the callers the store was given for
+  /// personal nodes (「A node's callers」); whether one was added.
   pub fn add_agent(&self, hub: &str, agent: &str) -> Result<bool> {
     let connection = self.connection();
     let known: bool = connection.query_row(
@@ -681,11 +682,12 @@ impl Store {
     let at = now_seconds();
     let account = personal_account(agent);
     let ownership = if account.is_some() { Ownership::Personal } else { Ownership::Shared };
+    let callers = account.as_ref().and_then(|_| self.personal_callers.joined());
 
     connection.execute(
-      "INSERT INTO nodes (name, label, kind, agent, hub_url, ownership, account, position, created_at, updated_at)
-       VALUES (?1, ?2, 'hub', ?3, ?4, ?5, ?6, ?7, ?8, ?8)",
-      params![name, label, agent, hub, ownership.name(), account, next_position(&connection)?, at],
+      "INSERT INTO nodes (name, label, kind, agent, hub_url, ownership, account, callers, position, created_at, updated_at)
+       VALUES (?1, ?2, 'hub', ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?9)",
+      params![name, label, agent, hub, ownership.name(), account, callers, next_position(&connection)?, at],
     )?;
 
     Ok(true)

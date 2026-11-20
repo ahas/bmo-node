@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use policy::nodes::{MonitoredAccounts, is_node_name};
+use policy::nodes::{MonitoredAccounts, PersonalCallers, is_node_name};
 use serde::Deserialize;
 
 use crate::owners::OwnersRead;
@@ -17,6 +17,9 @@ use crate::stop::DRAIN;
 pub struct CallerConfig {
   /// The file holding the caller's bearer token.
   pub token_file: String,
+  /// Whether every personal hub node is written with the caller as it joins the list.
+  #[serde(default)]
+  pub personal_nodes: bool,
 }
 
 /// Where a node's owners are read for a run (docs/nodes.md, 「A person's node」).
@@ -131,6 +134,19 @@ impl Config {
     }
 
     Ok(callers)
+  }
+
+  /// The callers every personal hub node is written with as it joins the list (docs/nodes.md, 「A node's
+  /// callers」), or why the service does not start: a name the rule refuses.
+  pub fn personal_callers(&self) -> Result<PersonalCallers, String> {
+    PersonalCallers::try_from(
+      self
+        .callers
+        .iter()
+        .filter(|(_, caller)| caller.personal_nodes)
+        .map(|(name, _)| name.clone())
+        .collect::<Vec<_>>(),
+    )
   }
 
   /// Where a node's owners are read, where the configuration names it.

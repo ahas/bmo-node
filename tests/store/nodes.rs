@@ -2,7 +2,7 @@
 //! adds and removes, a check written to its row, every node read with its hub, and whose each node is.
 
 use policy::node_states::NodeState;
-use policy::nodes::{NodeKind, Ownership};
+use policy::nodes::{NodeKind, Ownership, PersonalCallers};
 use store::Store;
 use store::nodes::{Checked, NodeChanges, SshLogin, agent_node_name};
 
@@ -339,6 +339,26 @@ fn a_person_s_machine_joins_personal_with_its_account_and_every_other_node_joins
       (Ownership::Shared, None),
     ]
   );
+}
+
+#[test]
+fn a_person_s_machine_joins_with_the_personal_callers_and_a_listed_node_keeps_its_own() {
+  let dir = tempfile::tempdir().unwrap();
+  let callers =
+    PersonalCallers::try_from(vec!["mail-reader".to_owned(), "desk-driver".to_owned()]).unwrap();
+  let store = Store::open_in(dir.path()).unwrap().with_personal_callers(callers);
+  let named = |name: &str| store.node(name).unwrap().unwrap().callers;
+
+  store.add_agent("http://hub.example", "u60").unwrap();
+  store.add_agent("http://hub.example", "lab").unwrap();
+
+  assert_eq!(named("u60").as_deref(), Some("desk-driver+mail-reader"));
+  assert_eq!(named("lab"), None, "a machine of the platform joins naming none");
+
+  store.set_callers("u60", None).unwrap();
+  store.add_agent("http://hub.example", "u60").unwrap();
+
+  assert_eq!(named("u60"), None, "a node already listed keeps what the owner wrote");
 }
 
 #[test]

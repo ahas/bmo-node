@@ -154,7 +154,10 @@ where
   Run: FnOnce(Store) -> Ran,
   Ran: Future<Output = Result<(Vec<String>, usize), String>>,
 {
-  let store = match Store::open_in(&config.data_root()) {
+  let opened = Store::open_in(&config.data_root())
+    .map_err(|why| why.to_string())
+    .and_then(|store| Ok(store.with_personal_callers(config.personal_callers()?)));
+  let store = match opened {
     Ok(store) => store,
     Err(why) => {
       eprintln!("bmo-node: {why}");
@@ -180,7 +183,11 @@ where
 async fn serve(config: Config) -> Result<(), String> {
   let data_root = config.data_root();
   let callers = config.callers()?;
-  let store = Arc::new(Store::open_in(&data_root).map_err(|why| why.to_string())?);
+  let store = Arc::new(
+    Store::open_in(&data_root)
+      .map_err(|why| why.to_string())?
+      .with_personal_callers(config.personal_callers()?),
+  );
   let service = Arc::new(
     Service::new(store, config.token.clone(), data_root, config.machine_label.clone())
       .with_scope_variable(config.scope_variable.clone())

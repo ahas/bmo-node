@@ -1,6 +1,7 @@
 //! What a node is called, how it is reached and whose it is (docs/nodes.md, 「What a node is」, 「What a row
 //! holds」 and 「A node's ownership」): its connection types, the rule its name holds to, the name a
-//! person's machine takes, and which nodes the hardware monitor reads.
+//! person's machine takes, which nodes the hardware monitor reads, and the callers a person's machine joins
+//! with.
 
 use std::collections::BTreeSet;
 
@@ -69,6 +70,32 @@ impl TryFrom<Vec<String>> for MonitoredAccounts {
         Err(format!("a monitored account is an account's id as a decimal number, not {wrong:?}"))
       }
       None => Ok(Self(accounts.into_iter().collect())),
+    }
+  }
+}
+
+/// The callers a personal hub node is written with as it joins the list: every caller whose table in the
+/// configuration says `personal_nodes` (docs/nodes.md, 「A node's callers」); none by default, so a node
+/// joins naming none.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct PersonalCallers(BTreeSet<String>);
+
+impl PersonalCallers {
+  /// The callers as a row holds them, joined by `+`; none where there are none.
+  pub fn joined(&self) -> Option<String> {
+    (!self.0.is_empty()).then(|| self.0.iter().map(String::as_str).collect::<Vec<_>>().join("+"))
+  }
+}
+
+impl TryFrom<Vec<String>> for PersonalCallers {
+  type Error = String;
+
+  fn try_from(callers: Vec<String>) -> Result<Self, String> {
+    match callers.iter().find(|caller| !is_node_name(caller)) {
+      Some(wrong) => Err(format!(
+        "a caller is lowercase letters, digits and hyphens of at most 32 characters, not {wrong:?}"
+      )),
+      None => Ok(Self(callers.into_iter().collect())),
     }
   }
 }

@@ -147,7 +147,8 @@ connection type needs is refused `incomplete`.
 A hub node is never registered by a route: it is added when its agent attaches to a listed hub
 (`docs/nodes.md`). A hub node takes `label`, `role`, `ownership` and `account` alone. An `account` that is not
 a decimal number, or one given to a node left or made `shared`, is `bad-field`. A node's `callers` are written by the command
-alone, never by a route, so no caller lets itself onto a node (`docs/nodes.md`, 「A node's callers」).
+alone, or by the configuration as a personal node joins, never by a route, so no caller lets itself onto a node
+(`docs/nodes.md`, 「A node's callers」).
 
 ### Runs
 
@@ -338,7 +339,7 @@ each release links to it as `node.toml`; the unit does not start where the data 
 | this machine's name | `machine_label` | how this machine is shown, where none is set the system's host name |
 | scope variable | `scope_variable` | the environment variable a process's scope is read from (`docs/machine.md`, 「What is read」); where none is set, no process has a scope |
 | drain | `drain_ms` | how long a call under way is given to finish once the service is told to stop, in milliseconds (「Stopping」); where none is set, thirty seconds |
-| callers | `[callers.<name>]` | one table for each caller with a token of its own, keyed by its name, lowercase letters, digits and hyphens of at most 32: `token_file`, the file holding the caller's bearer token, its surrounding whitespace dropped; where none is set, no caller makes a run |
+| callers | `[callers.<name>]` | one table for each caller with a token of its own, keyed by its name, lowercase letters, digits and hyphens of at most 32: `token_file`, the file holding the caller's bearer token, its surrounding whitespace dropped; and `personal_nodes`, `true` where every personal hub node is written with the caller as it joins the list (`docs/nodes.md`, 「A node's callers」), `false` where not given; where none is set, no caller makes a run |
 | monitored accounts | `monitored_accounts` | the accounts whose personal nodes the hardware monitor reads, each an id written out as a decimal number (`docs/hardware.md`, 「Which machines」); where none is set, no personal node is monitored, and the service does not start where one is not an account's id |
 | owners' read | `[owners]` | where a node's owners are read for a run (`docs/nodes.md`, 「A person's node」): `url`, an address in which `{nodeName}` stands for the node's name and `{caller}` for the caller's, each written escaped; and `token_file`, the file holding the bearer token presented there; where none is set, no run is let through |
 
