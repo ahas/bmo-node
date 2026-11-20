@@ -9,8 +9,13 @@
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
-/// Directories that are built, fetched or kept by tools rather than written.
+/// What is built, fetched or kept by tools rather than written: a folder, or `.git` as the file a worktree
+/// holds in its place, which names where the repository's own folder stands.
 const NOT_WRITTEN: &[&str] = &[".git", "target", "node_modules"];
+
+fn written(name: &std::ffi::OsStr) -> bool {
+  !NOT_WRITTEN.iter().any(|skip| name == *skip)
+}
 
 /// The folders of code, tests, units and documents, which hold no Hangul.
 const ENGLISH: &[&str] = &["crates", "packages", "tests", "deploy", "docs"];
@@ -28,10 +33,12 @@ fn texts(dir: &Path, found: &mut Vec<(PathBuf, String)>) {
   for entry in entries.flatten() {
     let path = entry.path();
 
+    if !written(&entry.file_name()) {
+      continue;
+    }
+
     if path.is_dir() {
-      if !NOT_WRITTEN.iter().any(|skip| entry.file_name() == *skip) {
-        texts(&path, found);
-      }
+      texts(&path, found);
     } else if let Ok(text) = std::fs::read_to_string(&path) {
       found.push((path, text));
     }
@@ -46,6 +53,7 @@ fn files(folders: &[&str]) -> Vec<(PathBuf, String)> {
     let path = entry.path();
 
     if path.is_file()
+      && written(&entry.file_name())
       && let Ok(text) = std::fs::read_to_string(&path)
     {
       found.push((path, text));

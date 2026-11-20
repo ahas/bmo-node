@@ -3,6 +3,11 @@
 //!
 //! Cargo names a binary's path to the tests of its own package only, and every test stands in the root
 //! package, so a test builds the binary it starts and finds it where cargo puts it.
+//!
+//! The build takes the compiler of the toolchain that built the test binary, the `rustc` beside the cargo
+//! that built it. Reached through rustup's proxy instead, `rustc` may honour a toolchain file a dependency
+//! ships, so a build into an empty target directory would compile that dependency with another compiler than
+//! the crates already there and fail.
 
 #![allow(dead_code)]
 
@@ -12,6 +17,13 @@ use std::process::Command;
 use std::sync::Mutex;
 
 static BUILT: Mutex<Option<HashMap<String, PathBuf>>> = Mutex::new(None);
+
+/// The compiler beside the cargo that built this test binary, where one stands there.
+fn toolchain_rustc() -> Option<PathBuf> {
+  let rustc = Path::new(env!("CARGO")).with_file_name("rustc");
+
+  rustc.is_file().then_some(rustc)
+}
 
 // The directory the test binary was built into, `<target>/<profile>/deps`, gives the target directory and
 // the profile.
@@ -41,7 +53,16 @@ pub fn built(package: &str, binary: &str) -> PathBuf {
 
   let dir = profile_dir();
   let target = dir.parent().expect("the profile's directory stands in the target directory");
-  let status = Command::new(env!("CARGO"))
+  let mut cargo = Command::new(env!("CARGO"));
+
+  // A compiler the caller names stands; otherwise the toolchain's own.
+  if std::env::var_os("RUSTC").is_none()
+    && let Some(rustc) = toolchain_rustc()
+  {
+    cargo.env("RUSTC", rustc);
+  }
+
+  let status = cargo
     .args(["build", "--quiet", "--package", package, "--bin", binary, "--profile"])
     .arg(profile(&dir))
     .arg("--target-dir")
