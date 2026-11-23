@@ -5,6 +5,38 @@ $ProgressPreference = 'SilentlyContinue'
 $t = [char]9
 $nl = [char]10
 $out = [Console]::Out
+# The run's first block, printed before anything slow: it only sets the run's start.
+$clock = [Diagnostics.Stopwatch]::StartNew()
+try { $out.Write("@@windows$nl@@host$nl$env:COMPUTERNAME$nl@@uptime$nl$($clock.Elapsed.TotalSeconds)$nl@@end$nl"); $out.Flush() } catch { exit }
+# The disks and volumes are asked on a runspace of their own, so a storage query that hangs costs only their
+# figures: each reading carries the last answers, and an asking still out is not asked again.
+$storage = @{ lines = @(); ps = $null; done = $null }
+$storage.space = [RunspaceFactory]::CreateRunspace()
+$storage.space.Open()
+$storage.script = @'
+$ErrorActionPreference = 'SilentlyContinue'
+$t = [char]9
+foreach ($d in Get-PhysicalDisk) { "disk$t$($d.DeviceId)$t$($d.FriendlyName)$t$($d.MediaType)$t$($d.BusType)$t$($d.Size)" }
+foreach ($p in Get-Partition) {
+  if (-not $p.DriveLetter -or $p.DriveLetter -eq [char]0) { continue }
+  $v = Get-Volume -DriveLetter $p.DriveLetter
+  if ($v -and $v.Size -gt 0) { "vol$t$($p.DiskNumber)$t$($p.DriveLetter):$t$($v.FileSystem)$t$($v.Size)$t$($v.SizeRemaining)" }
+}
+'@
+function AskStorage {
+  if ($storage.ps) { return }
+  $storage.ps = [PowerShell]::Create()
+  $storage.ps.Runspace = $storage.space
+  [void]$storage.ps.AddScript($storage.script)
+  $storage.done = $storage.ps.BeginInvoke()
+}
+function TakeStorage {
+  if (-not $storage.ps -or -not $storage.done.IsCompleted) { return }
+  try { $storage.lines = @($storage.ps.EndInvoke($storage.done) | ForEach-Object { [string]$_ }) } catch {}
+  $storage.ps.Dispose()
+  $storage.ps = $null
+}
+AskStorage
 
 $env:Path = "$env:Path;$env:ProgramFiles\NVIDIA Corporation\NVSMI"
 $nvml = $false
@@ -87,7 +119,6 @@ public static class BmoNvml {
 $nvml = [BmoNvml]::Open()
 } catch { $nvml = $false }
 
-$clock = [Diagnostics.Stopwatch]::StartNew()
 $proc = New-Object Diagnostics.PerformanceCounterCategory 'Processor Information'
 $meter = $null
 if ([Diagnostics.PerformanceCounterCategory]::Exists('Energy Meter')) { $meter = New-Object Diagnostics.PerformanceCounterCategory 'Energy Meter' }
@@ -134,6 +165,7 @@ function Walk($h, $lines) {
   foreach ($sub in $h.SubHardware) { Walk $sub $lines }
 }
 $seldom = @()
+$drives = @()
 $boot = $null
 $totalKb = $null
 $k = 0
@@ -149,12 +181,9 @@ while ([DateTime]::UtcNow -lt $end) {
 if ($cpu.Count -gt 0) { $seldom.Add("model$t$($cpu[0].Name.Trim())$t$(($cpu | Measure-Object NumberOfCores -Sum).Sum)$t$(($cpu | Measure-Object NumberOfLogicalProcessors -Sum).Sum)") }
 $page = @(Get-CimInstance Win32_PageFileUsage)
 if ($page.Count -gt 0) { $seldom.Add("swap$t$(($page | Measure-Object AllocatedBaseSize -Sum).Sum)$t$(($page | Measure-Object CurrentUsage -Sum).Sum)") }
-    foreach ($d in Get-PhysicalDisk) { $seldom.Add("disk$t$($d.DeviceId)$t$($d.FriendlyName)$t$($d.MediaType)$t$($d.BusType)$t$($d.Size)") }
-    foreach ($p in Get-Partition) {
-      if (-not $p.DriveLetter -or $p.DriveLetter -eq [char]0) { continue }
-      $v = Get-Volume -DriveLetter $p.DriveLetter
-      if ($v -and $v.Size -gt 0) { $seldom.Add("vol$t$($p.DiskNumber)$t$($p.DriveLetter):$t$($v.FileSystem)$t$($v.Size)$t$($v.SizeRemaining)") }
-    }
+    AskStorage
+    # The run's first reading waits up to ten seconds for the disks, so a run starts with them where they answer.
+    if ($k -eq 0 -and $storage.ps) { [void]$storage.done.AsyncWaitHandle.WaitOne(10000) }
   }
   $k++
   $next = $next.AddMilliseconds(1000)
@@ -167,6 +196,8 @@ if ($page.Count -gt 0) { $seldom.Add("swap$t$(($page | Measure-Object AllocatedB
   if ($boot) { $lines.Add("$(((Get-Date) - $boot).TotalSeconds)") } else { $lines.Add("$($clock.Elapsed.TotalSeconds)") }
   $lines.Add('@@win')
   foreach ($one in $seldom) { $lines.Add($one) }
+  TakeStorage
+  foreach ($one in $storage.lines) { $lines.Add($one) }
   if ($totalKb) { $lines.Add("mem$t$totalKb$t$($avail.RawValue)") }
   if ($boot) { $lines.Add("uptime$t$([int]((Get-Date) - $boot).TotalSeconds)") }
   $lines.Add("total$t$(Cooked $lastProc $nowProc '% processor utility' '_Total')")
@@ -183,8 +214,17 @@ if ($page.Count -gt 0) { $seldom.Add("swap$t$(($page | Measure-Object AllocatedB
   $lastProc = $nowProc
   $lastMeter = $nowMeter
   $lines.Add("lhm$t$library")
-  if ($pc) { foreach ($h in $pc.Hardware) { Walk $h $lines } }
+  # Reading a drive's sensors opens the drive, so the disks' are read every thirty readings and carried between.
+  if ($pc) {
+    if ($k % 30 -eq 1) { $drives = New-Object Collections.Generic.List[string] }
+    foreach ($h in $pc.Hardware) {
+      if ([string]$h.HardwareType -ne 'Storage') { Walk $h $lines } elseif ($k % 30 -eq 1) { Walk $h $drives }
+    }
+    foreach ($one in $drives) { $lines.Add($one) }
+  }
   $lines.Add('@@gpu'); if ($nvml) { foreach ($g in [BmoNvml]::Read()) { $lines.Add($g) } }; $lines.Add('@@end')
   try { $out.Write(($lines -join $nl) + $nl); $out.Flush() } catch { break }
 }
 if ($pc) { $pc.Close() }
+# A storage query that never answered still holds its runspace, and the run ends whatever is under way.
+[Environment]::Exit(0)

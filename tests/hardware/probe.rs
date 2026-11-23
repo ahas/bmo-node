@@ -177,6 +177,19 @@ fn the_live_scripts_are_plain_posix_shell() {
   }
 }
 
+// The Windows side a WSL run starts travels on the PowerShell command line, which Windows holds to 32,767
+// characters.
+#[test]
+fn the_windows_side_of_a_wsl_run_fits_on_a_windows_command_line() {
+  for name in ["live-posix-240.sh", "live-posix.sh"] {
+    let text = script(name);
+    let line = text.lines().find(|line| line.contains("-EncodedCommand")).unwrap();
+    let command = &line[line.find("powershell.exe").unwrap()..line.find(" </dev/null").unwrap()];
+
+    assert!(command.len() < 32_767, "{name}: {} characters", command.len());
+  }
+}
+
 #[test]
 fn the_live_script_reads_this_machine_a_reading_at_a_time() {
   let mut run = Command::new("sh")
@@ -228,54 +241,62 @@ fn the_live_script_reads_this_machine_a_reading_at_a_time() {
   assert!(!snapshot.threads.is_empty());
 }
 
-// "Where it ends having printed no block — the Windows PowerShell cannot be started from the run, as from a
-// service with no WSL interop — the run reads the virtual machine's own figures instead": the run stands as WSL
-// with a PowerShell that cannot be executed, and still hands readings over.
+// "Where it ends having printed no block past that first empty one (the Windows PowerShell cannot be started
+// from the run, as from a service with no WSL interop, or it fails while opening), the run reads the virtual
+// machine's own figures instead": the run stands as WSL with a PowerShell that cannot be executed, and with one
+// that prints its first empty block and fails, and still hands the virtual machine's readings over.
 #[test]
 fn a_wsl_run_whose_windows_side_answers_nothing_reads_the_virtual_machine_instead() {
   let dir = tempfile::tempdir().unwrap();
-  let powershell = dir.path().join("powershell.exe");
+  let cannot_start = "#!/bin/sh\necho 'cannot execute binary file' >&2\nexit 126\n";
+  let fails_opening = "#!/bin/sh\nprintf '@@winend\\r\\n'\nexit 1\n";
 
-  std::fs::write(&powershell, "#!/bin/sh\necho 'cannot execute binary file' >&2\nexit 126\n").unwrap();
-  std::fs::set_permissions(&powershell, std::os::unix::fs::PermissionsExt::from_mode(0o755)).unwrap();
+  for (stub, blocks) in [(cannot_start, 1), (fails_opening, 2)] {
+    let powershell = dir.path().join("powershell.exe");
 
-  for name in ["live-posix-240.sh", "live-posix.sh"] {
-    let as_wsl = script(name).replace("grep -qi microsoft /proc/version 2>/dev/null", "true").replace(
-      "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe",
-      &powershell.to_string_lossy(),
-    );
-    let mut run = Command::new("sh")
-      .arg("-s")
-      .stdin(Stdio::piped())
-      .stdout(Stdio::piped())
-      .stderr(Stdio::null())
-      .process_group(0)
-      .spawn()
-      .unwrap();
-    let pid = run.id() as i32;
+    std::fs::write(&powershell, stub).unwrap();
+    std::fs::set_permissions(&powershell, std::os::unix::fs::PermissionsExt::from_mode(0o755)).unwrap();
 
-    std::io::Write::write_all(&mut run.stdin.take().unwrap(), as_wsl.as_bytes()).unwrap();
+    for name in ["live-posix-240.sh", "live-posix.sh"] {
+      let as_wsl = script(name).replace("grep -qi microsoft /proc/version 2>/dev/null", "true").replace(
+        "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe",
+        &powershell.to_string_lossy(),
+      );
+      let mut run = Command::new("sh")
+        .arg("-s")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .process_group(0)
+        .spawn()
+        .unwrap();
+      let pid = run.id() as i32;
 
-    let mut out = run.stdout.take().unwrap();
-    let mut text = String::new();
-    let mut buffer = [0u8; 16 * 1024];
+      std::io::Write::write_all(&mut run.stdin.take().unwrap(), as_wsl.as_bytes()).unwrap();
 
-    while !text.contains("@@end\n") {
-      let read = out.read(&mut buffer).unwrap();
+      let mut out = run.stdout.take().unwrap();
+      let mut text = String::new();
+      let mut buffer = [0u8; 16 * 1024];
 
-      if read == 0 {
-        break;
+      while text.matches("@@end\n").count() < blocks {
+        let read = out.read(&mut buffer).unwrap();
+
+        if read == 0 {
+          break;
+        }
+
+        text.push_str(&String::from_utf8_lossy(&buffer[..read]));
       }
 
-      text.push_str(&String::from_utf8_lossy(&buffer[..read]));
-    }
+      // SAFETY: the run was started as the leader of a process group of its own.
+      unsafe {
+        libc::kill(-pid, libc::SIGKILL);
+      }
+      let _ = run.wait();
 
-    // SAFETY: the run was started as the leader of a process group of its own.
-    unsafe {
-      libc::kill(-pid, libc::SIGKILL);
-    }
-    let _ = run.wait();
+      let last = text.split("@@end\n").nth(blocks - 1).unwrap_or_default();
 
-    assert!(text.contains("@@uptime") && text.contains("@@end\n"), "{name}: {text}");
+      assert!(last.contains("@@uptime") && !last.contains("@@win"), "{name}: {text}");
+    }
   }
 }

@@ -272,7 +272,7 @@ pub async fn stream_through(
         }
         None => break,
       },
-      // Whoever stops listening stops the exec: the road cancels it at the next thing it prints.
+      // Whoever stops listening stops the exec: the road cancels it on the hub at once.
       () = stop.cancelled() => break,
     }
   }

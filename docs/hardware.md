@@ -101,12 +101,19 @@ what this service answers (`docs/api.md`, 「Machines」).
     `Tccd<n>`, `Package id 0`, `Core <n>`), and a figure the library works out from others left out.
 - The load average and the services stay the WSL side's, and the WSL virtual disk stays one of the
   machine's storage devices.
-- **In the live run the Windows side stays open too:** one PowerShell runs for the whole live run, opens
-  the counters and the library once, then prints a block every second, which paces the run. Where it ends
-  having printed no block — the Windows PowerShell cannot be started from the run, as from a service with
-  no WSL interop — the run reads the virtual machine's own figures instead, as on any Linux machine, so the
-  machine is still read. The edition,
-  the boot time and the disks and volumes are asked again every thirty readings.
+- **In the live run the Windows side stays open too:** one PowerShell runs for the whole live run. It
+  prints an empty block as soon as it starts, before anything slow, then opens the counters and the
+  library once and prints a block every second, which paces the run. Where it ends having printed no
+  block past that first empty one (the Windows PowerShell cannot be started from the run, as from a service
+  with no WSL interop, or it fails while opening), the run reads the virtual machine's own figures
+  instead, as on any Linux machine, so the machine is still read.
+  - The edition and the boot time are asked again every thirty readings.
+  - **The disks and volumes are asked in the background** every thirty readings, and each reading carries
+    the last answers that came in. An asking still out is not asked again, so a storage query that hangs
+    costs only the disks' figures and never holds a reading up.
+  - **Each disk's temperature is read from the library every thirty readings,** and the readings in
+    between carry the last, since reading a drive's sensors opens the drive. The CPU's and the board's
+    sensors are read every second.
 - **LibreHardwareMonitor and its driver are the monitor's own setup on each Windows machine.** The
   library's release is unpacked under `%ProgramData%` and reads the CPU and the board through the PawnIO
   driver, installed with winget; the place, the release and the driver package are the policy's
@@ -128,6 +135,9 @@ what this service answers (`docs/api.md`, 「Machines」).
   the edition with its build and kernel version, the CPU's model with its cores and logical processors,
   and the page file's size and use as the swap; each NVIDIA GPU in the columns the POSIX probe takes from
   `nvidia-smi`, and the temperature it slows down at.
+- **Its live form starts and paces itself as the Windows side's does:** a first block of the host and the
+  run's own clock as soon as it starts, the disks and volumes asked in the background, and each disk's
+  temperature read every thirty readings (「The Windows side」).
 - **Every GPU figure comes from NVML called inside the probe's own PowerShell,** opened once per run and
   asked each reading, never from a process started per reading. Where the driver's library is missing the
   GPUs are unreadable.
@@ -239,8 +249,18 @@ flowchart TD
   - A run that ends after carrying the machine is followed by the next at once. A run that fails or ends
     before its first reading makes the machine's latest the failure with what was met, and a run starts
     again after a wait that grows from a second to thirty while the failures go on.
-  - **A run that has printed nothing for thirty seconds is left running:** the machine's latest says it
-    has gone quiet, once for each quiet stretch, and its next reading stands in its place.
+  - **A run that has given no reading yet is stopped once it has printed nothing for a minute,** and
+    counts as a run that failed before its first reading: the machine's latest says it stalled, and the
+    next run starts after the same growing wait. Every live script prints its first block within seconds
+    of starting, a Windows one before it opens anything, so a minute of silence means the machine is not
+    getting on with the run. A run
+    started to relieve another that stalls is only dropped while the one it was to relieve still carries
+    the machine.
+  - **A run that has given a reading and then prints nothing for thirty seconds is left running:** the
+    machine's latest says it has gone quiet, once for each quiet stretch, and its next reading stands in
+    its place.
+  - A run stopped is ended on the machine at once, whatever its road: a local shell or an ssh login is
+    killed, and a hub's exec is cancelled without waiting for the script to print again.
 - **The live record** is a SQLite file of its own, `hardware-live.db`, written by the recorder alone, on a
   thread of its own, since a commit waits on the disk and a reading lands every second. The service reads
   it over a connection that only reads.

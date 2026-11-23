@@ -98,7 +98,18 @@ impl HubExec {
     let mut stderr = String::new();
 
     loop {
-      match run.next().await {
+      // Whoever stops listening stops the exec at once, though the script may print nothing for long.
+      let said = tokio::select! {
+        said = run.next() => Some(said),
+        () = output.closed() => None,
+      };
+      let Some(said) = said else {
+        run.cancel().await;
+
+        return Ended::Failed("nobody listened".into());
+      };
+
+      match said {
         Ok(Said::Started(_)) => {}
         Ok(Said::Stdout(bytes)) => {
           if output.send(bytes).await.is_err() {

@@ -1,6 +1,6 @@
 //! A script run on a jake node through its hub: the request goes to the node's own agent with the token
-//! out of the hub's file, the command's lines come whole however the frames and the lines were cut, and a
-//! hub's refusal is said as what it means.
+//! out of the hub's file, the command's lines come whole however the frames and the lines were cut, a
+//! hub's refusal is said as what it means, and a run stopped is cancelled on the hub at once.
 
 use std::net::{Ipv4Addr, SocketAddr};
 use std::sync::{Arc, Mutex};
@@ -13,6 +13,7 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::post;
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
+use futures_util::StreamExt;
 use hardware::hub_exec::HubExec;
 use hardware::roads::{StreamEnd, stream_through};
 use node_check::Machine;
@@ -160,4 +161,64 @@ fn a_windows_agent_is_handed_the_probe_packed_as_a_powershell_command() {
   // The agent encodes the command as UTF-16 base64, about 2.7 times its length; it must stay under 32,767.
   assert!(command.len() * 8 / 3 + 1_000 < 32_767, "{} characters", command.len());
   assert_eq!(linux, serde_json::json!({ "shell": "linux", "command": "echo hi", "env": {} }));
+}
+
+// "A hub's exec is cancelled without waiting for the script to print again" (docs/hardware.md, 「Live」): a
+// command that has gone silent is cancelled on the hub as soon as its run is stopped.
+#[tokio::test]
+async fn a_stopped_run_is_cancelled_on_the_hub_though_its_command_prints_nothing_more() {
+  let (cancelled, heard) = tokio::sync::oneshot::channel::<Value>();
+  let cancelled = Arc::new(Mutex::new(Some(cancelled)));
+  let opening = frame("started", json!({ "id": "c7" })) + &out("hello\n", 0);
+  let silent = futures_util::stream::iter([Ok::<_, std::convert::Infallible>(opening)])
+    .chain(futures_util::stream::pending());
+  let body = Arc::new(Mutex::new(Some(Body::from_stream(silent))));
+  let app = Router::new()
+    .route(
+      "/exec",
+      post(move || {
+        let body = body.lock().unwrap().take().unwrap_or_default();
+
+        async move { ([("content-type", "text/event-stream")], body).into_response() }
+      }),
+    )
+    .route(
+      "/cancel",
+      post(move |asked: axum::Json<Value>| {
+        if let Some(cancelled) = cancelled.lock().unwrap().take() {
+          let _ = cancelled.send(asked.0);
+        }
+
+        async { StatusCode::OK }
+      }),
+    );
+  let listener = tokio::net::TcpListener::bind(SocketAddr::from((Ipv4Addr::LOCALHOST, 0))).await.unwrap();
+  let url = format!("http://{}", listener.local_addr().unwrap());
+  let home = tempfile::tempdir().unwrap();
+
+  tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+  std::fs::write(home.path().join("hub.env"), "JAKE_CONTROL_TOKEN=tok\n").unwrap();
+
+  let road = HubExec {
+    hub: Hub {
+      url,
+      token_file: "~/hub.env".into(),
+    },
+    agent: "agent_a".into(),
+    powershell: false,
+    machine: Machine::new("ssh", home.path()),
+  };
+  let (lines, mut read) = mpsc::channel(64);
+  let stop = CancellationToken::new();
+  let running = tokio::spawn({
+    let stop = stop.clone();
+
+    async move { stream_through(&road, "run", lines, stop).await }
+  });
+  let bound = std::time::Duration::from_secs(10);
+
+  assert_eq!(tokio::time::timeout(bound, read.recv()).await.unwrap().as_deref(), Some("hello"));
+  stop.cancel();
+  assert_eq!(running.await.unwrap().failure, "the run was stopped");
+  assert_eq!(tokio::time::timeout(bound, heard).await.unwrap().unwrap(), json!({ "id": "c7" }));
 }

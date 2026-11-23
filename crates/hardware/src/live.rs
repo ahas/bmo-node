@@ -2,7 +2,8 @@
 //! machine until its stream ends, each reading handed to the record as it lands. A run on a road that
 //! stops runs itself is relieved before then by the next, which takes over at its own first reading; a
 //! run that fails or ends before its first reading has its failure recorded, and another is started after
-//! a wait that grows while the failures go on. A run that falls quiet is left running, and the machine's
+//! a wait that grows while the failures go on. A run that falls quiet before its first reading is stopped
+//! and fails as one that ended there; one that falls quiet after it is left running, and the machine's
 //! latest says so.
 
 use std::collections::BTreeMap;
@@ -26,11 +27,19 @@ use super::view::{HardwareView, hardware_view};
 /// WSL machine's counters and sensor library included.
 pub const RELIEF_SECONDS: i64 = 20;
 
-/// How long a run goes without printing a line before the machine's latest says it has gone quiet.
+/// How long a run that has given a reading goes without printing a line before the machine's latest says
+/// it has gone quiet.
 pub const QUIET_SECONDS: u64 = 30;
 
 /// What the machine's latest says of a run gone quiet.
 pub const QUIET: &str = "the machine has printed nothing for thirty seconds";
+
+/// How long a run that has given no reading yet goes without printing a line before it is stopped: past
+/// the slowest healthy start of a run, whose script prints its first block before anything slow.
+pub const STALL_SECONDS: u64 = 60;
+
+/// What the machine's latest says of a run stopped before its first reading.
+pub const STALLED: &str = "the run printed nothing for a minute before its first reading";
 
 /// The waits before a failed machine is tried again: the first, and the longest it grows to.
 pub const RETRY_FIRST_MS: u64 = 1_000;
@@ -115,6 +124,16 @@ struct Run {
   anchor: Option<(i64, f64)>,
 }
 
+impl Run {
+  /// When the run will have gone quiet if it prints nothing from now: later while it has given no reading,
+  /// since it is still starting.
+  fn quiet_from_now(&self) -> Instant {
+    let seconds = if self.published { QUIET_SECONDS } else { STALL_SECONDS };
+
+    Instant::now() + Duration::from_secs(seconds)
+  }
+}
+
 /// One machine's runs: the one carrying it, and the one started to relieve it.
 struct Machine {
   name: String,
@@ -148,7 +167,7 @@ impl Machine {
       published: false,
       relief_at: lifetime
         .map(|lifetime| now + Duration::from_secs((lifetime - RELIEF_SECONDS).max(0) as u64)),
-      quiet_at: Some(now + Duration::from_secs(QUIET_SECONDS)),
+      quiet_at: Some(now + Duration::from_secs(STALL_SECONDS)),
       anchor: None,
     };
     let (lines, mut heard) = mpsc::channel::<String>(64);
@@ -206,7 +225,7 @@ impl Machine {
       return;
     }
 
-    run.quiet_at = Some(Instant::now() + Duration::from_secs(QUIET_SECONDS));
+    run.quiet_at = Some(run.quiet_from_now());
 
     if line.trim() != "@@end" {
       run.lines.push(line);
@@ -270,6 +289,7 @@ impl Machine {
     };
 
     run.published = true;
+    run.quiet_at = Some(run.quiet_from_now());
     self.failures = 0;
     self.sink.reading(&self.name, at, view);
 
@@ -352,6 +372,7 @@ impl Machine {
       };
       let quiet = run.quiet_at.is_some_and(|at| at <= now);
       let relieved = run.relief_at.is_some_and(|at| at <= now);
+      let published = run.published;
 
       if quiet {
         run.quiet_at = None;
@@ -359,6 +380,18 @@ impl Machine {
 
       if relieved {
         run.relief_at = None;
+      }
+
+      // A run that never got going is stopped, and fails as a run that ended before its first reading.
+      if quiet && !published {
+        self.ended(
+          id,
+          StreamEnd {
+            ok: false,
+            failure: STALLED.into(),
+          },
+        );
+        continue;
       }
 
       // Only the run carrying the machine speaks for it, and it goes on running.

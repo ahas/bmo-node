@@ -1,12 +1,14 @@
 //! The live runs: a reading handed on from a run's second, a run held until its stream ends, a hub's run
-//! relieved before the hub stops it, a failure recorded and tried again, a quiet run left running and
-//! said to be quiet, runs held for exactly the machines given, and each road's live script.
+//! relieved before the hub stops it, a failure recorded and tried again, a run stalled before its first
+//! reading stopped and tried again, a quiet run left running and said to be quiet, runs held for exactly
+//! the machines given, and each road's live script.
 
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use hardware::live::{
-  Hands, QUIET, QUIET_SECONDS, RELIEF_SECONDS, RETRY_FIRST_MS, Reader, Sink, Wanted, live_script,
+  Hands, QUIET, QUIET_SECONDS, RELIEF_SECONDS, RETRY_FIRST_MS, Reader, STALL_SECONDS, STALLED, Sink,
+  Wanted, live_script,
 };
 use hardware::roads::{Source, StreamEnd};
 use hardware::view::HardwareView;
@@ -302,26 +304,96 @@ async fn records_a_failure_and_tries_again_after_a_wait_that_grows() {
   assert_eq!(stand.runs(), 3);
 }
 
+// A run that has given no reading yet and prints nothing for a minute is stopped and fails as a run that
+// ended before its first reading would; a first block, which only sets the start, is no reading.
 #[tokio::test(start_paused = true)]
-async fn leaves_a_run_that_falls_quiet_running_and_says_so_once_for_each_quiet_stretch() {
+async fn stops_a_run_that_stalls_before_its_first_reading_and_tries_again() {
+  let mut stand = Stand::new();
+  let first = Duration::from_millis(RETRY_FIRST_MS);
+
+  stand.reader.keep(&[local("box")]);
+  settle().await;
+  advance(Duration::from_secs(STALL_SECONDS - 1)).await;
+  assert!(!stand.stopped(0));
+  assert!(stand.seen().is_empty());
+  advance(Duration::from_secs(1)).await;
+  assert!(stand.stopped(0));
+  assert_eq!(stand.seen(), [format!("box {} failed: {STALLED}", 1000 + STALL_SECONDS)]);
+  advance(first).await;
+  assert_eq!(stand.runs(), 2);
+
+  stand.say(1, &reading(10, 0, true)).await;
+  advance(Duration::from_secs(STALL_SECONDS)).await;
+  assert!(stand.stopped(1));
+  assert!(stand.seen()[1].ends_with(STALLED));
+  // The wait has grown with the second failure.
+  advance(first).await;
+  assert_eq!(stand.runs(), 2);
+  advance(first).await;
+  assert_eq!(stand.runs(), 3);
+}
+
+#[tokio::test(start_paused = true)]
+async fn drops_a_relief_that_stalls_while_the_run_it_was_to_relieve_still_carries_the_machine() {
+  let mut stand = Stand::new();
+
+  stand.reader.keep(&[Wanted {
+    name: "box".into(),
+    source: Some(through_hub()),
+  }]);
+  settle().await;
+  stand.say(0, &reading(10, 0, true)).await;
+  stand.say(0, &reading(11, 10, false)).await;
+
+  let relief = through_hub().run_seconds().unwrap() - RELIEF_SECONDS;
+
+  for _ in (0..relief + STALL_SECONDS as i64).step_by(10) {
+    advance(Duration::from_secs(10)).await;
+    stand.say(0, "@@uptime").await;
+  }
+
+  assert_eq!(stand.runs(), 2);
+  assert!(stand.stopped(1));
+  assert!(!stand.stopped(0));
+  assert_eq!(stand.seen(), ["box 1000 10%"]);
+
+  // The run that carried the machine is followed at its end as ever.
+  stand
+    .end(
+      0,
+      StreamEnd {
+        ok: true,
+        failure: String::new(),
+      },
+    )
+    .await;
+  assert_eq!(stand.runs(), 3);
+}
+
+#[tokio::test(start_paused = true)]
+async fn leaves_a_run_that_falls_quiet_after_a_reading_running_and_says_so_once_for_each_quiet_stretch() {
   let mut stand = Stand::new();
 
   stand.reader.keep(&[local("box")]);
   settle().await;
+  stand.say(0, &reading(10, 0, true)).await;
+  stand.say(0, &reading(11, 50, false)).await;
   advance(Duration::from_secs(QUIET_SECONDS)).await;
   assert!(!stand.stopped(0));
   // Said at the moment the stretch is found quiet.
-  assert_eq!(stand.seen(), [format!("box {} failed: {QUIET}", 1000 + QUIET_SECONDS)]);
+  assert_eq!(
+    stand.seen(),
+    ["box 1000 50%".to_owned(), format!("box {} failed: {QUIET}", 1000 + QUIET_SECONDS)]
+  );
   advance(Duration::from_secs(10 * QUIET_SECONDS)).await;
-  assert_eq!(stand.seen().len(), 1);
+  assert_eq!(stand.seen().len(), 2);
   assert_eq!(stand.runs(), 1);
 
   // A line starts a new stretch, and the readings it brings stand in the notice's place.
-  stand.say(0, &reading(10, 0, true)).await;
-  stand.say(0, &reading(11, 50, false)).await;
-  assert!(stand.seen()[1].ends_with("50%"));
+  stand.say(0, &reading(12, 100, false)).await;
+  assert!(stand.seen()[2].ends_with("50%"));
   advance(Duration::from_secs(QUIET_SECONDS)).await;
-  assert!(stand.seen()[2].ends_with(QUIET));
+  assert!(stand.seen()[3].ends_with(QUIET));
   assert!(!stand.stopped(0));
 }
 
