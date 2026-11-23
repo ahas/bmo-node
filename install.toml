@@ -70,17 +70,17 @@ value = "{{token.node.service}}"
 id = "jake-hub"
 run = '''
 set -eu
-hub_env="$HOME/.local/share/jake/hub.env"
+hub_env="$BMO_INSTALL_PREFIX/jake/hub.env"
 [ -f "$hub_env" ] || exit 0
 port="$(sed -n 's/^JAKE_CONTROL_PORT=//p' "$hub_env" | tail -n 1)"
-"$HOME/.local/share/bmo-node/deploy/bin/bmo-node" --config "$HOME/.local/share/bmo-node/deploy/node.toml" \
+"$BMO_INSTALL_PREFIX/bmo-node/deploy/bin/bmo-node" --config "$BMO_INSTALL_PREFIX/bmo-node/deploy/node.toml" \
   node --add-hub "http://127.0.0.1:${port:-8791}" --token-file "$hub_env"
 '''
 done = '''
 set -eu
-hub_env="$HOME/.local/share/jake/hub.env"
+hub_env="$BMO_INSTALL_PREFIX/jake/hub.env"
 [ -f "$hub_env" ] || exit 0
 port="$(sed -n 's/^JAKE_CONTROL_PORT=//p' "$hub_env" | tail -n 1)"
-"$HOME/.local/share/bmo-node/deploy/bin/bmo-node" --config "$HOME/.local/share/bmo-node/deploy/node.toml" node \
+"$BMO_INSTALL_PREFIX/bmo-node/deploy/bin/bmo-node" --config "$BMO_INSTALL_PREFIX/bmo-node/deploy/node.toml" node \
   | grep -qF "http://127.0.0.1:${port:-8791}"
 '''
