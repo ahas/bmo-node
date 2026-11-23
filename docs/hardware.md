@@ -102,7 +102,10 @@ what this service answers (`docs/api.md`, 「Machines」).
 - The load average and the services stay the WSL side's, and the WSL virtual disk stays one of the
   machine's storage devices.
 - **In the live run the Windows side stays open too:** one PowerShell runs for the whole live run, opens
-  the counters and the library once, then prints a block every second, which paces the run. The edition,
+  the counters and the library once, then prints a block every second, which paces the run. Where it ends
+  having printed no block — the Windows PowerShell cannot be started from the run, as from a service with
+  no WSL interop — the run reads the virtual machine's own figures instead, as on any Linux machine, so the
+  machine is still read. The edition,
   the boot time and the disks and volumes are asked again every thirty readings.
 - **LibreHardwareMonitor and its driver are the monitor's own setup on each Windows machine.** The
   library's release is unpacked under `%ProgramData%` and reads the CPU and the board through the PawnIO
