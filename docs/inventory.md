@@ -63,13 +63,13 @@ scripts.
 | `machine-pressure`, `machine-room` | 2 | realised in Rust by the machine module |
 | `ssh-login` | 1 | realised in Rust by `crates/node-check` |
 | `jake-hub` | 1 | in part: the hub's token and status are realised by `crates/node-check`, its exec stream by `crates/hardware`'s road; its file transfer is bmo-voice's, its one user |
-| `node-shell` | 1 | bmo-voice's and bmo-kakaotalk's, who run their services on a node over its login; kakaotalk carries its own |
+| `node-shell` | 1 | bmo-voice's and a chat provider's, who run their services on a node over its login; the provider carries its own |
 | `hardware-read`, `node-view`, `this-machine` | 3 | realised in Rust by `crates/server`'s hardware reads and node views |
 | `process-memory` | 1 | agency's: its `machine memory` verb |
 | `hardware-chips.test`, `hardware-history.test`, `hardware-live-record.test`, `hardware-parity.test`, `hardware-probe.test`, `hardware-storage.test`, `hardware-view.test`, `hardware-windows.test` | 8 | each assertion held by a Rust test in `tests/hardware`; the probe test's bare Linux output stands as `tests/hardware/samples/linux-bare.txt` |
 | `ssh-login.test` | 1 | each assertion held by a Rust test in `tests/node_check` |
 | `jake-hub.test` | 1 | the token's assertions held in `tests/node_check`, the exec stream's in `tests/hardware`; the file transfer's go with bmo-voice |
-| `node-shell.test` | 1 | goes with bmo-voice and bmo-kakaotalk |
+| `node-shell.test` | 1 | goes with bmo-voice and the chat provider |
 | `machine-room.test` | 1 | each assertion held by a Rust test in `tests/machine.rs` |
 | `hardware-read.test`, `this-machine.test` | 2 | each assertion held by a Rust test in `tests/server` |
 | `nodes.test` | 1 | each assertion held by a Rust test in `tests/cli` |
@@ -176,5 +176,5 @@ process; no unit of their own stood for them.
 - **bmo-explorer:** the remote browser (`verbs/remote_browser`).
 - **bmo-web:** the console's node list, node screens, monitor screens and their routes, which call this
   service's API.
-- **bmo-voice and bmo-kakaotalk:** their node readers, through the API, and the node shell (and, for
+- **bmo-voice and a chat provider:** their node readers, through the API, and the node shell (and, for
   voice, the hub's file transfer) they run their services on a node by.
