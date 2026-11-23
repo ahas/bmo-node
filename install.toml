@@ -1,0 +1,86 @@
+# What installing the node service on a fresh machine needs, read by the testbed's install verb (bmo-testbed's
+# docs/install.md, 「The install declaration」). The configuration is docs/api.md's 「Configuration」.
+
+install = 1
+
+# The tunnel door reads no settings file, so a changed configuration restarts the service alone.
+restart = "systemctl --user restart bmo-node.service"
+
+[[needs]]
+program = "cargo"
+what = "Builds the service, the node check, the tunnel door and the hosted tool; the Rust toolchain from https://rustup.rs."
+
+[[needs]]
+program = "bun"
+what = "Runs the TypeScript client's check; the Bun runtime from https://bun.sh."
+
+[[needs]]
+program = "ssh"
+what = "Reaches and checks an ssh node and runs the hardware monitor's road; the openssh-client package."
+
+[[port]]
+name = "node.server"
+number = 13107
+
+# The tunnel door, llm-bridge, on every interface (docs/llm-bridge.md); its own public road is set up by a person.
+[[port]]
+name = "node.bridge"
+number = 18022
+
+# The bearer every caller presents, the console and the card master among them; kept where the voice's settings
+# name it.
+[[token]]
+name = "node.service"
+file = "env/node.token"
+
+# The owners' read is agency's node access route, asked with agency's control token, which this file holds for it.
+[[settings]]
+file = "env/node-owners.token"
+text = "{{token.agency.control}}"
+
+# The configuration, env/node.toml. No caller with a token of its own is named: no installed unit makes a run on a
+# person's node. The scope is the supervisor a process runs under, the variable agency sets for every turn.
+[[settings]]
+file = "env/node.toml"
+text = """
+listen = "127.0.0.1:{{port.node.server}}"
+token = "{{token.node.service}}"
+data_root = "{{data_root}}"
+scope_variable = "BMO_TURN_AGENT"
+
+[owners]
+url = "http://127.0.0.1:{{port.agency.control}}/nodes/{nodeName}/access?agent={caller}"
+token_file = "{{data_root}}/env/node-owners.token"
+"""
+
+[[line]]
+file = "env/web-console.env"
+key = "NODE_ADDRESS"
+value = "http://127.0.0.1:{{port.node.server}}"
+
+[[line]]
+file = "env/web-console.env"
+key = "NODE_TOKEN"
+value = "{{token.node.service}}"
+
+# The jake hub this machine runs is listed, so every agent attached to it joins the node list. The hub's file is
+# its own, ~/.local/share/jake/hub.env, whose JAKE_CONTROL_PORT and JAKE_CONTROL_TOKEN lines name its control API;
+# an install without the hub lists none.
+[[after]]
+id = "jake-hub"
+run = '''
+set -eu
+hub_env="$HOME/.local/share/jake/hub.env"
+[ -f "$hub_env" ] || exit 0
+port="$(sed -n 's/^JAKE_CONTROL_PORT=//p' "$hub_env" | tail -n 1)"
+"$HOME/.local/share/bmo-node/deploy/bin/bmo-node" --config "$HOME/.local/share/bmo-node/deploy/node.toml" \
+  node --add-hub "http://127.0.0.1:${port:-8791}" --token-file "$hub_env"
+'''
+done = '''
+set -eu
+hub_env="$HOME/.local/share/jake/hub.env"
+[ -f "$hub_env" ] || exit 0
+port="$(sed -n 's/^JAKE_CONTROL_PORT=//p' "$hub_env" | tail -n 1)"
+"$HOME/.local/share/bmo-node/deploy/bin/bmo-node" --config "$HOME/.local/share/bmo-node/deploy/node.toml" node \
+  | grep -qF "http://127.0.0.1:${port:-8791}"
+'''
