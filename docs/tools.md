@@ -122,7 +122,7 @@
 - **How a secret is handed is its `as`:**
   - `env`: a file of fields hands each field as a variable named by its key, with `prefix` written before the key;
     a file of one value hands the value as `BMO_SECRET_<STEM>`, the stem being the name in capitals with every
-    character other than a letter or a digit made an underscore, so `acme-portal` is `acme-portal`. A value
+    character other than a letter or a digit made an underscore, so `acme-portal` is `ACME_PORTAL`. A value
     that is not UTF-8 text is refused as a variable.
   - `file`: the file's bytes unchanged, written into a file on the node whose path the command finds in
     `BMO_SECRET_<STEM>_FILE`.
