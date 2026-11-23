@@ -11,7 +11,7 @@ use store::Store;
 
 // As a node's run prints it: the first process a unit's, the third with none and a name holding a space.
 const LOOK: &str = "@@procmem
-43314068 223448 2226456 798408 engine.service lab-arena-host
+43314068 223448 2226456 798408 engine.service engine-host
 85508 12 1877444 2308187 bmo-voice-server.service python
 2048 0 0 42 - tmux: server
 not a process
@@ -63,7 +63,7 @@ fn a_look_names_each_process_and_each_unit_with_what_the_unit_is_charged_and_no_
       .map(|one| (one.pid, one.name.as_str(), one.unit.as_deref()))
       .collect::<Vec<_>>(),
     [
-      (798408, "lab-arena-host", Some("engine.service")),
+      (798408, "engine-host", Some("engine.service")),
       (2308187, "python", Some("bmo-voice-server.service")),
       (42, "tmux: server", None),
     ]
