@@ -96,6 +96,7 @@ impl HubExec {
       Err(why) => return Ended::Failed(why),
     };
     let mut stderr = String::new();
+    let mut started = false;
 
     loop {
       // Whoever stops listening stops the exec at once, though the script may print nothing for long.
@@ -104,13 +105,23 @@ impl HubExec {
         () = output.closed() => None,
       };
       let Some(said) = said else {
+        // The hub cancels a command only by the id its start names, and keeps it running for a caller that
+        // has gone, so a run stopped before its start is read on to it first.
+        while !started {
+          match run.next().await {
+            Ok(Said::Started(_)) => started = true,
+            Ok(Said::Exit { .. }) | Err(_) => return Ended::Failed("nobody listened".into()),
+            Ok(_) => {}
+          }
+        }
+
         run.cancel().await;
 
         return Ended::Failed("nobody listened".into());
       };
 
       match said {
-        Ok(Said::Started(_)) => {}
+        Ok(Said::Started(_)) => started = true,
         Ok(Said::Stdout(bytes)) => {
           if output.send(bytes).await.is_err() {
             run.cancel().await;

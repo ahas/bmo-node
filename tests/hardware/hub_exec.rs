@@ -13,7 +13,6 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::post;
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
-use futures_util::StreamExt;
 use hardware::hub_exec::HubExec;
 use hardware::roads::{StreamEnd, stream_through};
 use node_check::Machine;
@@ -163,23 +162,33 @@ fn a_windows_agent_is_handed_the_probe_packed_as_a_powershell_command() {
   assert_eq!(linux, serde_json::json!({ "shell": "linux", "command": "echo hi", "env": {} }));
 }
 
-// "A hub's exec is cancelled without waiting for the script to print again" (docs/hardware.md, 「Live」): a
-// command that has gone silent is cancelled on the hub as soon as its run is stopped.
-#[tokio::test]
-async fn a_stopped_run_is_cancelled_on_the_hub_though_its_command_prints_nothing_more() {
-  let (cancelled, heard) = tokio::sync::oneshot::channel::<Value>();
+/// A hub whose exec stream the test feeds frame by frame: the feed, word that the exec was asked, what `/cancel`
+/// was asked with, and the road to its agent.
+struct FedHub {
+  feed: mpsc::UnboundedSender<String>,
+  asked: Option<tokio::sync::oneshot::Receiver<()>>,
+  cancelled: Option<tokio::sync::oneshot::Receiver<Value>>,
+  road: HubExec,
+  _home: tempfile::TempDir,
+}
+
+async fn fed_hub() -> FedHub {
+  let (feed, fed) = mpsc::unbounded_channel::<String>();
+  let (asked, heard_asked) = tokio::sync::oneshot::channel::<()>();
+  let (cancelled, heard_cancelled) = tokio::sync::oneshot::channel::<Value>();
+  let exec = Arc::new(Mutex::new(Some((fed, asked))));
   let cancelled = Arc::new(Mutex::new(Some(cancelled)));
-  let opening = frame("started", json!({ "id": "c7" })) + &out("hello\n", 0);
-  let silent = futures_util::stream::iter([Ok::<_, std::convert::Infallible>(opening)])
-    .chain(futures_util::stream::pending());
-  let body = Arc::new(Mutex::new(Some(Body::from_stream(silent))));
   let app = Router::new()
     .route(
       "/exec",
       post(move || {
-        let body = body.lock().unwrap().take().unwrap_or_default();
+        let (fed, asked) = exec.lock().unwrap().take().unwrap();
+        let frames = futures_util::stream::unfold(fed, |mut fed| async move {
+          fed.recv().await.map(|frame| (Ok::<_, std::convert::Infallible>(frame), fed))
+        });
+        let _ = asked.send(());
 
-        async move { ([("content-type", "text/event-stream")], body).into_response() }
+        async move { ([("content-type", "text/event-stream")], Body::from_stream(frames)).into_response() }
       }),
     )
     .route(
@@ -199,26 +208,57 @@ async fn a_stopped_run_is_cancelled_on_the_hub_though_its_command_prints_nothing
   tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
   std::fs::write(home.path().join("hub.env"), "JAKE_CONTROL_TOKEN=tok\n").unwrap();
 
-  let road = HubExec {
-    hub: Hub {
-      url,
-      token_file: "~/hub.env".into(),
+  FedHub {
+    feed,
+    asked: Some(heard_asked),
+    cancelled: Some(heard_cancelled),
+    road: HubExec {
+      hub: Hub {
+        url,
+        token_file: "~/hub.env".into(),
+      },
+      agent: "agent_a".into(),
+      powershell: false,
+      machine: Machine::new("ssh", home.path()),
     },
-    agent: "agent_a".into(),
-    powershell: false,
-    machine: Machine::new("ssh", home.path()),
-  };
-  let (lines, mut read) = mpsc::channel(64);
-  let stop = CancellationToken::new();
-  let running = tokio::spawn({
-    let stop = stop.clone();
+    _home: home,
+  }
+}
 
-    async move { stream_through(&road, "run", lines, stop).await }
-  });
+// "A hub's exec is cancelled without waiting for the script to print again" (docs/hardware.md, 「Live」): a
+// command that has gone silent is cancelled on the hub as soon as its run is stopped, and one stopped before the
+// hub named it is cancelled once the hub does, since the hub keeps a command running for a caller that has gone.
+#[tokio::test]
+async fn a_stopped_run_is_cancelled_on_the_hub_though_its_command_prints_nothing_more() {
   let bound = std::time::Duration::from_secs(10);
 
-  assert_eq!(tokio::time::timeout(bound, read.recv()).await.unwrap().as_deref(), Some("hello"));
-  stop.cancel();
-  assert_eq!(running.await.unwrap().failure, "the run was stopped");
-  assert_eq!(tokio::time::timeout(bound, heard).await.unwrap().unwrap(), json!({ "id": "c7" }));
+  for named_first in [true, false] {
+    let mut hub = fed_hub().await;
+    let (lines, mut read) = mpsc::channel(64);
+    let stop = CancellationToken::new();
+    let road = hub.road.clone();
+    let running = tokio::spawn({
+      let stop = stop.clone();
+
+      async move { stream_through(&road, "run", lines, stop).await }
+    });
+
+    tokio::time::timeout(bound, hub.asked.take().unwrap()).await.unwrap().unwrap();
+
+    if named_first {
+      hub.feed.send(frame("started", json!({ "id": "c7" })) + &out("hello\n", 0)).unwrap();
+      assert_eq!(tokio::time::timeout(bound, read.recv()).await.unwrap().as_deref(), Some("hello"));
+    }
+
+    stop.cancel();
+    assert_eq!(running.await.unwrap().failure, "the run was stopped");
+
+    if !named_first {
+      hub.feed.send(frame("started", json!({ "id": "c7" }))).unwrap();
+    }
+
+    let cancelled = tokio::time::timeout(bound, hub.cancelled.take().unwrap()).await;
+
+    assert_eq!(cancelled.unwrap().unwrap(), json!({ "id": "c7" }), "named first: {named_first}");
+  }
 }
