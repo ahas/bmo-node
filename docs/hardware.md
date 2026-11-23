@@ -107,10 +107,11 @@ what this service answers (`docs/api.md`, 「Machines」).
   block past that first empty one (the Windows PowerShell cannot be started from the run, as from a service
   with no WSL interop, or it fails while opening), the run reads the virtual machine's own figures
   instead, as on any Linux machine, so the machine is still read.
-  - The edition and the boot time are asked again every thirty readings.
-  - **The disks and volumes are asked in the background** every thirty readings, and each reading carries
-    the last answers that came in. An asking still out is not asked again, so a storage query that hangs
-    costs only the disks' figures and never holds a reading up.
+  - **The parts that hardly change are asked in the background** every thirty readings, in two askings of
+    their own: the system's (the edition, the boot time, the memory's size, the CPU's model and the page
+    file) and the storage's (the disks and volumes). Each reading carries the last answers that came in,
+    and an asking still out is not asked again, so a query that hangs costs only the figures it answers
+    and never holds a reading up. The run's first reading waits up to ten seconds for the first answers.
   - **Each disk's temperature is read from the library every thirty readings,** and the readings in
     between carry the last, since reading a drive's sensors opens the drive. The CPU's and the board's
     sensors are read every second.
@@ -136,8 +137,8 @@ what this service answers (`docs/api.md`, 「Machines」).
   and the page file's size and use as the swap; each NVIDIA GPU in the columns the POSIX probe takes from
   `nvidia-smi`, and the temperature it slows down at.
 - **Its live form starts and paces itself as the Windows side's does:** a first block of the host and the
-  run's own clock as soon as it starts, the disks and volumes asked in the background, and each disk's
-  temperature read every thirty readings (「The Windows side」).
+  run's own clock as soon as it starts, the parts that hardly change asked in the background, and each
+  disk's temperature read every thirty readings (「The Windows side」).
 - **Every GPU figure comes from NVML called inside the probe's own PowerShell,** opened once per run and
   asked each reading, never from a process started per reading. Where the driver's library is missing the
   GPUs are unreadable.

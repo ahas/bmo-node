@@ -8,12 +8,40 @@ $out = [Console]::Out
 # The run's first block, printed before anything slow: it only sets the run's start.
 $clock = [Diagnostics.Stopwatch]::StartNew()
 try { $out.Write("@@windows$nl@@host$nl$env:COMPUTERNAME$nl@@uptime$nl$($clock.Elapsed.TotalSeconds)$nl@@end$nl"); $out.Flush() } catch { exit }
-# The disks and volumes are asked on a runspace of their own, so a storage query that hangs costs only their
-# figures: each reading carries the last answers, and an asking still out is not asked again.
-$storage = @{ lines = @(); ps = $null; done = $null }
-$storage.space = [RunspaceFactory]::CreateRunspace()
-$storage.space.Open()
-$storage.script = @'
+# The parts that hardly change are asked in the background, the system's and the storage's each on a
+# runspace of a pool of their own, so a query that hangs costs only its own figures: each reading carries the
+# last answers, and an asking still out is not asked again.
+$pool = [RunspaceFactory]::CreateRunspacePool(1, 2)
+$pool.Open()
+function NewAsking($script) { @{ script = $script; ps = $null; done = $null; answer = @() } }
+function Ask($asking) {
+  if ($asking.ps) { return }
+  $asking.ps = [PowerShell]::Create()
+  $asking.ps.RunspacePool = $pool
+  [void]$asking.ps.AddScript($asking.script)
+  $asking.done = $asking.ps.BeginInvoke()
+}
+function Take($asking) {
+  if (-not $asking.ps -or -not $asking.done.IsCompleted) { return }
+  try { $asking.answer = @($asking.ps.EndInvoke($asking.done)) } catch {}
+  $asking.ps.Dispose()
+  $asking.ps = $null
+}
+# The edition, the boot time and the memory's size, the CPU's model, and the page file as the swap.
+$system = NewAsking @'
+$ErrorActionPreference = 'SilentlyContinue'
+$t = [char]9
+$found = New-Object Collections.Generic.List[string]
+$os = Get-CimInstance Win32_OperatingSystem
+if ($os) { $found.Add("os$t$($os.Caption)$t$($os.BuildNumber)$t$($os.Version)") }
+$cpu = @(Get-CimInstance Win32_Processor)
+if ($cpu.Count -gt 0) { $found.Add("model$t$($cpu[0].Name.Trim())$t$(($cpu | Measure-Object NumberOfCores -Sum).Sum)$t$(($cpu | Measure-Object NumberOfLogicalProcessors -Sum).Sum)") }
+$page = @(Get-CimInstance Win32_PageFileUsage)
+if ($page.Count -gt 0) { $found.Add("swap$t$(($page | Measure-Object AllocatedBaseSize -Sum).Sum)$t$(($page | Measure-Object CurrentUsage -Sum).Sum)") }
+[pscustomobject]@{ lines = $found.ToArray(); boot = $(if ($os) { $os.LastBootUpTime }); totalKb = $(if ($os) { $os.TotalVisibleMemorySize }) }
+'@
+# Each physical disk, and the lettered volumes on it.
+$storage = NewAsking @'
 $ErrorActionPreference = 'SilentlyContinue'
 $t = [char]9
 foreach ($d in Get-PhysicalDisk) { "disk$t$($d.DeviceId)$t$($d.FriendlyName)$t$($d.MediaType)$t$($d.BusType)$t$($d.Size)" }
@@ -23,20 +51,8 @@ foreach ($p in Get-Partition) {
   if ($v -and $v.Size -gt 0) { "vol$t$($p.DiskNumber)$t$($p.DriveLetter):$t$($v.FileSystem)$t$($v.Size)$t$($v.SizeRemaining)" }
 }
 '@
-function AskStorage {
-  if ($storage.ps) { return }
-  $storage.ps = [PowerShell]::Create()
-  $storage.ps.Runspace = $storage.space
-  [void]$storage.ps.AddScript($storage.script)
-  $storage.done = $storage.ps.BeginInvoke()
-}
-function TakeStorage {
-  if (-not $storage.ps -or -not $storage.done.IsCompleted) { return }
-  try { $storage.lines = @($storage.ps.EndInvoke($storage.done) | ForEach-Object { [string]$_ }) } catch {}
-  $storage.ps.Dispose()
-  $storage.ps = $null
-}
-AskStorage
+Ask $system
+Ask $storage
 
 $env:Path = "$env:Path;$env:ProgramFiles\NVIDIA Corporation\NVSMI"
 $nvml = $false
@@ -164,7 +180,6 @@ function Walk($h, $lines) {
   }
   foreach ($sub in $h.SubHardware) { Walk $sub $lines }
 }
-$seldom = @()
 $drives = @()
 $boot = $null
 $totalKb = $null
@@ -172,16 +187,16 @@ $k = 0
 $next = [DateTime]::UtcNow
 while ($true) {
   if ($k % 30 -eq 0) {
-    $seldom = New-Object Collections.Generic.List[string]
-    $os = Get-CimInstance Win32_OperatingSystem
-    if ($os) { $seldom.Add("os$t$($os.Caption)$t$($os.BuildNumber)$t$($os.Version)"); $boot = $os.LastBootUpTime; $totalKb = $os.TotalVisibleMemorySize }
-    $cpu = @(Get-CimInstance Win32_Processor)
-if ($cpu.Count -gt 0) { $seldom.Add("model$t$($cpu[0].Name.Trim())$t$(($cpu | Measure-Object NumberOfCores -Sum).Sum)$t$(($cpu | Measure-Object NumberOfLogicalProcessors -Sum).Sum)") }
-$page = @(Get-CimInstance Win32_PageFileUsage)
-if ($page.Count -gt 0) { $seldom.Add("swap$t$(($page | Measure-Object AllocatedBaseSize -Sum).Sum)$t$(($page | Measure-Object CurrentUsage -Sum).Sum)") }
-    AskStorage
-    # The run's first reading waits up to ten seconds for the disks, so a run starts with them where they answer.
-    if ($k -eq 0 -and $storage.ps) { [void]$storage.done.AsyncWaitHandle.WaitOne(10000) }
+    Ask $system
+    Ask $storage
+    # The run's first reading waits up to ten seconds for the answers, so a run starts with them where they come.
+    if ($k -eq 0) {
+      $waited = [Diagnostics.Stopwatch]::StartNew()
+      foreach ($one in $system, $storage) {
+        $left = 10000 - $waited.ElapsedMilliseconds
+        if ($one.ps -and $left -gt 0) { [void]$one.done.AsyncWaitHandle.WaitOne([int]$left) }
+      }
+    }
   }
   $k++
   $next = $next.AddMilliseconds(1000)
@@ -189,13 +204,16 @@ if ($page.Count -gt 0) { $seldom.Add("swap$t$(($page | Measure-Object AllocatedB
   if ($wait -gt 0) { Start-Sleep -Milliseconds $wait } else { $next = [DateTime]::UtcNow }
   $nowProc = Sample $proc
   $nowMeter = Sample $meter
+  Take $system
+  Take $storage
+  $known = $system.answer | Select-Object -Last 1
+  if ($known) { $boot = $known.boot; $totalKb = $known.totalKb }
   $lines = New-Object Collections.Generic.List[string]
   $lines.Add('@@windows'); $lines.Add('@@host'); $lines.Add($env:COMPUTERNAME); $lines.Add('@@uptime')
   if ($boot) { $lines.Add("$(((Get-Date) - $boot).TotalSeconds)") } else { $lines.Add("$($clock.Elapsed.TotalSeconds)") }
   $lines.Add('@@win')
-  foreach ($one in $seldom) { $lines.Add($one) }
-  TakeStorage
-  foreach ($one in $storage.lines) { $lines.Add($one) }
+  if ($known) { foreach ($one in $known.lines) { $lines.Add([string]$one) } }
+  foreach ($one in $storage.answer) { $lines.Add([string]$one) }
   if ($totalKb) { $lines.Add("mem$t$totalKb$t$($avail.RawValue)") }
   if ($boot) { $lines.Add("uptime$t$([int]((Get-Date) - $boot).TotalSeconds)") }
   $lines.Add("total$t$(Cooked $lastProc $nowProc '% processor utility' '_Total')")
@@ -224,5 +242,5 @@ if ($page.Count -gt 0) { $seldom.Add("swap$t$(($page | Measure-Object AllocatedB
   try { $out.Write(($lines -join $nl) + $nl); $out.Flush() } catch { break }
 }
 if ($pc) { $pc.Close() }
-# A storage query that never answered still holds its runspace, and the run ends whatever is under way.
+# A query that never answered still holds its runspace, and the run ends whatever is under way.
 [Environment]::Exit(0)
