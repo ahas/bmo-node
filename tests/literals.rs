@@ -1,5 +1,7 @@
 //! The text of the repository holds no Hangul and no personal literal anywhere: the web console words
-//! what a person reads, and this repository hands it English sentences and codes.
+//! what a person reads, and this repository hands it English sentences and codes. The README and its
+//! translations at the root are the one exemption from Hangul: the Korean one is Korean, and each names it
+//! in its language line.
 //!
 //! A personal literal is read off the machine the test runs on rather than written here, since a list of
 //! them would itself be one: the account's name where its home is a person's, the machine's host name and
@@ -65,6 +67,12 @@ fn files(folders: &[&str]) -> Vec<(PathBuf, String)> {
   }
 
   found
+}
+
+/// Whether `path` is the README or one of its translations at the root, `README.md` or `README.<lang>.md`.
+fn is_readme(path: &Path) -> bool {
+  let name = path.file_name().and_then(|name| name.to_str()).unwrap_or_default();
+  path.parent() == Some(root().as_path()) && name.starts_with("README") && name.ends_with(".md")
 }
 
 fn hangul(one: char) -> bool {
@@ -143,10 +151,10 @@ fn holds(line: &str, literal: &str) -> bool {
 }
 
 #[test]
-fn no_code_test_or_document_holds_hangul() {
+fn no_code_test_or_document_but_the_readmes_holds_hangul() {
   let mut found = Vec::new();
 
-  for (path, text) in files(ENGLISH) {
+  for (path, text) in files(ENGLISH).into_iter().filter(|(path, _)| !is_readme(path)) {
     for (index, line) in text.lines().enumerate() {
       if line.chars().any(hangul) {
         found.push(shown(&path, index + 1));
