@@ -165,6 +165,12 @@ fn no_code_test_or_document_but_the_readmes_holds_hangul() {
   assert!(found.is_empty(), "Hangul: {found:#?}");
 }
 
+/// The license's copyright line, which names its holder by the owner's public handle, the one place a
+/// personal literal is written on purpose.
+fn holder_line(path: &Path, line: &str) -> bool {
+  path == root().join("LICENSE") && line.starts_with("Copyright (c) ")
+}
+
 #[test]
 fn no_file_holds_a_personal_literal() {
   let literals = personal();
@@ -172,7 +178,7 @@ fn no_file_holds_a_personal_literal() {
   let mut found = Vec::new();
 
   for (path, text) in files(ENGLISH) {
-    for (index, line) in text.lines().enumerate() {
+    for (index, line) in text.lines().enumerate().filter(|(_, line)| !holder_line(&path, line)) {
       let line = fixed.iter().fold(line.to_lowercase(), |line, name| line.replace(name.as_str(), ""));
 
       for literal in &literals {
