@@ -8,8 +8,12 @@ else. No other unit reads these files; they reach what is in them through the AP
 | `node/node.db` | the node list, the hubs, the hardware history and the settings | the service and the `bmo-node` command |
 | `node/hardware-live.db` | the live record (`docs/hardware.md`, 「Live」) | the recorder alone |
 
-Both are SQLite files in write-ahead-log mode. The service runs the store's migrations as it starts; the
-command runs them too before it reads or writes. A connection to either file that meets another's
+Both are SQLite files in write-ahead-log mode. The service makes `node.db`'s tables as it starts where they
+are missing, and the command does too before it reads or writes. Its schema starts at the 1.0.0 baseline,
+version 5 in the file's own `user_version`, which makes every table below with the seed hub; an install from
+the last release before 1.0.0 already holds that version and that schema, and is read as it stands. A file of
+an older version is refused, with its version named: the last release before 1.0.0 brings it up first. One of
+a later version is refused too. A connection to either file that meets another's
 lock waits its turn until the lock is given back, however long it is held.
 
 ## The tables

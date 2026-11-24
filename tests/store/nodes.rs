@@ -402,30 +402,60 @@ fn a_node_s_ownership_is_changed_and_a_shared_node_holds_no_account() {
   assert_eq!(owned(&store.node("u60").unwrap().unwrap()), (Ownership::Personal, Some("61")));
 }
 
+// Every object of a file as SQLite keeps it, and its version.
+fn shape(path: &std::path::Path) -> (i64, Vec<(String, String)>) {
+  let connection = rusqlite::Connection::open(path).unwrap();
+  let version = connection.pragma_query_value(None, "user_version", |row| row.get(0)).unwrap();
+  let objects = connection
+    .prepare("SELECT name, COALESCE(sql, '') FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' ORDER BY type, name")
+    .unwrap()
+    .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
+    .unwrap()
+    .collect::<rusqlite::Result<_>>()
+    .unwrap();
+  (version, objects)
+}
+
 #[test]
-fn a_store_made_before_ownership_reads_its_hub_nodes_once() {
+fn a_new_file_takes_the_baseline_whole() {
+  let dir = tempfile::tempdir().unwrap();
+  let opened = dir.path().join("opened.db");
+  drop(Store::open(&opened).unwrap());
+  let laid = dir.path().join("laid.db");
+  rusqlite::Connection::open(&laid)
+    .unwrap()
+    .execute_batch(concat!(include_str!("../../crates/store/src/baseline.sql"), "PRAGMA user_version = 5;"))
+    .unwrap();
+
+  assert_eq!(shape(&opened), shape(&laid));
+  assert_eq!(shape(&opened).0, store::BASELINE);
+}
+
+#[test]
+fn an_install_at_the_last_release_before_the_baseline_is_read_as_it_stands() {
   let dir = tempfile::tempdir().unwrap();
   let path = dir.path().join("node.db");
   let store = Store::open(&path).unwrap();
-
-  store.add_agent("http://hub.example", "u4").unwrap();
   store.add_agent("http://hub.example", "n2").unwrap();
   drop(store);
-
-  let old = rusqlite::Connection::open(&path).unwrap();
-
-  old
-    .execute_batch(
-      "ALTER TABLE nodes DROP COLUMN ownership; ALTER TABLE nodes DROP COLUMN account;
-       PRAGMA user_version = 4;",
-    )
-    .unwrap();
-  drop(old);
+  let before = shape(&path);
 
   let nodes = Store::open(&path).unwrap().nodes().unwrap();
+  assert_eq!(nodes.len(), 1);
+  assert_eq!(shape(&path), before);
+}
 
-  assert_eq!(
-    nodes.iter().map(owned).collect::<Vec<_>>(),
-    [(Ownership::Personal, Some("4")), (Ownership::Shared, None)]
-  );
+#[test]
+fn an_install_short_of_the_last_release_before_the_baseline_is_refused() {
+  let dir = tempfile::tempdir().unwrap();
+  let path = dir.path().join("node.db");
+  drop(Store::open(&path).unwrap());
+  rusqlite::Connection::open(&path)
+    .unwrap()
+    .execute_batch("PRAGMA user_version = 4;")
+    .unwrap();
+
+  let refused = Store::open(&path).err().expect("an older store is refused").to_string();
+  assert!(refused.contains("version 4"), "{refused}");
+  assert_eq!(shape(&path).0, 4);
 }

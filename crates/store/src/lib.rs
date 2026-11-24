@@ -17,7 +17,7 @@ mod migration;
 pub mod nodes;
 pub mod settings;
 
-pub use migration::HUB_SEED;
+pub use migration::{BASELINE, HUB_SEED};
 
 /// The folder under the data root everything of the node service's stands in.
 pub const FOLDER: &str = "node";

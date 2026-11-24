@@ -1,163 +1,44 @@
-//! The store's tables, made where they are missing (docs/store.md, 「The tables」). The schema's version is
-//! the database's own `user_version`; each step runs once, in order, inside one transaction.
+//! The store's tables, made where they are missing, from the 1.0.0 baseline (docs/store.md, 「The tables」).
+//! The schema's version is the database's own `user_version`: the baseline's is 5, the version an install
+//! from the last release before 1.0.0 holds already.
 
-use rusqlite::{Connection, Transaction, params};
+use rusqlite::{Connection, params};
 
 /// The hub every store starts with: the local hub and the environment file its token stands in. It is
-/// written once, when the table is made, so a hub removed stays removed.
+/// written once, when the tables are made, so a hub removed stays removed.
 pub const HUB_SEED: (&str, &str) = ("http://127.0.0.1:8791", "~/.local/share/jake/hub.env");
 
-const FIRST: &str = r#"
-CREATE TABLE nodes (
-  name TEXT PRIMARY KEY,
-  label TEXT NOT NULL,
-  kind TEXT NOT NULL,
-  host TEXT,
-  port INTEGER,
-  user TEXT,
-  key_path TEXT,
-  shell TEXT,
-  agent TEXT,
-  hub_url TEXT,
-  role TEXT,
-  position INTEGER NOT NULL,
-  state TEXT NOT NULL DEFAULT 'unknown',
-  detail TEXT,
-  checked_at INTEGER,
-  connected_at INTEGER,
-  created_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL
-);
-CREATE TABLE hubs (
-  url TEXT PRIMARY KEY,
-  token_file TEXT NOT NULL,
-  created_at INTEGER NOT NULL
-);
-CREATE TABLE hardware_samples (
-  machine TEXT NOT NULL,
-  at INTEGER NOT NULL,
-  sample TEXT NOT NULL,
-  PRIMARY KEY (machine, at)
-);
-CREATE INDEX hardware_samples_at ON hardware_samples (at);
-CREATE TABLE hardware_rollups (
-  machine TEXT NOT NULL,
-  at INTEGER NOT NULL,
-  tally TEXT NOT NULL,
-  PRIMARY KEY (machine, at)
-);
-CREATE INDEX hardware_rollups_at ON hardware_rollups (at);
-CREATE TABLE settings (
-  key TEXT PRIMARY KEY,
-  value TEXT NOT NULL
-);
-"#;
+/// The baseline's version.
+pub const BASELINE: i64 = 5;
 
-// A hub keyed by an id of its own, never given again once used, with a label beside its address; a node
-// reached through a hub named by the connection type's own code; the disk's line kept as the alert line it
-// now is, and the launch limits and the machine look's old marks of what it told let go of.
-const SECOND: &str = r#"
-CREATE TABLE hubs_keyed (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  url TEXT NOT NULL UNIQUE,
-  token_file TEXT NOT NULL,
-  label TEXT,
-  created_at INTEGER NOT NULL
-);
-INSERT INTO hubs_keyed (url, token_file, created_at) SELECT url, token_file, created_at FROM hubs ORDER BY created_at, url;
-DROP TABLE hubs;
-ALTER TABLE hubs_keyed RENAME TO hubs;
-UPDATE nodes SET kind = 'hub' WHERE kind = 'jake';
-UPDATE settings SET key = 'machine_limit:alert_disk_free_gb' WHERE key = 'machine_limit:launch_disk_free_gb';
-DELETE FROM settings WHERE key IN ('machine_limit:launch_memory_full_pct', 'machine_limit:launch_memory_available_gb',
-  'machine_limit:launch_load_per_thread', 'machine_pressure_told', 'machine_disk_told');
-"#;
-
-// Who held each machine's memory, one sample per machine per minute.
-const THIRD: &str = r#"
-CREATE TABLE memory_samples (
-  machine TEXT NOT NULL,
-  at INTEGER NOT NULL,
-  sample TEXT NOT NULL,
-  PRIMARY KEY (machine, at)
-);
-CREATE INDEX memory_samples_at ON memory_samples (at);
-"#;
-
-// The callers a node lets make a run on it, joined by `+`; none until the owner writes them.
-const FOURTH: &str = "ALTER TABLE nodes ADD COLUMN callers TEXT;";
-
-// Whose a node is, `shared` until it is read otherwise, and the account a personal node belongs to.
-const FIFTH: &str = "ALTER TABLE nodes ADD COLUMN ownership TEXT NOT NULL DEFAULT 'shared';
-ALTER TABLE nodes ADD COLUMN account TEXT;";
-
-/// Every hub node already listed read as one joining now would be: personal, with its account, where its
-/// agent's name is a person's machine's (docs/nodes.md, 「A node's ownership」).
-fn read_hub_ownership(unit: &Transaction<'_>) -> rusqlite::Result<()> {
-  let agents: Vec<(String, String)> = unit
-    .prepare("SELECT name, agent FROM nodes WHERE kind = 'hub' AND agent IS NOT NULL")?
-    .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
-    .collect::<rusqlite::Result<_>>()?;
-
-  for (name, agent) in agents {
-    if let Some(account) = policy::nodes::personal_account(&agent) {
-      unit.execute(
-        "UPDATE nodes SET ownership = 'personal', account = ?1 WHERE name = ?2",
-        params![account, name],
-      )?;
-    }
-  }
-
-  Ok(())
-}
-
-/// Every step not yet run, run, and the version moved to the last.
+/// The tables made where they are missing, with the seed hub; a store of an older version, from a release
+/// before 1.0.0 short of its last, refused, and one of a later version too.
 pub fn settle(connection: &mut Connection, now: i64) -> rusqlite::Result<()> {
   let version: i64 = connection.pragma_query_value(None, "user_version", |row| row.get(0))?;
 
-  if version < 1 {
+  if version == 0 {
     let unit = connection.transaction()?;
 
-    unit.execute_batch(FIRST)?;
+    unit.execute_batch(include_str!("baseline.sql"))?;
     unit.execute(
       "INSERT INTO hubs (url, token_file, created_at) VALUES (?1, ?2, ?3)",
       params![HUB_SEED.0, HUB_SEED.1, now],
     )?;
-    unit.pragma_update(None, "user_version", 1)?;
+    unit.pragma_update(None, "user_version", BASELINE)?;
     unit.commit()?;
-  }
-
-  if version < 2 {
-    let unit = connection.transaction()?;
-
-    unit.execute_batch(SECOND)?;
-    unit.pragma_update(None, "user_version", 2)?;
-    unit.commit()?;
-  }
-
-  if version < 3 {
-    let unit = connection.transaction()?;
-
-    unit.execute_batch(THIRD)?;
-    unit.pragma_update(None, "user_version", 3)?;
-    unit.commit()?;
-  }
-
-  if version < 4 {
-    let unit = connection.transaction()?;
-
-    unit.execute_batch(FOURTH)?;
-    unit.pragma_update(None, "user_version", 4)?;
-    unit.commit()?;
-  }
-
-  if version < 5 {
-    let unit = connection.transaction()?;
-
-    unit.execute_batch(FIFTH)?;
-    read_hub_ownership(&unit)?;
-    unit.pragma_update(None, "user_version", 5)?;
-    unit.commit()?;
+  } else if version != BASELINE {
+    let why = if version < BASELINE {
+      format!(
+        "the store's schema is version {version}, from a release before 1.0.0 short of its last; that release \
+         brings it to version {BASELINE} first"
+      )
+    } else {
+      format!("the store's schema is version {version}, and this build reads version {BASELINE}")
+    };
+    return Err(rusqlite::Error::SqliteFailure(
+      rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_MISMATCH),
+      Some(why),
+    ));
   }
 
   Ok(())
