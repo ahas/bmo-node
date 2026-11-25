@@ -1,7 +1,6 @@
 # The workspace: the crates the node service is built from under `crates/`, and the repository's own package at
-# the root, which publishes nothing and holds every test in `tests/`. The version is the repository's one
-# version: 0.1.0 with a revision until the first release, moving only at a release the owner declares
-# (docs/api.md, 「Versions」).
+# the root, which publishes nothing and holds every test in `tests/`. The version below is a placeholder that
+# never moves: a build reads the set's version off the git tags (docs/api.md, 「Versions」).
 [workspace]
 members = [
   "crates/client",

@@ -125,13 +125,13 @@ async fn the_health_names_its_version_and_why_it_is_not_ready() {
 
   assert_eq!(
     stood.get("/health").await,
-    json!({ "ready": false, "reason": "the loops have not started", "version": env!("CARGO_PKG_VERSION") })
+    json!({ "ready": false, "reason": "the loops have not started", "version": bmo_node_plugin::VERSION })
   );
 
   stood.service.set_ready();
   assert_eq!(
     stood.get("/health").await,
-    json!({ "ready": true, "reason": null, "version": env!("CARGO_PKG_VERSION") })
+    json!({ "ready": true, "reason": null, "version": bmo_node_plugin::VERSION })
   );
 }
 

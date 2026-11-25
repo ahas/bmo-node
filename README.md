@@ -16,7 +16,7 @@ The node service of bmo: the machines reachable from here and what is known of t
 - **A run:** a command a unit that is not a session runs on a hub node as itself, where the node's own setting
   lets it and the node is the person's it acts for (`docs/api.md`, 「Runs」).
 
-Version 0.1.0-rev.2.
+The version is the set's, read off the git tags when a build is made (`docs/api.md`, 「Versions」).
 
 ## Layout
 

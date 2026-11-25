@@ -1,6 +1,6 @@
 # The node service's boundary
 
-This document states the API of the node service, version **0.1.0-rev.2**: every route and event it
+This document states the API of the node service: every route and event it
 answers, the clients and the harness plugin it publishes, its configuration and its command. A change to
 anything here changes this document in the same commit.
 
@@ -400,6 +400,8 @@ Through `bmo`, the same commands are typed as `bmo node …` and `bmo hardware-s
 
 ## Versions
 
-The repository's version is the workspace's, and both clients and the plugin carry it. It follows bmo-chat's
-`docs/conventions.md`, 「Versions」: it moves only at a release the owner declares, and until the first release it is
-`0.1.0` with a revision, `0.1.0-rev.<n>`. A commit, a deployment or a change to this document moves no version.
+The version is the set's, read off the git tags when a build is made, as bmo-chat's `docs/conventions.md`,
+「Versions」 states: the testbed hands it to the build as `BMO_VERSION`, and the health, the MCP server and
+`bmo-node --version` answer it. The version fields of the Cargo manifests and the TypeScript client's
+`package.json` are placeholders that never move. A version moves only at a release the owner declares, which
+tags the commit and makes none; a commit, a deployment or a change to this document moves no version.

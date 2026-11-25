@@ -152,6 +152,6 @@ pub async fn health(service: Shared) -> Answer<Health> {
   Ok(Json(Health {
     ready,
     reason: (!ready).then(|| "the loops have not started".to_owned()),
-    version: env!("CARGO_PKG_VERSION").to_owned(),
+    version: bmo_node_plugin::VERSION.to_owned(),
   }))
 }

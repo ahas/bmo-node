@@ -72,5 +72,5 @@ which job a process serves, whether a launch goes ahead and what the chat agent 
   `cargo clippy --workspace --all-targets -- -D warnings`.
 - The TypeScript client: `bun run check` in `packages/node-client`.
 - Tests: `cargo test --workspace`.
-- The version is the workspace's: `0.1.0` with a revision, `0.1.0-rev.<n>`, until the first release. It moves
-  only at a release the owner declares (`docs/api.md`, 「Versions」).
+- The version is the set's, read off the git tags when a build is made; the manifests' version fields are
+  placeholders that never move (`docs/api.md`, 「Versions」).

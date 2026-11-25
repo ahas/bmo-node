@@ -12,3 +12,10 @@ mod tools;
 pub use openapi::{openapi, openapi_json};
 pub use server::NodeServer;
 pub use tools::{Answered, NodeTool, ToolFailure, tools};
+
+/// The version this build answers with: the set's, which the testbed hands the build as `BMO_VERSION`, else
+/// the manifest's placeholder (bmo-chat's `docs/conventions.md`, 「Versions」).
+pub const VERSION: &str = match option_env!("BMO_VERSION") {
+  Some(version) => version,
+  None => env!("CARGO_PKG_VERSION"),
+};

@@ -19,7 +19,7 @@ use store::Store;
 #[derive(Parser)]
 #[command(
   name = "bmo-node",
-  version,
+  version = bmo_node_plugin::VERSION,
   about = "The node service: the node list, the node checks, the hardware monitor and this machine's standing"
 )]
 struct Cli {

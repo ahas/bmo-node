@@ -87,7 +87,7 @@ impl ServerHandler for NodeServer {
     let mut server = Implementation::default();
 
     server.name = "bmo-node".to_owned();
-    server.version = env!("CARGO_PKG_VERSION").to_owned();
+    server.version = crate::VERSION.to_owned();
     info.server_info = server;
     info.instructions = Some(INSTRUCTIONS.to_owned());
     info
