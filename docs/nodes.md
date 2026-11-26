@@ -47,7 +47,8 @@ service's API (`docs/api.md`); nothing else keeps a list of its own.
 - `ownership`: `shared` or `personal`, and `account`, the account a personal node belongs to, or none
   (「A node's ownership」).
 - `role`: the services the node is reserved for, joined by `+`, or none (「A node's role」).
-- `callers`: the callers the node lets make a run on it, joined by `+`, or none (「A node's callers」).
+- `callers`: the callers the node lets make a run or a file transfer on it, joined by `+`, or none
+  (「A node's callers」).
 - `position`: the order the list is shown in. A new node goes last.
 - The last check: `state`, `detail` (one line saying what the check met), `checked_at`, and
   `connected_at`, the last moment the node was found connected, kept when a later check fails.
@@ -57,8 +58,8 @@ service's API (`docs/api.md`); nothing else keeps a list of its own.
 - **Every node is either shared or personal.** A `shared` node is a machine of the platform, run for everyone;
   a `personal` node is one person's own PC, and names the `account` it belongs to where that is known.
 - **A personal node stays in the list and is reached as any node is:** it is checked, its target is handed
-  out, and runs and the hosted tool reach it as before. A personal node that is merely off is not told as a
-  failure (「The states」).
+  out, and runs, file transfers and the hosted tool reach it as before. A personal node that is merely off is
+  not told as a failure (「The states」).
 - **Ownership is not monitoring.** The hardware monitor reads every shared node and the personal nodes of the
   monitored accounts the configuration names, and never another person's PC (`docs/hardware.md`, 「Which
   machines」); each node answers whether it is `monitored`.
@@ -67,8 +68,8 @@ service's API (`docs/api.md`); nothing else keeps a list of its own.
   number, or `u<user>-<tail>`; an agent whose name has that shape is `personal`, its account the number. Every
   other hub node, and every ssh node, is `shared`. The stores made before ownership existed are given the same
   reading of their hub nodes once.
-- **The account is what a screen shows and filters by,** never who may reach the node: a run and the hosted
-  tool read the node's owners afresh each time (「A person's node」).
+- **The account is what a screen shows and filters by,** never who may reach the node: a run, a file transfer
+  and the hosted tool read the node's owners afresh each time (「A person's node」).
 - **A PC several accounts were declared to share** (a binding the account service keeps as shared) is still a
   person's PC, and so `personal` here: `shared` means a machine of the platform, not one shared by people.
 - **A person changes it with the command or a route:** `bmo-node node --set <name> --ownership
@@ -86,8 +87,9 @@ service's API (`docs/api.md`); nothing else keeps a list of its own.
 
 ## A node's callers
 
-- **A node lets a caller make a run on it only where its own `callers` name that caller** (`docs/api.md`,
-  「Runs」). A node naming none takes no caller's run.
+- **A node lets a caller make a run or a file transfer on it only where its own `callers` name that caller**
+  (`docs/api.md`, 「Runs」 and 「File transfer」). A node naming none takes no caller's run and moves no
+  caller's file.
 - **A caller is a name the configuration gives a token of its own** (`docs/api.md`, 「Configuration」),
   lowercase letters, digits and hyphens: a unit of the deployment that is not a session, such as a service
   driving a program on a person's PC. Nothing here keeps a list of them or reads any one of them.
@@ -101,21 +103,23 @@ service's API (`docs/api.md`); nothing else keeps a list of its own.
 - **Past that, the owner writes it, with the command alone:** `bmo-node node --set <name> --callers
   <caller>[+<caller>…]` sets the whole list, and `--callers none` clears it. No route writes it, so a caller
   holding the service's token cannot let itself onto a node; every route and event shows it.
-- **A node's callers do not pass a run on their own:** the node must also be the person's own node the run is
-  made for (「A person's node」).
+- **A node's callers do not pass a run or a file transfer on their own:** the node must also be the person's
+  own node it is made for (「A person's node」).
 
 ## A person's node
 
-- **A run is made for one person,** named by the account it is for, and only on that person's own node: a node
-  whose owners hold the account. A node another person owns, or no one owns, is refused.
+- **A run and a file transfer are made for one person,** named by the account they are for, and only on that
+  person's own node: a node whose owners hold the account. A node another person owns, or no one owns, is
+  refused.
 - **Whose node it is, is read and not kept here.** The service asks the owners' read its configuration names
-  (`docs/api.md`, 「Calls the node service makes」) for each run, and holds nothing of what it answers.
+  (`docs/api.md`, 「Calls the node service makes」) for each run and each file transfer, and holds nothing of
+  what it answers.
 - **Deployed, the owners are agency's:** its access read answers the accounts whose record of a person's node
   names the node, and for an isolation node the account it is named for (agency's `docs/person-nodes.md`,
   「Which node is a person's」). A person's PC is their node once agency's record binds their account to it,
   set by the service that binds an account to its machine, or by the owner with `bmo node person <account>
   <node>`.
-- **Where no owners' read is configured,** no node is anyone's and no run is let through.
+- **Where no owners' read is configured,** no node is anyone's and no run and no file transfer is let through.
 
 ## How a node's state is known
 
@@ -225,17 +229,21 @@ routes do the same (`docs/api.md`).
 
 ## Reaching a node
 
-- **The service reaches a node in three ways and no others:** the check's own login or hub status
+- **The service reaches a node in four ways and no others:** the check's own login or hub status
   (「How a node's state is known」); the hardware monitor's road, which runs a script on the node and
   hands its output on as it comes (`docs/hardware.md`, 「Which machines」), over which the Windows sensor
-  setup runs too; and a run, the hub's exec aimed at the node's agent for a caller (below).
+  setup runs too; a run, the hub's exec aimed at the node's agent for a caller; and a file transfer, the
+  hub's upload or download aimed at the same agent for the same caller (below).
 - **A service kept on a node is built, fed and asked over the node's own login by the unit that keeps it,**
   with the node's target from `GET /nodes/{nodeName}/target` (`docs/api.md`), whose `sshArgs` open its
-  batch login. The node service's routes carry no file transfer.
-- **A unit that is not a session runs a command on a hub node through a run alone** (`docs/api.md`, 「Runs」):
-  as itself, with a token of its own, on a node whose `callers` name it (「A node's callers」), for a person
-  whose own node it is (「A person's node」). The hub's control token is read by the service for that one
-  request and handed to no caller.
+  batch login. Where such a unit moves one whole file's bytes to or from the node, it does so on the node
+  service's file-transfer routes, which relay the hub's own transfer under exactly the judgement a run
+  already gets and keep nothing of the file themselves (`docs/api.md`, 「File transfer」).
+- **A unit that is not a session runs a command on a hub node through a run alone** (`docs/api.md`, 「Runs」)
+  **and moves a file's bytes through a file transfer alone** (`docs/api.md`, 「File transfer」): as itself,
+  with a token of its own, on a node whose `callers` name it (「A node's callers」), for a person whose own
+  node it is (「A person's node」). The hub's control token is read by the service for that one request and
+  handed to no caller.
 - **An agent runs a command on a hub node through the hosted tool `bmo/node_exec` alone** (`docs/tools.md`): the
   hub's exec aimed at the node's agent, with the hub's control token read by the tool and handed to no session,
   and only for a caller whose account owns the node or that holds the administrator's grant. A hub's own exec checks

@@ -191,7 +191,7 @@ async fn serve(config: Config) -> Result<(), String> {
   let service = Arc::new(
     Service::new(store, config.token.clone(), data_root, config.machine_label.clone())
       .with_scope_variable(config.scope_variable.clone())
-      .with_runs(callers, config.owners_read())
+      .with_callers(callers, config.owners_read())
       .with_monitored(config.monitored_accounts.clone()),
   );
   let listener = tokio::net::TcpListener::bind(&config.listen)

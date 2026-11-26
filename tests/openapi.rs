@@ -48,12 +48,14 @@ fn the_document_states_the_routes_events_and_tools_of_the_api_document() {
       "GET /machines/{machineName}/readings",
       "GET /nodes",
       "GET /nodes/{nodeName}",
+      "GET /nodes/{nodeName}/file",
       "GET /nodes/{nodeName}/target",
       "PATCH /machines/{machineName}",
       "PATCH /nodes/{nodeName}",
       "POST /hubs",
       "POST /node-checks",
       "POST /nodes",
+      "POST /nodes/{nodeName}/file",
       "POST /nodes/{nodeName}/runs",
     ]
   );

@@ -12,6 +12,7 @@ use sse_stream::SseStream;
 
 use crate::error::WireError;
 use crate::events::{Event, EventPage, EventsQuery};
+use crate::files::{DownloadQuery, Upload, UploadQuery};
 use crate::hardware::{MemorySamplePage, MemorySamplesQuery, ReadingPage, ReadingsQuery};
 use crate::machines::{Health, Machine, MachineChanges, MachinePage};
 use crate::nodes::{
@@ -114,8 +115,8 @@ impl NodeClient {
     self.http.request(method, self.url(segments)).bearer_auth(&self.token)
   }
 
-  async fn answer<T: DeserializeOwned>(request: RequestBuilder) -> CallResult<T> {
-    let answer = request.send().await?;
+  /// A response already had, read as the route's own type or as the refusal it answered with.
+  async fn read<T: DeserializeOwned>(answer: reqwest::Response) -> CallResult<T> {
     let status = answer.status();
     let body = answer.text().await?;
 
@@ -127,6 +128,10 @@ impl NodeClient {
     }
 
     Err(CallError::not_answered(status.as_u16(), body))
+  }
+
+  async fn answer<T: DeserializeOwned>(request: RequestBuilder) -> CallResult<T> {
+    Self::read(request.send().await?).await
   }
 
   async fn get<T: DeserializeOwned>(&self, segments: &[&str]) -> CallResult<T> {
@@ -200,6 +205,47 @@ impl NodeClient {
   /// `POST /nodes/{nodeName}/runs`, asked with a caller's own token.
   pub async fn run(&self, node_name: &str, ask: &RunAsk) -> CallResult<Run> {
     self.send(Method::POST, &["nodes", node_name, "runs"], ask).await
+  }
+
+  /// `POST /nodes/{nodeName}/file`, asked with a caller's own token: the bytes of `body` written on the node
+  /// as the whole file `query` declares, the service holding none of them itself.
+  pub async fn upload_file(
+    &self,
+    node_name: &str,
+    query: &UploadQuery,
+    body: impl Into<reqwest::Body>,
+  ) -> CallResult<Upload> {
+    let request = self.request(Method::POST, &["nodes", node_name, "file"]).query(query).body(body);
+
+    Self::read(request.send().await?).await
+  }
+
+  /// `GET /nodes/{nodeName}/file`, asked with a caller's own token: the file's bytes streamed from the node,
+  /// and the byte count the answer declares. The stream ends with the file; where the transfer broke off
+  /// part way, it ends short of that count.
+  pub async fn download_file(
+    &self,
+    node_name: &str,
+    query: &DownloadQuery,
+  ) -> CallResult<(u64, impl Stream<Item = CallResult<Vec<u8>>> + use<>)> {
+    let answer = self.request(Method::GET, &["nodes", node_name, "file"]).query(query).send().await?;
+    let status = answer.status();
+
+    if !status.is_success() {
+      return Err(CallError::not_answered(status.as_u16(), answer.text().await?));
+    }
+
+    let Some(total) = answer.content_length() else {
+      return Err(CallError::Unreadable {
+        status: status.as_u16(),
+        body: "the answer declares no Content-Length".to_owned(),
+      });
+    };
+    let bytes = answer
+      .bytes_stream()
+      .map(|one| one.map(|piece| piece.to_vec()).map_err(CallError::from));
+
+    Ok((total, bytes))
   }
 
   /// `POST /node-checks`.

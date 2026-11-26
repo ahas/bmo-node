@@ -44,7 +44,7 @@ pub struct Node {
   /// The account a personal node belongs to, its id written out; none on a shared node.
   pub account: Option<String>,
   pub role: Option<String>,
-  /// The callers the node lets make a run on it, joined by `+`; none where it lets none.
+  /// The callers the node lets make a run or a file transfer on it, joined by `+`; none where it lets none.
   pub callers: Option<String>,
   pub position: i64,
   pub state: NodeState,
@@ -69,7 +69,7 @@ impl Node {
     self.role.as_deref().map(|role| role.split('+').collect()).unwrap_or_default()
   }
 
-  /// The callers the node lets make a run on it, by name.
+  /// The callers the node lets make a run or a file transfer on it, by name.
   pub fn callers(&self) -> Vec<&str> {
     self.callers.as_deref().map(|callers| callers.split('+').collect()).unwrap_or_default()
   }
@@ -80,7 +80,7 @@ impl Node {
     accounts.read(self.ownership, self.account.as_deref())
   }
 
-  /// Whether the node lets `caller` make a run on it.
+  /// Whether the node lets `caller` make a run or a file transfer on it.
   pub fn lets(&self, caller: &str) -> bool {
     self.callers().contains(&caller)
   }
@@ -624,8 +624,8 @@ impl Store {
     get_on(&connection, name)?.ok_or_else(|| no_node(name))
   }
 
-  /// The callers a node lets make a run on it, set whole, or cleared by none (docs/nodes.md, 「A node's
-  /// callers」). Only the command writes them.
+  /// The callers a node lets make a run or a file transfer on it, set whole, or cleared by none
+  /// (docs/nodes.md, 「A node's callers」). Only the command writes them.
   pub fn set_callers(&self, name: &str, callers: Option<String>) -> Result<Node> {
     let callers = checked_callers(callers)?;
     let connection = self.connection();

@@ -182,7 +182,7 @@ pub struct Node {
   pub monitored: bool,
   /// The services the node is reserved for, joined by `+`.
   pub role: Option<String>,
-  /// The callers the node lets make a run on it, by name; none where it lets none.
+  /// The callers the node lets make a run or a file transfer on it, by name; none where it lets none.
   pub callers: Vec<String>,
   pub state: NodeState,
   pub tone: Tone,

@@ -6,6 +6,7 @@
 use std::collections::BTreeMap;
 
 use bmo_node_client::events::{EventKind, EventPage, EventsQuery};
+use bmo_node_client::files::{DownloadQuery, Upload, UploadQuery};
 use bmo_node_client::hardware::{
   MemorySamplePage, MemorySamplesQuery, Reading, ReadingPage, ReadingsQuery,
 };
@@ -30,7 +31,8 @@ const DESCRIPTION: &str = "The node service: the machines reachable from here an
   Nodes and hubs, how to reach a node, checking whether each answers, and each machine's hardware readings. \
   A machine carries its readings, tracking and CPU limit; whether a launch may start on it is the caller's \
   own policy, read from these fields. Bodies are JSON with camelCase keys, and times are integers of epoch \
-  milliseconds. Every route needs the service's bearer token, but a run, which needs a caller's own token. Every failure and refusal is a non-2xx status \
+  milliseconds. Every route needs the service's bearer token, but a run and a file transfer, which need a \
+  caller's own token. Every failure and refusal is a non-2xx status \
   with a body of `code` and `error`. A page is `items` and `more`. Any other method and path is answered \
   404 `no-route`.";
 
@@ -117,7 +119,8 @@ pub fn openapi() -> Value {
         "bearer": {
           "type": "http",
           "scheme": "bearer",
-          "description": "The service's token, from the caller's own configuration; on a run, the caller's own token.",
+          "description": "The service's token, from the caller's own configuration; on a run and on a file \
+            transfer, the caller's own token.",
         },
       },
     },
@@ -161,6 +164,13 @@ enum Answer {
   Nothing,
   /// The event stream, or its page to a reader asking for JSON.
   Events(Schema),
+  /// 200 and raw bytes, of the length the answer declares.
+  Bytes,
+}
+
+/// The body or the answer of one whole file, streamed rather than read.
+fn binary() -> Value {
+  json!({ "type": "string", "format": "binary" })
 }
 
 /// One route as the document states it.
@@ -173,6 +183,8 @@ struct Route {
   /// The path and query parameters, as OpenAPI parameter objects.
   parameters: Vec<Value>,
   body: Option<Schema>,
+  /// Whether the body is one whole file's raw bytes rather than JSON.
+  raw_body: bool,
   answer: Answer,
   /// Whether the route can answer 500 `failed`.
   can_fail: bool,
@@ -197,6 +209,7 @@ impl Route {
       summary,
       parameters: Vec::new(),
       body: None,
+      raw_body: false,
       answer,
       can_fail: true,
       refuses: Vec::new(),
@@ -258,6 +271,12 @@ impl Route {
     self
   }
 
+  /// A body of raw bytes rather than JSON: one whole file, streamed as it arrives.
+  fn raw_body(mut self) -> Self {
+    self.raw_body = true;
+    self
+  }
+
   fn never_fails(mut self) -> Self {
     self.can_fail = false;
     self
@@ -273,7 +292,10 @@ impl Route {
   fn operation(self, error: &Schema) -> Value {
     let mut codes = Vec::new();
 
-    if self.body.is_some() || self.parameters.iter().any(|parameter| parameter["in"] == "query") {
+    if self.body.is_some()
+      || self.raw_body
+      || self.parameters.iter().any(|parameter| parameter["in"] == "query")
+    {
       codes.push(ErrorCode::BadRequest);
     }
 
@@ -323,6 +345,13 @@ impl Route {
           },
         }),
       ),
+      Answer::Bytes => (
+        "200",
+        json!({
+          "description": self.summary,
+          "content": { "application/octet-stream": { "schema": binary() } },
+        }),
+      ),
     };
     let mut responses = Map::new();
 
@@ -348,11 +377,14 @@ impl Route {
       operation["parameters"] = self.parameters.into();
     }
 
-    if let Some(body) = self.body {
-      operation["requestBody"] = json!({
-        "required": true,
-        "content": { "application/json": { "schema": body } },
-      });
+    let content = match (self.raw_body, self.body) {
+      (true, _) => Some(json!({ "application/octet-stream": { "schema": binary() } })),
+      (false, Some(body)) => Some(json!({ "application/json": { "schema": body } })),
+      (false, None) => None,
+    };
+
+    if let Some(content) = content {
+      operation["requestBody"] = json!({ "required": true, "content": content });
     }
 
     operation
@@ -444,6 +476,34 @@ fn routes(generator: &mut SchemaGenerator) -> Vec<Route> {
     )
     .at::<String>(generator, "nodeName", NODE)
     .body::<RunAsk>(generator)
+    .refuses(&[NotFound, NotAHubNode, Incomplete, UpstreamFailed]),
+    Route::new(
+      "post",
+      "/nodes/{nodeName}/file",
+      "nodes",
+      "createNodesFile",
+      "Write one file on a hub node through its hub, as the caller its own token names, for the person whose \
+       account is named: the node's callers must name the caller and the node must be that person's own. The \
+       body is the file's raw bytes, streamed on to the hub unread, declared whole by `total` and `checksum`, \
+       which the node's agent verifies before it moves the file into place. Keeps nothing.",
+      read::<Upload>(generator),
+    )
+    .at::<String>(generator, "nodeName", NODE)
+    .query::<UploadQuery>(generator)
+    .raw_body()
+    .refuses(&[NotFound, NotAHubNode, Incomplete, UpstreamFailed]),
+    Route::new(
+      "get",
+      "/nodes/{nodeName}/file",
+      "nodes",
+      "getNodesFile",
+      "Read one file back from a hub node through its hub, as the caller its own token names, for the person \
+       whose account is named: the same judgement as a run. The answer is the file's raw bytes with \
+       `Content-Length` its byte count; a file the node does not hold is refused `not-found` naming its path.",
+      Answer::Bytes,
+    )
+    .at::<String>(generator, "nodeName", NODE)
+    .query::<DownloadQuery>(generator)
     .refuses(&[NotFound, NotAHubNode, Incomplete, UpstreamFailed]),
     Route::new(
       "post",

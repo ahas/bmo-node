@@ -62,7 +62,7 @@ pub struct NodesArgs {
   pub label: Option<String>,
   #[arg(long)]
   pub role: Option<String>,
-  /// The callers the node lets make a run on it, joined by `+`, or `none`.
+  /// The callers the node lets make a run or a file transfer on it, joined by `+`, or `none`.
   #[arg(long)]
   pub callers: Option<String>,
   /// Whose the node is: `shared` or `personal`.

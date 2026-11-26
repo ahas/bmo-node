@@ -65,10 +65,10 @@ pub struct Config {
   /// How long a call under way is given to finish once the service is told to stop, in milliseconds.
   #[serde(default)]
   pub drain_ms: Option<u64>,
-  /// The callers with a token of their own, by name; none makes a run where none is set.
+  /// The callers with a token of their own, by name; none makes a run or moves a file where none is set.
   #[serde(default)]
   pub callers: BTreeMap<String, CallerConfig>,
-  /// Where a node's owners are read for a run; no run is let through where none is set.
+  /// Where a node's owners are read for a run or a file transfer; nothing is let through where none is set.
   #[serde(default)]
   pub owners: Option<OwnersConfig>,
   /// The accounts whose personal nodes the hardware monitor reads; none is monitored where none is set.

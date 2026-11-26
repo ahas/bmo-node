@@ -52,9 +52,9 @@ pub struct Service {
   pub label: String,
   /// The environment variable a process's scope is read from, where one is configured.
   pub scope_variable: Option<String>,
-  /// The callers with a token of their own, which make a run as themselves.
+  /// The callers with a token of their own, which make a run or move a file as themselves.
   pub callers: Vec<Caller>,
-  /// Where a node's owners are read for a run, where the configuration names it.
+  /// Where a node's owners are read for a run or a file transfer, where the configuration names it.
   pub owners: Option<OwnersRead>,
   /// The accounts whose personal nodes the hardware monitor reads.
   pub monitored: MonitoredAccounts,
@@ -124,8 +124,9 @@ impl Service {
     self
   }
 
-  /// The service taking a run from the callers given, their owners read where `owners` names.
-  pub fn with_runs(mut self, callers: Vec<Caller>, owners: Option<OwnersRead>) -> Self {
+  /// The service taking a run and a file transfer from the callers given, their owners read where `owners`
+  /// names.
+  pub fn with_callers(mut self, callers: Vec<Caller>, owners: Option<OwnersRead>) -> Self {
     self.callers = callers;
     self.owners = owners;
     self

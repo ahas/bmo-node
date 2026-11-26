@@ -81,16 +81,19 @@ impl ErrorCode {
   pub fn meaning(self) -> &'static str {
     match self {
       Self::BadRequest => {
-        "the body or the query is not the shape the route takes; the error names what is wrong"
+        "the body or the query is not the shape the route takes, or a file transfer names a path the node \
+         will not take; the error names what is wrong"
       }
       Self::Unauthorized => "the token is missing or wrong",
       Self::Forbidden => {
-        "the token is right but the caller may not do this: a caller's token on a route but a run, the service's \
-         own token on a run, or a run the node does not let the caller make; the error names why"
+        "the token is right but the caller may not do this: a caller's token on a route but a run or a file \
+         transfer, the service's own token on either of those two, or a run or a file transfer the node does \
+         not let the caller make; the error names why"
       }
       Self::NoRoute => "no route answers this method and path",
       Self::NotFound => {
-        "nothing stands at the key the path names: no node, hub or machine of that name or id"
+        "nothing stands at the key the path names: no node, hub or machine of that name or id; or, on a file \
+         transfer, no file at the path it names on the node"
       }
       Self::Conflict => {
         "the key is taken: a node of that name, or a hub at that address, is already listed"
@@ -103,11 +106,13 @@ impl ErrorCode {
         "a field is out of range, of the other connection type, or names nothing listed; the error names it"
       }
       Self::Incomplete => "the node's row lacks a field its connection type needs",
-      Self::NotAHubNode => "a run names an ssh node, which is reached over its own login",
+      Self::NotAHubNode => {
+        "a run or a file transfer names an ssh node, which is reached over its own login"
+      }
       Self::Failed => "the service failed; the error is the failure as a sentence",
       Self::UpstreamFailed => {
-        "what a run needed did not answer: the node's hub, its agent, or the owners' read; the error names which \
-         and why"
+        "what a run or a file transfer needed did not answer: the node's hub, its agent, or the owners' read; \
+         the error names which and why"
       }
     }
   }

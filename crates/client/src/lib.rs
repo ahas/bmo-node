@@ -6,6 +6,7 @@ mod call;
 mod error;
 pub mod events;
 mod fields;
+pub mod files;
 pub mod hardware;
 pub mod machines;
 pub mod nodes;

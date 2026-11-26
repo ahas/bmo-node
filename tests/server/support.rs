@@ -110,9 +110,9 @@ pub struct Stand {
   pub ssh_gated: bool,
   /// How long the calls under way are given once the service is stopped.
   pub drain: Duration,
-  /// The callers with a token of their own, which make a run.
+  /// The callers with a token of their own, which make a run or move a file.
   pub callers: Vec<Caller>,
-  /// Where a node's owners are read for a run.
+  /// Where a node's owners are read for a run or a file transfer.
   pub owners: Option<OwnersRead>,
   /// The accounts whose personal nodes the hardware monitor reads.
   pub monitored: MonitoredAccounts,
@@ -140,7 +140,7 @@ impl Stand {
     let store = Arc::new(Store::open_in(&data).unwrap());
     let mut service = Service::new(store, TOKEN, data, Some("Lab machine".into()))
       .with_scope_variable(Some(SCOPE.into()))
-      .with_runs(self.callers, self.owners)
+      .with_callers(self.callers, self.owners)
       .with_monitored(self.monitored);
     let ssh = dir.path().join("ssh");
 
@@ -268,6 +268,12 @@ pub fn holds_to_contract(method: &Method, path: &str, status: StatusCode, body: 
   assert!(response.is_object(), "{method} {template} states no {status} answer: {body}");
 
   let Some(schema) = response["content"]["application/json"].get("schema") else {
+    // A route that answers one whole file's raw bytes has no JSON body to hold to; its own test reads the
+    // bytes and the length the answer declares.
+    if response["content"]["application/octet-stream"].is_object() {
+      return;
+    }
+
     assert_eq!(body, &json!(""), "{method} {template} answers {status} with no body");
     return;
   };

@@ -19,7 +19,7 @@
             }
           }
         },
-        "description": "`bad-request`: the body or the query is not the shape the route takes; the error names what is wrong"
+        "description": "`bad-request`: the body or the query is not the shape the route takes, or a file transfer names a path the node will not take; the error names what is wrong"
       },
       "Conflict": {
         "content": {
@@ -49,7 +49,7 @@
             }
           }
         },
-        "description": "`forbidden`: the token is right but the caller may not do this: a caller's token on a route but a run, the service's own token on a run, or a run the node does not let the caller make; the error names why"
+        "description": "`forbidden`: the token is right but the caller may not do this: a caller's token on a route but a run or a file transfer, the service's own token on either of those two, or a run or a file transfer the node does not let the caller make; the error names why"
       },
       "Gone": {
         "content": {
@@ -99,7 +99,7 @@
             }
           }
         },
-        "description": "`not-a-hub-node`: a run names an ssh node, which is reached over its own login"
+        "description": "`not-a-hub-node`: a run or a file transfer names an ssh node, which is reached over its own login"
       },
       "NotFound": {
         "content": {
@@ -109,7 +109,7 @@
             }
           }
         },
-        "description": "`not-found`: nothing stands at the key the path names: no node, hub or machine of that name or id"
+        "description": "`not-found`: nothing stands at the key the path names: no node, hub or machine of that name or id; or, on a file transfer, no file at the path it names on the node"
       },
       "Unauthorized": {
         "content": {
@@ -129,7 +129,7 @@
             }
           }
         },
-        "description": "`upstream-failed`: what a run needed did not answer: the node's hub, its agent, or the owners' read; the error names which and why"
+        "description": "`upstream-failed`: what a run or a file transfer needed did not answer: the node's hub, its agent, or the owners' read; the error names which and why"
       }
     },
     "schemas": {
@@ -1585,7 +1585,7 @@
             ]
           },
           "callers": {
-            "description": "The callers the node lets make a run on it, by name; none where it lets none.",
+            "description": "The callers the node lets make a run or a file transfer on it, by name; none where it lets none.",
             "items": {
               "type": "string"
             },
@@ -2526,6 +2526,36 @@
         ],
         "type": "object"
       },
+      "Upload": {
+        "description": "A file an upload wrote on the node, as the node's hub's agent acknowledged it: written only once its\nbytes matched what the query declared.",
+        "properties": {
+          "checksum": {
+            "description": "Its sha256, in lowercase hex.",
+            "type": "string"
+          },
+          "node": {
+            "description": "The node it was written on.",
+            "type": "string"
+          },
+          "path": {
+            "description": "The path it was written at.",
+            "type": "string"
+          },
+          "total": {
+            "description": "Its byte count.",
+            "format": "uint64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "node",
+          "path",
+          "total",
+          "checksum"
+        ],
+        "type": "object"
+      },
       "VolumeView": {
         "description": "One mounted volume.",
         "properties": {
@@ -2579,14 +2609,14 @@
     },
     "securitySchemes": {
       "bearer": {
-        "description": "The service's token, from the caller's own configuration; on a run, the caller's own token.",
+        "description": "The service's token, from the caller's own configuration; on a run and on a file transfer, the caller's own token.",
         "scheme": "bearer",
         "type": "http"
       }
     }
   },
   "info": {
-    "description": "The node service: the machines reachable from here and what is known of them. Nodes and hubs, how to reach a node, checking whether each answers, and each machine's hardware readings. A machine carries its readings, tracking and CPU limit; whether a launch may start on it is the caller's own policy, read from these fields. Bodies are JSON with camelCase keys, and times are integers of epoch milliseconds. Every route needs the service's bearer token, but a run, which needs a caller's own token. Every failure and refusal is a non-2xx status with a body of `code` and `error`. A page is `items` and `more`. Any other method and path is answered 404 `no-route`.",
+    "description": "The node service: the machines reachable from here and what is known of them. Nodes and hubs, how to reach a node, checking whether each answers, and each machine's hardware readings. A machine carries its readings, tracking and CPU limit; whether a launch may start on it is the caller's own policy, read from these fields. Bodies are JSON with camelCase keys, and times are integers of epoch milliseconds. Every route needs the service's bearer token, but a run and a file transfer, which need a caller's own token. Every failure and refusal is a non-2xx status with a body of `code` and `error`. A page is `items` and `more`. Any other method and path is answered 404 `no-route`.",
     "title": "bmo-node",
     "version": "0.1.0-rev.2"
   },
@@ -3417,6 +3447,192 @@
         ]
       }
     },
+    "/nodes/{nodeName}/file": {
+      "get": {
+        "operationId": "getNodesFile",
+        "parameters": [
+          {
+            "description": "The node's name.",
+            "in": "path",
+            "name": "nodeName",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The person whose node it must be, as the account's id written out.",
+            "in": "query",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The whole file's path on the node.",
+            "in": "query",
+            "name": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Read one file back from a hub node through its hub, as the caller its own token names, for the person whose account is named: the same judgement as a run. The answer is the file's raw bytes with `Content-Length` its byte count; a file the node does not hold is refused `not-found` naming its path."
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "- `not-a-hub-node`: a run or a file transfer names an ssh node, which is reached over its own login\n- `incomplete`: the node's row lacks a field its connection type needs"
+          },
+          "500": {
+            "$ref": "#/components/responses/Failed"
+          },
+          "502": {
+            "$ref": "#/components/responses/UpstreamFailed"
+          }
+        },
+        "summary": "Read one file back from a hub node through its hub, as the caller its own token names, for the person whose account is named: the same judgement as a run. The answer is the file's raw bytes with `Content-Length` its byte count; a file the node does not hold is refused `not-found` naming its path.",
+        "tags": [
+          "nodes"
+        ]
+      },
+      "post": {
+        "operationId": "createNodesFile",
+        "parameters": [
+          {
+            "description": "The node's name.",
+            "in": "path",
+            "name": "nodeName",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The person whose node it must be, as the account's id written out.",
+            "in": "query",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The body's sha256, in lowercase hex.",
+            "in": "query",
+            "name": "checksum",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The whole file's path on the node.",
+            "in": "query",
+            "name": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The body's byte count.",
+            "in": "query",
+            "name": "total",
+            "required": true,
+            "schema": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "format": "binary",
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Upload"
+                }
+              }
+            },
+            "description": "Write one file on a hub node through its hub, as the caller its own token names, for the person whose account is named: the node's callers must name the caller and the node must be that person's own. The body is the file's raw bytes, streamed on to the hub unread, declared whole by `total` and `checksum`, which the node's agent verifies before it moves the file into place. Keeps nothing."
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "- `not-a-hub-node`: a run or a file transfer names an ssh node, which is reached over its own login\n- `incomplete`: the node's row lacks a field its connection type needs"
+          },
+          "500": {
+            "$ref": "#/components/responses/Failed"
+          },
+          "502": {
+            "$ref": "#/components/responses/UpstreamFailed"
+          }
+        },
+        "summary": "Write one file on a hub node through its hub, as the caller its own token names, for the person whose account is named: the node's callers must name the caller and the node must be that person's own. The body is the file's raw bytes, streamed on to the hub unread, declared whole by `total` and `checksum`, which the node's agent verifies before it moves the file into place. Keeps nothing.",
+        "tags": [
+          "nodes"
+        ]
+      }
+    },
     "/nodes/{nodeName}/runs": {
       "post": {
         "operationId": "createNodesRuns",
@@ -3472,7 +3688,7 @@
                 }
               }
             },
-            "description": "- `not-a-hub-node`: a run names an ssh node, which is reached over its own login\n- `incomplete`: the node's row lacks a field its connection type needs"
+            "description": "- `not-a-hub-node`: a run or a file transfer names an ssh node, which is reached over its own login\n- `incomplete`: the node's row lacks a field its connection type needs"
           },
           "500": {
             "$ref": "#/components/responses/Failed"

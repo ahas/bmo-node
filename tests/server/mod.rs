@@ -1,9 +1,12 @@
 //! The node service's routes asked over HTTP, each answer held to the committed OpenAPI document: the
 //! nodes, the node checks and the targets, the hubs, the machines and their readings, the event stream and
-//! the health; the configuration's callers for personal nodes; the stop that drains them, in the process and as the process; the harness plugin's MCP server over them; and the pass, the
+//! the health; the runs and file transfers a caller makes as itself; the configuration's callers for
+//! personal nodes; the stop that drains them, in the process and as the process; the harness plugin's MCP
+//! server over them; and the pass, the
 //! names and the reading taken once that stand behind them.
 
 mod config;
+mod files;
 mod hubs;
 mod machines;
 mod mcp;

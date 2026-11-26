@@ -7,9 +7,10 @@ anything here changes this document in the same commit.
 The service is an upstream unit (bmo-chat's `docs/conventions.md`, 「Upstream and downstream」): a harness
 can take it as its first entry point through its MCP server, with no other unit running. Routes are
 grouped by the resource they act on. The service's own token names no caller: any caller holding it calls
-any route but a run, and whether a launch may start on a machine is the caller's own policy, read from the
-fields below. A run is the one route a caller calls as itself, with a token of its own the deployment's
-configuration names (「Runs」, 「Configuration」); no name of a caller is written in the service.
+any route but a run or a file transfer, and whether a launch may start on a machine is the caller's own
+policy, read from the fields below. A run and a file transfer are the routes a caller calls as itself, with a
+token of its own the deployment's configuration names (「Runs」, 「File transfer」,
+「Configuration」); no name of a caller is written in the service.
 
 ## Wire format
 
@@ -19,7 +20,7 @@ and refusal a non-2xx status with a body of `code` and `error`, and lists as a p
 What the service adds to it:
 
 - **Every route needs `Authorization: Bearer <token>`,** `GET /health` among them: the configured token on
-  every route but a run, and a caller's own token on a run and on no other route.
+  every route but a run or a file transfer, and a caller's own token on those two routes and on no other.
 - **A field written with a question mark** may be null or left out of an answer, and may be left out of a
   request.
 - **A figure is a number in the unit its name says** (`celsius`, `watts`, `mhz`, `usedGb`, `megabytes`,
@@ -35,19 +36,19 @@ What the service adds to it:
 
 | Status | Code | When |
 |---|---|---|
-| 400 | `bad-request` | the body or the query is not the shape the route takes; the error names what is wrong |
+| 400 | `bad-request` | the body or the query is not the shape the route takes, or a file transfer names a path the node will not take; the error names what is wrong |
 | 401 | `unauthorized` | the token is missing or wrong |
-| 403 | `forbidden` | the token is right but the caller may not do this: a caller's token on a route but a run, the service's own token on a run, or a run the node does not let the caller make; the error names why |
+| 403 | `forbidden` | the token is right but the caller may not do this: a caller's token on a route but a run or a file transfer, the service's own token on either of those two, or a run or a file transfer the node does not let the caller make; the error names why |
 | 404 | `no-route` | no route answers this method and path |
-| 404 | `not-found` | nothing stands at the key the path names: no node, hub or machine of that name or id |
+| 404 | `not-found` | nothing stands at the key the path names: no node, hub or machine of that name or id; or, on a file transfer, no file at the path it names on the node |
 | 409 | `conflict` | the key is taken: a node of that name, or a hub at that address, is already listed |
 | 410 | `gone` | an event stream resumed from before the window the service keeps |
 | 422 | `name-rule` | a node's name is not lowercase letters, digits and hyphens of at most 32 characters |
 | 422 | `bad-field` | a field is out of range, of the other connection type, or names nothing listed; the error names it |
 | 422 | `incomplete` | the node's row lacks a field its connection type needs |
-| 422 | `not-a-hub-node` | a run names an ssh node, which is reached over its own login |
+| 422 | `not-a-hub-node` | a run or a file transfer names an ssh node, which is reached over its own login |
 | 500 | `failed` | the service failed; the error is the failure as a sentence |
-| 502 | `upstream-failed` | what a run needed did not answer: the node's hub, its agent, or the owners' read; the error names which and why |
+| 502 | `upstream-failed` | what a run or a file transfer needed did not answer: the node's hub, its agent, or the owners' read; the error names which and why |
 
 ## The clients and the harness plugin
 
@@ -89,7 +90,8 @@ its own.
   which runs one command on a hub node through its hub for a caller whose account owns the node, or that holds
   the administrator's grant, handing it the caller's saved secrets by name where the call names them, and answers
   its exit code and output. It is not among the plugin's tools, which know
-  no caller, and neither is a run (「Runs」), which a caller makes as itself with a token of its own.
+  no caller, and neither is a run (「Runs」) or a file transfer (「File transfer」), each of which a caller
+  makes as itself with a token of its own.
 - This document is the canonical statement: where the document, the code and the clients disagree, the
   code is repaired and both clients generated again.
 
@@ -104,6 +106,8 @@ its own.
 | `DELETE /nodes/{nodeName}` | query `leave?`, `true` to send a hub node's agent a leave first | 204; a leave the hub refuses or cannot be sent is `conflict` with the hub's reason, and nothing is removed |
 | `GET /nodes/{nodeName}/target` | | how to reach the node (below) |
 | `POST /nodes/{nodeName}/runs` | `account`, `command`, `shell?`, `cwd?`, `env?`, `distro?` | one command run on the node for the caller, answered with its end (「Runs」) |
+| `POST /nodes/{nodeName}/file` | query `account`, `path`, `total`, `checksum`; the body the file's raw bytes | the file written on the node through its hub (「File transfer」) |
+| `GET /nodes/{nodeName}/file` | query `account`, `path` | the file's raw bytes, streamed from the node through its hub (「File transfer」) |
 
 A node holds no credential, only where one is kept:
 
@@ -118,7 +122,7 @@ A node holds no credential, only where one is kept:
 | `account?` | the account a personal node belongs to, its id as a decimal number written out; none on a shared node |
 | `monitored` | whether the hardware monitor reads the node: a shared node, or a personal node of a monitored account (`docs/hardware.md`, 「Which machines」) |
 | `role?` | the services the node is reserved for, joined by `+` (`docs/nodes.md`, 「A node's role」) |
-| `callers` | the callers the node lets make a run on it, by name, none where it lets none (`docs/nodes.md`, 「A node's callers」) |
+| `callers` | the callers the node lets make a run or a file transfer on it, by name, none where it lets none (`docs/nodes.md`, 「A node's callers」) |
 | `state` | the last check's state: `connected`, `disconnected`, `auth`, `hostkey`, `unreachable`, `error` or `unknown` (`docs/nodes.md`, 「The states」) |
 | `tone` | `good`, `bad` or `unknown`, as the policy's node states give it; `unknown` for a personal node that is `disconnected` or `unreachable` (`docs/nodes.md`, 「The states」) |
 | `detail?`, `checkedAt?`, `connectedAt?` | the last check's line, when it was made, and when the node was last found connected |
@@ -179,6 +183,46 @@ answered with the command's end. It is a computation that keeps nothing: the ser
 - **A run is held to the hub's own ceilings** on its time and its output, and the service adds none: the call
   waits for the hub's stream to end. A caller whose work runs longer starts it on the node as a unit of its own
   and reads it back with later runs.
+
+### File transfer
+
+A file transfer moves one file's bytes to or from a hub node through the node's hub, for a person whose own
+node it is. It is the hub's own transfer relayed: the service holds no file, no part of one, and no record of
+a transfer.
+
+- **The caller is named by its own token,** as on a run. The service's own token names no caller and is
+  refused here `forbidden`; a token neither is `unauthorized`.
+- **The query:** `account`, the person whose node it must be, as the account's id written out; `path`, the
+  whole file's path on the node; and, on an upload, `total`, the body's byte count, and `checksum`, its sha256
+  in lowercase hex.
+- **The body of an upload** is the file's raw bytes as `application/octet-stream`, read as they arrive and
+  handed straight on, so a file of any size goes through without standing in the service.
+- **What is checked, in this order,** before the hub is asked anything, being the list a run checks and the
+  same refusals (「Runs」):
+  1. a node no row holds is `not-found`;
+  2. a node whose `callers` do not name the caller is `forbidden`, the error naming the node and the caller;
+  3. an ssh node is `not-a-hub-node`: it is reached over its own login with its target's `sshArgs`;
+  4. the node's owners are read (`docs/nodes.md`, 「A person's node」), and a node whose owners do not hold
+     `account` is `forbidden`, the error naming the node, its owners or that it has none, and the account. An
+     owners' read that is not configured lets no transfer through and is `forbidden` saying so; one that does
+     not answer, or answers something that does not read, is `upstream-failed`.
+- **The hub is asked its own transfer,** with the control token read out of the node's hub's token file for
+  that one request: the hub's `POST /upload` for an upload, and its `POST /download` for a download, each
+  aimed at the node's agent. The agent writes an upload at a temporary path and moves it into place only once
+  the bytes it assembled match the declared `total` and `checksum`, and it ends a download only once it has
+  sent them whole; the service adds no check of its own and keeps nothing of either.
+- **An upload's answer** is 200 and `node`, `path`, `total` and `checksum`, once the hub's agent has
+  acknowledged the verified write.
+- **A download's answer** is 200 `application/octet-stream` with `Content-Length` the file's byte count and
+  its bytes streamed, the answer ending when the hub says the file is whole.
+- **What the hub or its agent refuses before any byte is written or read is answered as a refusal,** the error
+  saying what was met: a path the node will not take (a folder that is not there, or a place it may not write
+  or read) is `bad-request` naming the node and the path; nothing standing at the path a download named is
+  `not-found` naming the node and the path; the hub refusing the token, the agent not attached, the hub not
+  answering, the token file unreadable, bytes that did not verify and a transfer the hub gave up are
+  `upstream-failed` naming which and why.
+- **A transfer that breaks after its first byte cannot change its answer.** The caller sees the body end
+  short of the length it declared, and the service holds nothing of what came.
 
 ## Node checks
 
@@ -339,15 +383,15 @@ each release links to it as `node.toml`; the unit does not start where the data 
 | this machine's name | `machine_label` | how this machine is shown, where none is set the system's host name |
 | scope variable | `scope_variable` | the environment variable a process's scope is read from (`docs/machine.md`, 「What is read」); where none is set, no process has a scope |
 | drain | `drain_ms` | how long a call under way is given to finish once the service is told to stop, in milliseconds (「Stopping」); where none is set, thirty seconds |
-| callers | `[callers.<name>]` | one table for each caller with a token of its own, keyed by its name, lowercase letters, digits and hyphens of at most 32: `token_file`, the file holding the caller's bearer token, its surrounding whitespace dropped; and `personal_nodes`, `true` where every personal hub node is written with the caller as it joins the list (`docs/nodes.md`, 「A node's callers」), `false` where not given; where none is set, no caller makes a run |
+| callers | `[callers.<name>]` | one table for each caller with a token of its own, keyed by its name, lowercase letters, digits and hyphens of at most 32: `token_file`, the file holding the caller's bearer token, its surrounding whitespace dropped; and `personal_nodes`, `true` where every personal hub node is written with the caller as it joins the list (`docs/nodes.md`, 「A node's callers」), `false` where not given; where none is set, no caller makes a run or moves a file |
 | monitored accounts | `monitored_accounts` | the accounts whose personal nodes the hardware monitor reads, each an id written out as a decimal number (`docs/hardware.md`, 「Which machines」); where none is set, no personal node is monitored, and the service does not start where one is not an account's id |
-| owners' read | `[owners]` | where a node's owners are read for a run (`docs/nodes.md`, 「A person's node」): `url`, an address in which `{nodeName}` stands for the node's name and `{caller}` for the caller's, each written escaped; and `token_file`, the file holding the bearer token presented there; where none is set, no run is let through |
+| owners' read | `[owners]` | where a node's owners are read for a run or a file transfer (`docs/nodes.md`, 「A person's node」): `url`, an address in which `{nodeName}` stands for the node's name and `{caller}` for the caller's, each written escaped; and `token_file`, the file holding the bearer token presented there; where none is set, no run and no file transfer is let through |
 
 - **The callers' tokens are read once, at start,** and the service does not start where a file cannot be read,
   holds no token, or holds the service's own token or another caller's. A changed token is taken up by a
   restart.
-- **The owners' read's token is read for each run,** so a token changed where it is kept is taken up at once,
-  and it goes nowhere else: not into an answer, an event or a log line.
+- **The owners' read's token is read for each run and each file transfer,** so a token changed where it is
+  kept is taken up at once, and it goes nowhere else: not into an answer, an event or a log line.
 - A path in either may start `~/`, the home of the account the service runs as.
 
 ## Calls the node service makes
@@ -357,9 +401,11 @@ gives:
 
 - **an ssh node** through OpenSSH, with the policy's options (`docs/nodes.md`);
 - **a hub,** an outside program an agent attaches to, over its HTTP control address with the token read
-  from the hub's token file for each request: `GET /status` for the agents attached and departed, and
-  `POST /exec?agent=<agent>` to run a command on an agent's machine, a run's among them;
-- **the owners' read,** for a run alone: a `GET` of the address `[owners]` names, with its token, answered by a
+  from the hub's token file for each request: `GET /status` for the agents attached and departed,
+  `POST /exec?agent=<agent>` to run a command on an agent's machine, a run's among them, and
+  `POST /upload?agent=<agent>` and `POST /download?agent=<agent>` to move one file's bytes on it, a file
+  transfer's among them;
+- **the owners' read,** for a run or a file transfer alone: a `GET` of the address `[owners]` names, with its token, answered by a
   JSON object whose `owners` lists the accounts that own the node, each a number or a string, none for a node
   no one owns (`docs/nodes.md`, 「A person's node」). Deployed, it is agency's
   `GET /nodes/{nodeName}/access?agent={caller}` on its control port, with its control token.

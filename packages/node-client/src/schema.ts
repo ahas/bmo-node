@@ -196,6 +196,24 @@ export interface paths {
         patch: operations["changeNode"];
         trace?: never;
     };
+    "/nodes/{nodeName}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one file back from a hub node through its hub, as the caller its own token names, for the person whose account is named: the same judgement as a run. The answer is the file's raw bytes with `Content-Length` its byte count; a file the node does not hold is refused `not-found` naming its path. */
+        get: operations["getNodesFile"];
+        put?: never;
+        /** Write one file on a hub node through its hub, as the caller its own token names, for the person whose account is named: the node's callers must name the caller and the node must be that person's own. The body is the file's raw bytes, streamed on to the hub unread, declared whole by `total` and `checksum`, which the node's agent verifies before it moves the file into place. Keeps nothing. */
+        post: operations["createNodesFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/nodes/{nodeName}/runs": {
         parameters: {
             query?: never;
@@ -669,7 +687,7 @@ export interface components {
             address: string;
             /** @description The name a hub node's hub knows its agent by. */
             agentName: string | null;
-            /** @description The callers the node lets make a run on it, by name; none where it lets none. */
+            /** @description The callers the node lets make a run or a file transfer on it, by name; none where it lets none. */
             callers: string[];
             /**
              * Format: int64
@@ -996,6 +1014,23 @@ export interface components {
             swapMb: number;
             unit: string;
         };
+        /**
+         * @description A file an upload wrote on the node, as the node's hub's agent acknowledged it: written only once its
+         *     bytes matched what the query declared.
+         */
+        Upload: {
+            /** @description Its sha256, in lowercase hex. */
+            checksum: string;
+            /** @description The node it was written on. */
+            node: string;
+            /** @description The path it was written at. */
+            path: string;
+            /**
+             * Format: uint64
+             * @description Its byte count.
+             */
+            total: number;
+        };
         /** @description One mounted volume. */
         VolumeView: {
             /** Format: double */
@@ -1022,7 +1057,7 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
-        /** @description `bad-request`: the body or the query is not the shape the route takes; the error names what is wrong */
+        /** @description `bad-request`: the body or the query is not the shape the route takes, or a file transfer names a path the node will not take; the error names what is wrong */
         BadRequest: {
             headers: {
                 [name: string]: unknown;
@@ -1049,7 +1084,7 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
-        /** @description `forbidden`: the token is right but the caller may not do this: a caller's token on a route but a run, the service's own token on a run, or a run the node does not let the caller make; the error names why */
+        /** @description `forbidden`: the token is right but the caller may not do this: a caller's token on a route but a run or a file transfer, the service's own token on either of those two, or a run or a file transfer the node does not let the caller make; the error names why */
         Forbidden: {
             headers: {
                 [name: string]: unknown;
@@ -1094,7 +1129,7 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
-        /** @description `not-a-hub-node`: a run names an ssh node, which is reached over its own login */
+        /** @description `not-a-hub-node`: a run or a file transfer names an ssh node, which is reached over its own login */
         NotAHubNode: {
             headers: {
                 [name: string]: unknown;
@@ -1103,7 +1138,7 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
-        /** @description `not-found`: nothing stands at the key the path names: no node, hub or machine of that name or id */
+        /** @description `not-found`: nothing stands at the key the path names: no node, hub or machine of that name or id; or, on a file transfer, no file at the path it names on the node */
         NotFound: {
             headers: {
                 [name: string]: unknown;
@@ -1121,7 +1156,7 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
-        /** @description `upstream-failed`: what a run needed did not answer: the node's hub, its agent, or the owners' read; the error names which and why */
+        /** @description `upstream-failed`: what a run or a file transfer needed did not answer: the node's hub, its agent, or the owners' read; the error names which and why */
         UpstreamFailed: {
             headers: {
                 [name: string]: unknown;
@@ -1624,6 +1659,106 @@ export interface operations {
             500: components["responses"]["Failed"];
         };
     };
+    getNodesFile: {
+        parameters: {
+            query: {
+                /** @description The person whose node it must be, as the account's id written out. */
+                account: string;
+                /** @description The whole file's path on the node. */
+                path: string;
+            };
+            header?: never;
+            path: {
+                /** @description The node's name. */
+                nodeName: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Read one file back from a hub node through its hub, as the caller its own token names, for the person whose account is named: the same judgement as a run. The answer is the file's raw bytes with `Content-Length` its byte count; a file the node does not hold is refused `not-found` naming its path. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /**
+             * @description - `not-a-hub-node`: a run or a file transfer names an ssh node, which is reached over its own login
+             *     - `incomplete`: the node's row lacks a field its connection type needs
+             */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["Failed"];
+            502: components["responses"]["UpstreamFailed"];
+        };
+    };
+    createNodesFile: {
+        parameters: {
+            query: {
+                /** @description The person whose node it must be, as the account's id written out. */
+                account: string;
+                /** @description The body's sha256, in lowercase hex. */
+                checksum: string;
+                /** @description The whole file's path on the node. */
+                path: string;
+                /** @description The body's byte count. */
+                total: number;
+            };
+            header?: never;
+            path: {
+                /** @description The node's name. */
+                nodeName: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/octet-stream": string;
+            };
+        };
+        responses: {
+            /** @description Write one file on a hub node through its hub, as the caller its own token names, for the person whose account is named: the node's callers must name the caller and the node must be that person's own. The body is the file's raw bytes, streamed on to the hub unread, declared whole by `total` and `checksum`, which the node's agent verifies before it moves the file into place. Keeps nothing. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Upload"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /**
+             * @description - `not-a-hub-node`: a run or a file transfer names an ssh node, which is reached over its own login
+             *     - `incomplete`: the node's row lacks a field its connection type needs
+             */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["Failed"];
+            502: components["responses"]["UpstreamFailed"];
+        };
+    };
     createNodesRuns: {
         parameters: {
             query?: never;
@@ -1654,7 +1789,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             /**
-             * @description - `not-a-hub-node`: a run names an ssh node, which is reached over its own login
+             * @description - `not-a-hub-node`: a run or a file transfer names an ssh node, which is reached over its own login
              *     - `incomplete`: the node's row lacks a field its connection type needs
              */
             422: {

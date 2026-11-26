@@ -2,7 +2,8 @@
 //! `POST /exec` aimed at the node's own agent, with the control token read out of the hub's token file for
 //! that one request, and the hub's stream read into what the command said and how it ended. The token is
 //! part of no answer and no message. A run and the hosted tool both wait for a command's end here, keeping
-//! the last part of each stream (docs/api.md, 「Runs」; docs/tools.md, 「A call」).
+//! the last part of each stream (docs/api.md, 「Runs」; docs/tools.md, 「A call」). The address and stream
+//! reading a file transfer needs are the same road (`hub_files`, docs/api.md, 「File transfer」).
 
 use std::collections::BTreeMap;
 
@@ -70,12 +71,13 @@ pub struct HubRun {
   id: Option<String>,
 }
 
-fn encoded(value: &str) -> String {
+/// One value as a hub's query parameter takes it: every character other than a letter or a digit escaped.
+pub(crate) fn encoded(value: &str) -> String {
   utf8_percent_encode(value, NON_ALPHANUMERIC).to_string()
 }
 
 /// The JSON an event carries, where it carries any.
-fn data(event: &Sse) -> Value {
+pub(crate) fn data(event: &Sse) -> Value {
   event
     .data
     .as_deref()

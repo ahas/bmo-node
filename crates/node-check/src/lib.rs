@@ -5,6 +5,7 @@
 
 pub mod hub;
 pub mod hub_exec;
+pub mod hub_files;
 pub mod pass;
 pub mod rows;
 pub mod ssh;

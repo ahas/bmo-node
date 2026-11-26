@@ -16,10 +16,11 @@
 - **A session sees the entry where its record holds `room.tools`,** the chat line's capability, so a supervisor
   reaches it, by `bmo use bmo/node_exec` where it is not shown by name. The entry declares no grant of the host's:
   whom it serves is decided per node by the tool itself (「Who may run a command on which node」).
-- **The tool is a session's road; a unit that is not a session makes a run** (`docs/api.md`, 「Runs」). Both
-  aim the hub's exec at the node's agent the same way and answer a command's end in the same shape, while
-  each judges its own caller: the tool a session by its record, a run a caller by its own token, the node's
-  `callers` and the node's owners.
+- **The tool is a session's road; a unit that is not a session makes a run** (`docs/api.md`, 「Runs」) **and
+  moves one file's bytes on the node's file-transfer routes** (`docs/api.md`, 「File transfer」). The tool and
+  a run aim the hub's exec at the node's agent the same way and answer a command's end in the same shape,
+  while each judges its own caller: the tool a session by its record, a run and a file transfer a caller by
+  its own token, the node's `callers` and the node's owners.
 - **The harness plugin carries no such tool.** Its MCP server calls the service with the service's own token and
   knows no caller, so a command on a node is reached through the tool host alone, where the caller's record is
   known.
