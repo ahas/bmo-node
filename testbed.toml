@@ -24,10 +24,11 @@ repository = "bmo-chat"
 # member, every target compiled, through its Cargo verb in the shared build directory, wherever a change marks a
 # crate, and the change check compiles every crate a change marks; a change that marks none has no Rust to judge.
 
-# The TypeScript client: its types as docs/openapi.json generates them now, and its typecheck.
+# The TypeScript client: its types as docs/openapi.json generates them now, and its typecheck. Its check script
+# installs its locked packages first, as a project of its own readies itself, so the suite runs it as it stands.
 [[check.step]]
 id = "node-client"
-command = "bun install --cwd packages/node-client --frozen-lockfile && bun run --cwd packages/node-client check"
+command = "bun run --cwd packages/node-client check"
 
 [build]
 # The service and its command, the node check's own binary, the tunnel door, and the hosted tool's executable.

@@ -59,4 +59,4 @@ instead, and the checks that hold it.
   on a tracked file holding a mail address outside the reserved example domains, a person's home path, a
   telephone number, a token or a private network address (`PERSONAL-DATA.md`).
 - `cargo fmt --all --check` and `cargo clippy --workspace --all-targets -- -D warnings`
-- `bun run check` in `packages/node-client`, after `bun install`
+- `bun run check` in `packages/node-client`, which installs its locked packages first
