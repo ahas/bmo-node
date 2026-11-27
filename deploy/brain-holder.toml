@@ -3,7 +3,7 @@
 held_by = "node"
 
 [[memory]]
-key = "when"
+key = "node.when"
 type = "tip"
 recall_condition = "a command on a person's PC or a hub node"
 text = "Run it only with bmo/node_exec, secrets by their name; a refusal is final."
