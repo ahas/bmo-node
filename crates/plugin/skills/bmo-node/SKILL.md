@@ -1,6 +1,6 @@
 ---
 name: bmo-node
-description: Reach the machines a node service lists, through the bmo-node MCP server. Use before logging into a node over SSH, to learn how it is reached, and before starting heavy work on a machine, to see how loaded it is; also to list the nodes, check whether they answer now, and read a machine's past hardware figures.
+description: How the bmo-node MCP tools list the machines a node service knows, say how each is reached, check whether it answers, and read its load and past hardware figures.
 ---
 
 # bmo-node
@@ -15,10 +15,10 @@ nothing else running.
 Register the server with the harness as a stdio MCP server:
 
 ```
-bmo-node mcp --url http://127.0.0.1:8790
+bmo-node mcp --url <the service's base address>
 ```
 
-The address is the service's base address, where its `/health` route stands. The service's bearer token goes
+The address is the one the deployment names for the service, where its `/health` route stands; never guess one. The service's bearer token goes
 in the `BMO_NODE_TOKEN` environment variable of the server, or `--token`; every route needs it, and a wrong
 one answers every tool with a 401 `unauthorized` error. On the machine the service runs on,
 `bmo-node --config <file> mcp` takes both from the service's own configuration instead.
@@ -38,14 +38,16 @@ one answers every tool with a 401 `unauthorized` error. On the machine the servi
    ```
 
    `sshOptions` are the same options for `sftp` or `scp`, each given after `-o`. `shell` is `posix`, or
-   `powershell` for a Windows login, which answers in PowerShell. For a hub node, the target names the hub's
-   `hubAddress`, the `hubTokenFile` its token is kept in and the `agentName` the hub knows the machine by;
-   no SSH reaches it.
+   `powershell` for a Windows login, which answers in PowerShell. A hub node (`kind` `hub`) is reached by no
+   SSH: run a command on it with the hosted tool `bmo/node_exec` (`bmo use bmo/node_exec --describe` gives its
+   arguments) and in no other way. Its target names the hub and the `agentName` the hub knows the machine by;
+   never read the hub's token file, never ask the hub's routes by hand, and where `bmo/node_exec` refuses, ask
+   your supervisor rather than going around it.
 3. `node_check` with `{ "body": { "nodeNames": ["<name>"] } }` when you need to know whether a node answers
    now rather than as of the last pass; leave `nodeNames` empty to check every node. Each node comes back as
    it stands after its check.
 
-A target never holds a credential, only where one is kept: a key path, or a token file.
+A target never holds a credential, only where one is kept; a credential is never read into a conversation.
 
 ## Before heavy work
 
