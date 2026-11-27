@@ -1,0 +1,9 @@
+# This service's standing line in every agent's brain: when to reach for it. How its tools are called is
+# their manuals', handed with a tool's first call in a session.
+held_by = "node"
+
+[[memory]]
+key = "when"
+type = "tip"
+recall_condition = "a command on a person's PC or a hub node"
+text = "Run it only with bmo/node_exec, secrets by their name; a refusal is final."
