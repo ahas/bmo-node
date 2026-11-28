@@ -10,6 +10,13 @@ command's exit code and its output.
 - A session holding the administrator's grant, `node.admin`, reaches every node.
 - Any other call is refused before the node is reached, and the refusal names the node and its owner.
 
+## How a call answers
+
+A refused call comes back marked `isError` true with a sentence that names what is wrong: a node you do not own, a
+shell the host does not run, a secret no file holds, an approval still owed. Correct that one thing and call
+again. A refusal is the answer: never reach the node another way, through the hub's own route, its console or a
+script that reads its token.
+
 ## Arguments
 
 - `node`: the node's name, as the node service lists it.
@@ -71,3 +78,23 @@ An install, a stop of a process or a service, a restart or a shutdown runs only 
 call puts the question to him and is refused naming it, `question #N`. Tell him what you are about to run and
 why, wait for his answer, then call again with the same node and command and `approval: N`. Only his own choice
 of "Run it" on that very command runs it.
+
+## Host work and the machines
+
+- Host work no repository's service owns is your own hands' work: a package tied to no service, an OS setting, a
+  network drive or a mount, a backup, the router, the machine itself. Do it yourself, behind your reply where it
+  takes longer than moments, and never file it as an item. It is the owner's work alone to order.
+- What a repository's service stands on is that repository's: its public name, DNS record, proxy host, port,
+  firewall opening and unit. File it as an item of that repository and let its job do it, even on these machines.
+  Work that needs both is split the same way.
+- Answer a question about a machine from what you looked at: run the command, read what came back, then answer.
+  Never answer that you cannot see it, and never hand the looking back to the owner. A unit's port refusing a call
+  is one thing that did not answer, not the end of the look.
+- How each machine is reached (its names, its login, where a proxy host's halves are kept, how the router is read
+  and written, where a DNS credential lives) is written in the owner's infrastructure repository, its CLAUDE.md
+  first and then its docs. Read it when such work comes up, and work from it, never from memory.
+- A cause not yet established is looked for first in the logs of that moment; where none was kept, strengthen the
+  logging so the next one can be read.
+- A machine's hardware is read from the machine or its document, never from memory.
+- Never put a key, a token or a password in an answer or a note: the file that holds it is enough to use it.
+- What these machines turn up is the owner's: another member asking about them is told nothing.
