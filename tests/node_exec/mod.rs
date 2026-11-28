@@ -1,6 +1,7 @@
 //! The hosted tool `node-exec` (docs/tools.md): who may run a command on which node, and a command run on a
 //! hub node through its hub, each against a stand-in of agency, the node service and the hub on one port.
 
+mod approval;
 mod call;
 mod caller;
 mod restart;
@@ -35,6 +36,9 @@ pub const HUB_TOKEN: &str = "hub-secret-token";
 /// One exec the hub was asked: its agent, its bearer and its body.
 pub type Exec = (Option<String>, Option<String>, Value);
 
+/// One question the job service was asked, and the replies it holds.
+pub type Asked = (Value, Vec<Value>);
+
 /// What the stand-in holds and what it was asked.
 #[derive(Clone, Default)]
 pub struct World {
@@ -50,6 +54,34 @@ pub struct World {
   pub frames: Arc<Mutex<Vec<String>>>,
   /// Every exec the hub was asked.
   pub execs: Arc<Mutex<Vec<Exec>>>,
+  /// The job service's questions as asked, by number from 1, and the replies each holds.
+  pub questions: Arc<Mutex<Vec<Asked>>>,
+}
+
+async fn ask(State(world): State<World>, axum::Json(body): axum::Json<Value>) -> Response {
+  let mut questions = world.questions.lock().unwrap();
+  let id = questions.len() as i64 + 1;
+  let mut question = body.clone();
+
+  question["id"] = json!(id);
+  question["state"] = json!("open");
+  questions.push((question.clone(), vec![]));
+
+  (StatusCode::CREATED, axum::Json(question)).into_response()
+}
+
+async fn question(State(world): State<World>, Path(id): Path<usize>) -> Response {
+  match world.questions.lock().unwrap().get(id - 1) {
+    Some((question, _)) => axum::Json(question.clone()).into_response(),
+    None => StatusCode::NOT_FOUND.into_response(),
+  }
+}
+
+async fn replies(State(world): State<World>, Path(id): Path<usize>) -> Response {
+  match world.questions.lock().unwrap().get(id - 1) {
+    Some((_, replies)) => axum::Json(json!({ "items": replies, "more": false })).into_response(),
+    None => StatusCode::NOT_FOUND.into_response(),
+  }
 }
 
 pub fn frame(event: &str, data: Value) -> String {
@@ -227,6 +259,9 @@ pub async fn serve_at(world: &World, addr: SocketAddr) -> (SocketAddr, JoinHandl
     .route("/person-nodes", get(person_nodes))
     .route("/nodes/{name}/target", get(target))
     .route("/exec", post(exec))
+    .route("/questions", post(ask))
+    .route("/questions/{id}", get(question))
+    .route("/questions/{id}/replies", get(replies))
     .with_state(world.clone());
   let listener = bind(addr).await;
   let addr = listener.local_addr().unwrap();
@@ -250,6 +285,7 @@ pub async fn stood() -> Stood {
     nodes: NodeClient::new(&url, "node-token"),
     agency: Ok(Agency::new(&url, "agency-token")),
     secrets: Ok(env.clone()),
+    questions: Ok(node_exec_tool::approval::Questions::new(&url, "job-token")),
     machine: Machine::new("ssh", home.path()),
   };
 

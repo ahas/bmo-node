@@ -3,6 +3,7 @@
 //! and answers the command's exit code and output. One call is handed on standard input and answered on
 //! standard output (bmo-pocket's `docs/api.md`, 「The call protocol」).
 
+pub mod approval;
 pub mod caller;
 pub mod script;
 pub mod secrets;
@@ -59,6 +60,10 @@ pub struct Ask {
   pub distro: Option<String>,
   #[serde(default)]
   pub secrets: Vec<Named>,
+  /// The question that approved a command that changes the machine (docs/tools.md, 「A command that changes a
+  /// machine」).
+  #[serde(default)]
+  pub approval: Option<i64>,
 }
 
 impl Ask {
@@ -158,6 +163,7 @@ pub struct Ground {
   pub nodes: Result<NodeClient, String>,
   pub agency: Result<Agency, String>,
   pub secrets: Result<PathBuf, String>,
+  pub questions: Result<approval::Questions, String>,
   pub machine: Machine,
 }
 
@@ -171,6 +177,7 @@ impl Ground {
       nodes,
       agency: Agency::read(data_root),
       secrets: Ok(data_root.join("env")),
+      questions: approval::Questions::read(data_root),
       machine: Machine::local(),
     }
   }
@@ -182,7 +189,8 @@ impl Ground {
     Self {
       nodes: Err(why.clone()),
       agency: Err(why.clone()),
-      secrets: Err(why),
+      secrets: Err(why.clone()),
+      questions: Err(why),
       machine: Machine::local(),
     }
   }
@@ -243,6 +251,41 @@ fn handing(ask: &Ask, caller: &Caller, ground: &Ground) -> Result<Handing, Strin
   Handing::of(&secrets, &ask.env)
 }
 
+/// Why a command that changes the machine may not run yet, or nothing: it runs only on the owner's choice to run
+/// it, asked as a question the first time, and once the call names that question answered so (docs/tools.md,
+/// 「A command that changes a machine」).
+async fn unapproved(ask: &Ask, node: &str, asker: &str, ground: &Ground) -> Option<String> {
+  let word = approval::changes_machine(&ask.command)?;
+  let questions = match &ground.questions {
+    Ok(questions) => questions,
+    Err(why) => {
+      return Some(format!(
+        "This command changes the machine ({word}), so it runs only on the owner's approval, which cannot be asked: {why}"
+      ));
+    }
+  };
+
+  match ask.approval {
+    None => Some(match questions.ask(asker, node, &ask.command).await {
+      Ok(id) => format!(
+        "This command changes the machine ({word}), so it runs only on the owner's approval: question #{id} asks him now. Once he chose \"{}\", call again with the same node and command and approval {id}.",
+        approval::RUN
+      ),
+      Err(why) => format!(
+        "This command changes the machine ({word}), so it runs only on the owner's approval, which could not be asked: {why}"
+      ),
+    }),
+    Some(id) => match questions.approves(id, node, &ask.command).await {
+      Ok(true) => None,
+      Ok(false) => Some(format!(
+        "Question #{id} has not approved this command on {node}: it runs once the owner himself answered that very question \"{}\".",
+        approval::RUN
+      )),
+      Err(why) => Some(format!("Question #{id} could not be read: {why}")),
+    },
+  }
+}
+
 /// The entry asked for, answered over `ground`: the node an account names read first, then the caller
 /// judged, then the secrets it names read, then the node read, then the command run on it, and every value
 /// handed masked in what the answer says.
@@ -265,6 +308,10 @@ pub async fn answer(handed: &Handed, ground: &Ground) -> Answer {
     Ok(caller) => caller,
     Err(why) => return Answer::refusal(why),
   };
+  if let Some(refused) = unapproved(&ask, &node, handed.session.agent(), ground).await {
+    return Answer::refusal(refused);
+  }
+
   let handing = match handing(&ask, &caller, ground) {
     Ok(handing) => handing,
     Err(why) => return Answer::refusal(why),

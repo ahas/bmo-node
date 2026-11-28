@@ -25,6 +25,25 @@
   knows no caller, so a command on a node is reached through the tool host alone, where the caller's record is
   known.
 
+## A command that changes a machine
+
+- **An install, a stop of a process or a service, a restart or a shutdown runs only on the owner's approval.** A
+  command whose text holds the word of a package manager (`apt`, `apt-get`, `dnf`, `yum`, `pacman`, `snap`,
+  `brew`, `winget`, `choco`, `scoop`, `msiexec`, `dpkg`), of a stop (`kill`, `pkill`, `killall`, `taskkill`,
+  `Stop-Process`, `Stop-Service`, `Restart-Service`, `systemctl`, `sc.exe`) or of a restart or shutdown
+  (`Restart-Computer`, `Stop-Computer`, `shutdown`, `reboot`, `poweroff`) is read as one, in whatever shell it is
+  given: the tool runs PowerShell and bash alike, and no reading of a command line serves both, so the words are
+  looked for in its text.
+- **The first call asks.** It puts a question to the owner through the job service (`POST /questions` at the
+  address and with the token agency's `env/agency.env` names, `BMO_JOB_URL` and `BMO_JOB_TOKEN`), asked in the
+  caller's name, its words the node and the command, its choices "Run it" and "Do not run it", the second its
+  recommendation; and it refuses the call naming the question.
+- **A call naming that question as `approval` runs the command** where the question asks of that very node and
+  command and stands answered by a person's settling reply choosing "Run it". A question still open, one settled
+  by a supervisor or by its recommendation as its due time passed, one answered otherwise, and one asking of
+  another command each approve nothing, and the call is refused saying so.
+- **Where the job service cannot be asked,** the command is refused saying why: it never runs unasked.
+
 ## A call
 
 - **The arguments:** the node, named either by `node`, its name, or by `account`, the account whose node it is,

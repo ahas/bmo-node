@@ -64,3 +64,10 @@ own and read it back with later commands.
     bmo use bmo/node_exec --json '{"node": "my-pc", "secrets": ["site-login"], "command": "./sign-in.ps1 -User $env:USERNAME"}'
     bmo use bmo/node_exec --json '{"node": "my-pc", "secrets": [{"name": "site-login", "prefix": "SITE_"}], "shell": "linux", "command": "python3 sign_in.py"}'
     bmo use bmo/node_exec --json '{"node": "my-pc", "shell": "linux", "secrets": ["deploy-key"], "command": "ssh -i \"$BMO_SECRET_DEPLOY_KEY_FILE\" host true"}'
+
+## A command that changes the machine
+
+An install, a stop of a process or a service, a restart or a shutdown runs only on the owner's approval. The first
+call puts the question to him and is refused naming it, `question #N`. Tell him what you are about to run and
+why, wait for his answer, then call again with the same node and command and `approval: N`. Only his own choice
+of "Run it" on that very command runs it.

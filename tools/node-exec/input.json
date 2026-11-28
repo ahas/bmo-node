@@ -28,6 +28,10 @@
       "additionalProperties": { "type": "string" },
       "description": "Variables laid over the agent's environment for this command."
     },
+    "approval": {
+      "type": "integer",
+      "description": "The question that approved a command that changes the machine (an install, a stop of a process or service, a restart or a shutdown): the number the first call's refusal named, once the owner chose to run it there. The same node and command must be asked again."
+    },
     "distro": {
       "type": "string",
       "description": "The WSL distribution a wsl command runs in; the default one where none is named."
